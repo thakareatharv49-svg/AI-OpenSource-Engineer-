@@ -1,0 +1,61 @@
+.start-building {
+  padding: 110px 20px;
+  background: #f8fafc;
+  text-align: center;
+}
+
+.start-building-content {
+  max-width: 850px;
+  margin: 0 auto;
+}
+
+.start-building-label {
+  display: inline-block;
+  margin-bottom: 18px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #6b7280;
+}
+
+.start-building h2 {
+  margin-bottom: 20px;
+  font-size: 48px;
+  color: #111827;
+}
+
+.start-building p {
+  max-width: 700px;
+  margin: 0 auto 35px;
+  font-size: 18px;
+  line-height: 1.7;
+  color: #6b7280;
+}
+
+.start-building-steps {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 40px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.start-building-button {
+  padding: 15px 30px;
+  border: none;
+  border-radius: 10px;
+  background: #111827;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.start-building-button:hover {
+  opacity: 0.85;
+}
