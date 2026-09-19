@@ -1,0 +1,138 @@
+.contribution-page {
+  min-height: 100vh;
+  padding: 120px 20px 80px;
+  background: #f8fafc;
+}
+
+.contribution-container {
+  max-width: 850px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.contribution-label {
+  display: inline-block;
+  margin-bottom: 16px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #6b7280;
+}
+
+.contribution-container h1 {
+  margin-bottom: 20px;
+  font-size: 48px;
+  color: #111827;
+}
+
+.contribution-container > p {
+  max-width: 700px;
+  margin: 0 auto 55px;
+  font-size: 18px;
+  line-height: 1.7;
+  color: #6b7280;
+}
+
+.contribution-workflow {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 700px;
+  margin: 0 auto 45px;
+  text-align: left;
+}
+
+.workflow-step {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 22px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.workflow-number {
+  min-width: 48px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #6b7280;
+}
+
+.workflow-step h3 {
+  margin: 0 0 6px;
+  font-size: 19px;
+  color: #111827;
+}
+
+.workflow-step p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
+.contribution-start-button {
+  padding: 15px 32px;
+  border: none;
+  border-radius: 10px;
+  background: #111827;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.contribution-start-button:hover {
+  opacit.contribution-progress {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 auto 40px;
+  max-width: 750px;
+}
+
+.progress-stage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.progress-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #d1d5db;
+  font-size: 12px;
+}
+
+.progress-stage.active {
+  background: #111827;
+  color: #ffffff;
+}
+
+.progress-stage.active .progress-number {
+  background: #ffffff;
+  color: #111827;
+}
+
+.progress-stage.completed {
+  background: #d1d5db;
+  color: #374151;
+}
+
+.progress-stage.completed .progress-number {
+  background: #111827;
+  color: #ffffff;
+}y: 0.85;
+}
