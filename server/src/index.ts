@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import aiRouter from "./routes/ai";
+import aiRouter from "./routes/ai.js";
 
 dotenv.config();
 
@@ -25,6 +25,53 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
+// GitHub authentication verification
+app.get("/api/github/auth", async (_req, res) => {
+  try {
+    const token = process.env.GITHUB_TOKEN;
+
+    if (!token) {
+      return res.status(500).json({
+        success: false,
+        message: "GITHUB_TOKEN is missing in the .env file",
+      });
+    }
+
+    const response = await fetch("https://api.github.com/user", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+        "User-Agent": "AI-OpenSource-Engineer",
+      },
+    });
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        success: false,
+        message: "GitHub authentication failed",
+      });
+    }
+
+    const user = (await response.json()) as {
+      login: string;
+    };
+
+    return res.json({
+      success: true,
+      message: "GitHub authentication successful",
+      username: user.login,
+    });
+  } catch (error) {
+    console.error("GitHub authentication error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to connect to GitHub",
+    });
+  }
+});
+
+// GitHub issues
 app.get("/api/github/issues", async (_req, res) => {
   try {
     const response = await fetch(

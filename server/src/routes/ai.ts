@@ -6,6 +6,30 @@ dotenv.config();
 
 const router = Router();
 
+/* ---------------- GitHub Repository Helper ---------------- */
+
+async function fetchRepositoryFiles(repository: string) {
+  const response = await fetch(
+    `https://api.github.com/repos/${repository}/git/trees/main?recursive=1`
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch repository files from GitHub");
+  }
+
+  const data = await response.json();
+
+  return data.tree
+    .filter(
+      (file: any) =>
+        file.type === "blob" &&
+        /\.(ts|tsx|js|jsx|json|md)$/.test(file.path)
+    )
+    .map((file: any) => file.path);
+}
+
+/* ---------------- Gemini Helper ---------------- */
+
 function getAI() {
   if (!process.env.GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY is not configured");
@@ -19,36 +43,57 @@ function getAI() {
 async function generateJSON(prompt: string) {
   const ai = getAI();
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3.6-flash",
-    contents: prompt,
-  });
+  const maxRetries = 3;
 
-  const text = response.text;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3.6-flash",
+        contents: prompt,
+      });
 
-  if (!text) {
-    throw new Error("Gemini returned an empty response");
+      const text = response.text;
+
+      if (!text) {
+        throw new Error("Gemini returned an empty response");
+      }
+
+      const cleanedText = text
+        .replace(/^```json\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/\s*```$/i, "")
+        .trim();
+
+      return JSON.parse(cleanedText);
+    } catch (error) {
+      console.error(`Gemini attempt ${attempt} failed:`, error);
+
+      if (attempt === maxRetries) {
+        throw error;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    }
   }
 
-  const cleanedText = text
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .trim();
-
-  return JSON.parse(cleanedText);
+  throw new Error("Gemini request failed after retries");
 }
+
+/* ---------------- Select Issue ---------------- */
 
 router.post("/select-issue", async (req, res) => {
   try {
     const { issues } = req.body;
 
     if (!Array.isArray(issues) || issues.length === 0) {
-      return res.status(400).json({ error: "No issues provided" });
+      return res.status(400).json({
+        error: "No issues provided",
+      });
     }
 
     const result = await generateJSON(`
 You are an AI assistant helping a developer find a good open-source contribution.
+
 Choose the best beginner/intermediate GitHub issue.
 
 Consider clarity, difficulty, actionability, and independent completion.
@@ -71,6 +116,7 @@ Return ONLY valid JSON:
     });
   } catch (error) {
     console.error("AI selection error:", error);
+
     return res.status(500).json({
       error:
         error instanceof Error
@@ -80,26 +126,41 @@ Return ONLY valid JSON:
   }
 });
 
+/* ---------------- Analyze Repository ---------------- */
+
 router.post("/analyze-repository", async (req, res) => {
   try {
     const { repository, issue } = req.body;
 
     if (!repository || !issue) {
-      return res.status(400).json({ error: "Repository and issue are required" });
+      return res.status(400).json({
+        error: "Repository and issue are required",
+      });
     }
+
+    const repositoryFiles = await fetchRepositoryFiles(repository);
 
     const result = await generateJSON(`
 You are an expert open-source repository analyst.
+
 Analyze the repository and selected issue below.
 
-Repository: ${repository}
+Repository:
+${repository}
+
+Available repository files:
+${JSON.stringify(repositoryFiles, null, 2)}
+
 Issue:
 ${JSON.stringify(issue, null, 2)}
 
-Do not pretend to inspect files you cannot access. Based only on the supplied information,
-provide a practical preliminary analysis.
+Use the available file paths to identify potentially relevant files.
 
-Return ONLY valid JSON with:
+Do not claim to have inspected file contents.
+Do not invent exact source code.
+Clearly distinguish confirmed information from assumptions.
+
+Return ONLY valid JSON:
 {
   "repositoryOverview": "...",
   "summary": "...",
@@ -116,6 +177,7 @@ Return ONLY valid JSON with:
     });
   } catch (error) {
     console.error("Repository analysis error:", error);
+
     return res.status(500).json({
       error:
         error instanceof Error
@@ -124,6 +186,8 @@ Return ONLY valid JSON with:
     });
   }
 });
+
+/* ---------------- Build Solution ---------------- */
 
 router.post("/build-solution", async (req, res) => {
   try {
@@ -137,9 +201,12 @@ router.post("/build-solution", async (req, res) => {
 
     const result = await generateJSON(`
 You are an expert software engineer preparing an open-source contribution.
+
 Create a clear implementation plan for the selected issue.
 
-Repository: ${repository}
+Repository:
+${repository}
+
 Issue:
 ${JSON.stringify(issue, null, 2)}
 
@@ -147,6 +214,7 @@ Repository analysis:
 ${JSON.stringify(repositoryAnalysis, null, 2)}
 
 Do not claim that code was changed or tests were executed.
+
 Return ONLY valid JSON:
 {
   "solutionSummary": "...",
@@ -164,6 +232,7 @@ Return ONLY valid JSON:
     });
   } catch (error) {
     console.error("Build solution error:", error);
+
     return res.status(500).json({
       error:
         error instanceof Error
@@ -173,10 +242,17 @@ Return ONLY valid JSON:
   }
 });
 
+/* ---------------- Generate Code Proposal ---------------- */
+
 router.post("/generate-code", async (req, res) => {
   try {
-    const { repository, issue, repositoryAnalysis, solutionPlan, files } =
-      req.body;
+    const {
+      repository,
+      issue,
+      repositoryAnalysis,
+      solutionPlan,
+      files,
+    } = req.body;
 
     if (
       !repository ||
@@ -194,10 +270,13 @@ router.post("/generate-code", async (req, res) => {
 You are a careful open-source coding agent.
 
 Your task is to prepare proposed code changes for a GitHub issue.
+
 You must not claim that files were modified, code was executed, or tests passed.
+
 Only generate a proposal based on the information provided.
 
-Repository: ${repository}
+Repository:
+${repository}
 
 Issue:
 ${JSON.stringify(issue, null, 2)}
@@ -211,10 +290,10 @@ ${JSON.stringify(solutionPlan, null, 2)}
 Available repository files, if supplied:
 ${JSON.stringify(files ?? [], null, 2)}
 
-If actual source files are not supplied, clearly state that the proposal is
-preliminary and do not invent exact existing code.
+If actual source files are not supplied, clearly state that the proposal
+is preliminary and do not invent exact existing code.
 
-Return ONLY valid JSON in this format:
+Return ONLY valid JSON:
 {
   "summary": "...",
   "assumptions": ["..."],
@@ -245,6 +324,7 @@ Return ONLY valid JSON in this format:
     });
   } catch (error) {
     console.error("Code generation error:", error);
+
     return res.status(500).json({
       error:
         error instanceof Error

@@ -33,6 +33,14 @@ type RepositoryAnalysis = {
   [key: string]: unknown;
 };
 
+function getRepositoryName(issueUrl: string) {
+  const repositoryUrl = issueUrl.split("/issues/")[0];
+
+  return repositoryUrl
+    .replace(/^https?:\/\/github\.com\//, "")
+    .replace(/\/$/, "");
+}
+
 function Contribution() {
   const [started, setStarted] = useState(false);
   const [stage, setStage] = useState(0);
@@ -155,7 +163,7 @@ function Contribution() {
     setRepositoryError("");
 
     try {
-      const repositoryUrl = selectedIssue.url.split("/issues/")[0];
+      const repository = getRepositoryName(selectedIssue.url);
 
       const response = await fetch(
         "http://localhost:5000/api/ai/analyze-repository",
@@ -165,7 +173,7 @@ function Contribution() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            repository: repositoryUrl,
+            repository: repository,
             issue: selectedIssue,
           }),
         }
@@ -201,7 +209,7 @@ function Contribution() {
     setSolutionError("");
 
     try {
-      const repositoryUrl = selectedIssue.url.split("/issues/")[0];
+      const repository = getRepositoryName(selectedIssue.url);
 
       const response = await fetch(
         "http://localhost:5000/api/ai/build-solution",
@@ -211,7 +219,7 @@ function Contribution() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            repository: repositoryUrl,
+            repository: repository,
             issue: selectedIssue,
             repositoryAnalysis: repositoryAnalysis,
           }),
@@ -246,7 +254,7 @@ function Contribution() {
     setCodeError("");
 
     try {
-      const repositoryUrl = selectedIssue.url.split("/issues/")[0];
+      const repository = getRepositoryName(selectedIssue.url);
 
       const response = await fetch(
         "http://localhost:5000/api/ai/generate-code",
@@ -256,7 +264,7 @@ function Contribution() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            repository: repositoryUrl,
+            repository: repository,
             issue: selectedIssue,
             repositoryAnalysis,
             solutionPlan,
@@ -311,13 +319,13 @@ function Contribution() {
       detail: "Writing and modifying the required code...",
     },
     {
-      title: "Running Tests...",
+      title: "Reviewing Code Proposal...",
       description:
-        "AI is testing the changes and checking whether the implementation works correctly.",
+        "AI generated a proposed solution. Review the changes before final verification.",
       step: "04",
-      name: "Run Tests",
+      name: "Review Code Proposal",
       detail:
-        "Running project tests and checking the implementation...",
+        "Inspect the generated code proposal before final approval...",
     },
     {
       title: "Ready for Review",
@@ -608,6 +616,13 @@ function Contribution() {
                       ) : <p>{typeof value === "object" && value !== null ? JSON.stringify(value, null, 2) : String(value)}</p>}
                     </div>
                   ))}
+                  <br />
+                  <button
+                    className="contribution-start-button"
+                    onClick={() => setStage(4)}
+                  >
+                    Continue to Final Review
+                  </button>
                 </div>
               </div>
             )}
