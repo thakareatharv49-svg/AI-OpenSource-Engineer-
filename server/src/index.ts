@@ -1,3 +1,4 @@
+import githubRouter from "./routes/github.js";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -12,6 +13,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api/ai", aiRouter);
+app.use("/api/github", githubRouter);
 
 app.get("/", (_req, res) => {
   res.json({

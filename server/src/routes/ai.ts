@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
+import OpenAI from "openai";
 import { Router } from "express";
 
 dotenv.config();
@@ -9,24 +10,79 @@ const router = Router();
 /* ---------------- GitHub Repository Helper ---------------- */
 
 async function fetchRepositoryFiles(repository: string) {
-  const response = await fetch(
-    `https://api.github.com/repos/${repository}/git/trees/main?recursive=1`
-  );
+  const token = process.env.GITHUB_TOKEN;
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch repository files from GitHub");
+  if (!token) {
+    throw new Error("GITHUB_TOKEN is not configured");
   }
 
-  const data = await response.json();
+  const headers = {
+    Accept: "application/vnd.github+json",
+    Authorization: `Bearer ${token}`,
+    "User-Agent": "AI-OpenSource-Engineer",
+  };
 
-  return data.tree
+  const repositoryResponse = await fetch(
+    `https://api.github.com/repos/${repository}`,
+    { headers }
+  );
+
+  if (!repositoryResponse.ok) {
+    throw new Error("Failed to fetch repository information");
+  }
+
+  const repositoryData = await repositoryResponse.json();
+  const defaultBranch = repositoryData.default_branch;
+
+  const treeResponse = await fetch(
+    `https://api.github.com/repos/${repository}/git/trees/${defaultBranch}?recursive=1`,
+    { headers }
+  );
+
+  if (!treeResponse.ok) {
+    throw new Error("Failed to fetch repository files");
+  }
+
+  const treeData = await treeResponse.json();
+
+  const files = treeData.tree
     .filter(
       (file: any) =>
         file.type === "blob" &&
         /\.(ts|tsx|js|jsx|json|md)$/.test(file.path)
     )
-    .map((file: any) => file.path);
+    .slice(0, 20);
+
+  const filesWithContent = await Promise.all(
+    files.map(async (file: any) => {
+      const fileResponse = await fetch(
+        `https://api.github.com/repos/${repository}/contents/${file.path}?ref=${defaultBranch}`,
+        { headers }
+      );
+
+      if (!fileResponse.ok) {
+        return {
+          path: file.path,
+          content: "Unable to fetch file content",
+        };
+      }
+
+      const fileData = await fileResponse.json();
+
+      const content = fileData.encoding === "base64"
+        ? Buffer.from(fileData.content, "base64").toString("utf-8")
+        : "";
+
+      return {
+        path: file.path,
+        content,
+      };
+    })
+  );
+
+  return filesWithContent;
 }
+
 
 /* ---------------- Gemini Helper ---------------- */
 
@@ -39,45 +95,117 @@ function getAI() {
     apiKey: process.env.GEMINI_API_KEY,
   });
 }
-
-async function generateJSON(prompt: string) {
-  const ai = getAI();
-
-  const maxRetries = 3;
-
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const response = await ai.models.generateContent({
-        model: "gemini-3.6-flash",
-        contents: prompt,
-      });
-
-      const text = response.text;
-
-      if (!text) {
-        throw new Error("Gemini returned an empty response");
-      }
-
-      const cleanedText = text
-        .replace(/^```json\s*/i, "")
-        .replace(/^```\s*/i, "")
-        .replace(/\s*```$/i, "")
-        .trim();
-
-      return JSON.parse(cleanedText);
-    } catch (error) {
-      console.error(`Gemini attempt ${attempt} failed:`, error);
-
-      if (attempt === maxRetries) {
-        throw error;
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-    }
+function getOpenAI() {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY is not configured");
   }
 
-  throw new Error("Gemini request failed after retries");
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
 }
+
+async function generateJSON(prompt: string) {
+  // 1. Try Gemini
+  try {
+    const ai = getAI();
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.6-flash",
+      contents: prompt,
+    });
+
+    const text = response.text;
+
+    if (!text) {
+      throw new Error("Gemini returned an empty response");
+    }
+
+    const cleanedText = text
+      .replace(/^```json\s*/i, "")
+      .replace(/^```\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+
+    return JSON.parse(cleanedText);
+  } catch (geminiError) {
+    console.error("Gemini failed. Switching to OpenAI:", geminiError);
+  }
+
+  // 2. Try OpenAI
+  try {
+    const openai = getOpenAI();
+
+    const response = await openai.responses.create({
+      model: "gpt-5",
+      input: prompt,
+    });
+
+    const text = response.output_text;
+
+    if (!text) {
+      throw new Error("OpenAI returned an empty response");
+    }
+
+    const cleanedText = text
+      .replace(/^```json\s*/i, "")
+      .replace(/^```\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+
+    return JSON.parse(cleanedText);
+  } catch (openaiError) {
+    console.error("OpenAI failed. Switching to Ollama:", openaiError);
+  }
+
+  // 3. Try Ollama (Local AI)
+  try {
+    const response = await fetch("http://localhost:11434/api/generate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "llama3.2:3b",
+        prompt: `${prompt}
+
+IMPORTANT:
+Return ONLY valid JSON.
+Do not include markdown code fences.
+Do not include explanations outside the JSON.`,
+        stream: false,
+        format: "json",
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Ollama request failed: ${response.status}`);
+    }
+
+    const data = (await response.json()) as {
+      response?: string;
+    };
+
+    if (!data.response) {
+      throw new Error("Ollama returned an empty response");
+    }
+
+    const cleanedText = data.response
+      .replace(/^```json\s*/i, "")
+      .replace(/^```\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+
+    return JSON.parse(cleanedText);
+  } catch (ollamaError) {
+    console.error("Ollama failed:", ollamaError);
+
+    throw new Error(
+      "All AI providers failed. Please check your API credits and local Ollama installation."
+    );
+  }
+}
+
 
 /* ---------------- Select Issue ---------------- */
 

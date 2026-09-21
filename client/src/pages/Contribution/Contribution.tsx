@@ -46,6 +46,26 @@ function Contribution() {
   const [stage, setStage] = useState(0);
   const [approved, setApproved] = useState(false);
 
+  const [creatingPR, setCreatingPR] = useState(false);
+  const [prError, setPrError] = useState("");
+
+  const [pullRequest, setPullRequest] = useState<{
+    htmlUrl: string;
+    number: number;
+  } | null>(null);
+
+  const [branchName, setBranchName] = useState("");
+  const [forkingRepository, setForkingRepository] = useState(false);
+const [forkError, setForkError] = useState("");
+const [forkedRepository, setForkedRepository] = useState("");
+  const [baseBranch, setBaseBranch] = useState("main");
+  const [creatingBranch, setCreatingBranch] = useState(false);
+  const [branchError, setBranchError] = useState("");
+
+  const [committingFile, setCommittingFile] = useState(false);
+  const [commitError, setCommitError] = useState("");
+  const [commitSuccess, setCommitSuccess] = useState(false);
+
   const [issues, setIssues] = useState<GitHubIssue[]>([]);
   const [loadingIssues, setLoadingIssues] = useState(false);
   const [issueError, setIssueError] = useState("");
@@ -67,11 +87,15 @@ function Contribution() {
 
   const [repositoryError, setRepositoryError] = useState("");
 
-  const [solutionPlan, setSolutionPlan] = useState<SolutionPlan | null>(null);
+  const [solutionPlan, setSolutionPlan] =
+    useState<SolutionPlan | null>(null);
+
   const [buildingSolution, setBuildingSolution] = useState(false);
   const [solutionError, setSolutionError] = useState("");
 
-  const [codeProposal, setCodeProposal] = useState<Record<string, unknown> | null>(null);
+  const [codeProposal, setCodeProposal] =
+    useState<Record<string, unknown> | null>(null);
+
   const [generatingCode, setGeneratingCode] = useState(false);
   const [codeError, setCodeError] = useState("");
 
@@ -92,7 +116,6 @@ function Contribution() {
         }
 
         const data = await response.json();
-
         setIssues(data.issues);
       } catch (error) {
         console.error("Failed to fetch issues:", error);
@@ -173,7 +196,7 @@ function Contribution() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            repository: repository,
+            repository,
             issue: selectedIssue,
           }),
         }
@@ -219,9 +242,9 @@ function Contribution() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            repository: repository,
+            repository,
             issue: selectedIssue,
-            repositoryAnalysis: repositoryAnalysis,
+            repositoryAnalysis,
           }),
         }
       );
@@ -248,7 +271,9 @@ function Contribution() {
   };
 
   const handleGenerateCode = async () => {
-    if (!selectedIssue || !repositoryAnalysis || !solutionPlan) return;
+    if (!selectedIssue || !repositoryAnalysis || !solutionPlan) {
+      return;
+    }
 
     setGeneratingCode(true);
     setCodeError("");
@@ -264,7 +289,7 @@ function Contribution() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            repository: repository,
+            repository,
             issue: selectedIssue,
             repositoryAnalysis,
             solutionPlan,
@@ -282,6 +307,7 @@ function Contribution() {
       setStage(3);
     } catch (error) {
       console.error("Code generation error:", error);
+
       setCodeError(
         error instanceof Error
           ? error.message
@@ -291,6 +317,251 @@ function Contribution() {
       setGeneratingCode(false);
     }
   };
+  const handleForkRepository = async () => {
+  if (!selectedIssue) {
+    setForkError("No issue selected.");
+    return;
+  }
+
+  setForkingRepository(true);
+  setForkError("");
+
+  try {
+    const repository = getRepositoryName(selectedIssue.url);
+    const [owner, repo] = repository.split("/");
+
+    const response = await fetch(
+      "http://localhost:5000/api/github/fork",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          owner,
+          repo,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.error || "Failed to fork repository."
+      );
+    }
+
+    setForkedRepository(data.repository.fullName);
+  } catch (error) {
+    setForkError(
+      error instanceof Error
+        ? error.message
+        : "Failed to fork repository."
+    );
+  } finally {
+    setForkingRepository(false);
+  }
+};
+
+  const handleCreateBranch = async () => {
+    if (!selectedIssue) return;
+
+    setCreatingBranch(true);
+    setBranchError("");
+
+    try {
+      const repository = forkedRepository;
+      if (!repository) {
+  setBranchError("Please fork the repository first.");
+  return;
+}
+      const [owner, repo] = repository.split("/");
+
+      if (!owner || !repo) {
+        throw new Error("Invalid GitHub repository.");
+      }
+
+      const repositoryResponse = await fetch(
+        `http://localhost:5000/api/github/repository/${owner}/${repo}`
+      );
+
+      const repositoryData = await repositoryResponse.json();
+
+      if (!repositoryResponse.ok) {
+        throw new Error(
+          repositoryData.error ||
+            "Failed to fetch repository information."
+        );
+      }
+
+      const baseBranch = repositoryData.repository.defaultBranch;
+      setBaseBranch(baseBranch);
+      const newBranchName = `ai-contribution-${Date.now()}`;
+
+      const response = await fetch(
+        "http://localhost:5000/api/github/branch",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            owner,
+            repo,
+            branchName: newBranchName,
+            baseBranch,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || "Branch creation failed."
+        );
+      }
+
+      setBranchName(newBranchName);
+
+      console.log("Branch created successfully:", data);
+    } catch (error) {
+      console.error("Branch creation error:", error);
+
+      setBranchError(
+        error instanceof Error
+          ? error.message
+          : "Failed to create GitHub branch."
+      );
+    } finally {
+      setCreatingBranch(false);
+    }
+  };
+  const handleCommitFile = async () => {
+  console.log("Commit AI Proposal button clicked");
+
+  if (!branchName) {
+    setCommitError("Please create a branch first.");
+    return;
+  }
+
+  if (!forkedRepository) {
+    setCommitError("Please fork the repository first.");
+    return;
+  }
+
+  if (!codeProposal) {
+    setCommitError("Code proposal is not available.");
+    return;
+  }
+
+  setCommittingFile(true);
+  setCommitError("");
+  setCommitSuccess(false);
+
+  try {
+    const [owner, repo] = forkedRepository.split("/");
+
+    console.log("Commit details:", {
+      owner,
+      repo,
+      branchName,
+    });
+
+    const response = await fetch(
+      "http://localhost:5000/api/github/file",
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          owner,
+          repo,
+          branchName,
+          filePath: "ai-contribution-proposal.json",
+          content: JSON.stringify(codeProposal, null, 2),
+          commitMessage: "Add AI contribution proposal",
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.error || "Failed to commit file."
+      );
+    }
+
+    console.log("File committed successfully:", data);
+
+    setCommitSuccess(true);
+  } catch (error) {
+    console.error("File commit error:", error);
+
+    setCommitError(
+      error instanceof Error
+        ? error.message
+        : "Failed to commit file."
+    );
+  } finally {
+    setCommittingFile(false);
+  }
+};
+
+ 
+  const handleCreatePullRequest = async () => {
+  if (!branchName) {
+    setPrError("Please create a branch first.");
+    return;
+  }
+
+  setCreatingPR(true);
+  setPrError("");
+
+  try {
+    const response = await fetch(
+      "http://localhost:5000/api/github/pull-request",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+         owner: forkedRepository.split("/")[0],
+repo: forkedRepository.split("/")[1],
+          headBranch: branchName,
+          baseBranch,
+          title: "AI Contribution: Add Proposal",
+          body: "This pull request was created by AI Open Source Engineer.",
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.error || "Failed to create pull request."
+      );
+    }
+
+    setPullRequest({
+      htmlUrl: data.pullRequest.htmlUrl,
+      number: data.pullRequest.number,
+    });
+  } catch (error) {
+    setPrError(
+      error instanceof Error
+        ? error.message
+        : "Failed to create pull request."
+    );
+  } finally {
+    setCreatingPR(false);
+  }
+};
 
   const stages = [
     {
@@ -396,6 +667,30 @@ function Contribution() {
                   The AI completed the workflow and you approved the
                   changes.
                 </p>
+                <button
+  className="contribution-start-button"
+  onClick={handleCreatePullRequest}
+  disabled={creatingPR || !branchName}
+>
+  {creatingPR
+    ? "Creating Pull Request..."
+    : "Create Pull Request"}
+</button>
+
+{prError && <p>{prError}</p>}
+
+{pullRequest && (
+  <p>
+    Pull request created successfully! ✅{" "}
+    <a
+      href={pullRequest.htmlUrl}
+      target="_blank"
+      rel="noreferrer"
+    >
+      View Pull Request #{pullRequest.number} →
+    </a>
+  </p>
+)}
               </div>
             </div>
           </>
@@ -526,7 +821,14 @@ function Contribution() {
                               <ul>
                                 {value.map((item, index) => (
                                   <li key={index}>
-                                    {typeof item === "object" && item !== null ? JSON.stringify(item, null, 2) : String(item)}
+                                    {typeof item === "object" &&
+                                    item !== null
+                                      ? JSON.stringify(
+                                          item,
+                                          null,
+                                          2
+                                        )
+                                      : String(item)}
                                   </li>
                                 ))}
                               </ul>
@@ -543,7 +845,6 @@ function Contribution() {
                     </p>
                   )}
 
-                  <br />
                   <br />
 
                   <button
@@ -570,32 +871,49 @@ function Contribution() {
                 <div>
                   <h2>Solution Plan</h2>
 
-                  {Object.entries(solutionPlan).map(([key, value]) => (
-                    <div key={key}>
-                      <h3>
-                        {key
-                          .replace(/([A-Z])/g, " $1")
-                          .replace(/^./, (char) => char.toUpperCase())}
-                      </h3>
+                  {Object.entries(solutionPlan).map(
+                    ([key, value]) => (
+                      <div key={key}>
+                        <h3>
+                          {key
+                            .replace(/([A-Z])/g, " $1")
+                            .replace(/^./, (char) =>
+                              char.toUpperCase()
+                            )}
+                        </h3>
 
-                      {Array.isArray(value) ? (
-                        <ul>
-                          {value.map((item, index) => (
-                            <li key={index}>{typeof item === "object" && item !== null ? JSON.stringify(item, null, 2) : String(item)}</li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p>{String(value)}</p>
-                      )}
-                    </div>
-                  ))}
+                        {Array.isArray(value) ? (
+                          <ul>
+                            {value.map((item, index) => (
+                              <li key={index}>
+                                {typeof item === "object" &&
+                                item !== null
+                                  ? JSON.stringify(
+                                      item,
+                                      null,
+                                      2
+                                    )
+                                  : String(item)}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p>{String(value)}</p>
+                        )}
+                      </div>
+                    )
+                  )}
+
                   <br />
+
                   <button
                     className="contribution-start-button"
                     onClick={handleGenerateCode}
                     disabled={generatingCode}
                   >
-                    {generatingCode ? "Generating Code..." : "Generate Code"}
+                    {generatingCode
+                      ? "Generating Code..."
+                      : "Generate Code"}
                   </button>
 
                   {codeError && <p>{codeError}</p>}
@@ -605,18 +923,53 @@ function Contribution() {
 
             {stage === 3 && codeProposal && (
               <div className="workflow-step">
-                <span className="workflow-number">{stages[stage].step}</span>
+                <span className="workflow-number">
+                  {stages[stage].step}
+                </span>
+
                 <div>
                   <h2>Code Proposal</h2>
-                  {Object.entries(codeProposal).map(([key, value]) => (
-                    <div key={key}>
-                      <h3>{key.replace(/([A-Z])/g, " $1").replace(/^./, (char) => char.toUpperCase())}</h3>
-                      {Array.isArray(value) ? (
-                        <ul>{value.map((item, index) => <li key={index}>{typeof item === "object" && item !== null ? JSON.stringify(item, null, 2) : String(item)}</li>)}</ul>
-                      ) : <p>{typeof value === "object" && value !== null ? JSON.stringify(value, null, 2) : String(value)}</p>}
-                    </div>
-                  ))}
+
+                  {Object.entries(codeProposal).map(
+                    ([key, value]) => (
+                      <div key={key}>
+                        <h3>
+                          {key
+                            .replace(/([A-Z])/g, " $1")
+                            .replace(/^./, (char) =>
+                              char.toUpperCase()
+                            )}
+                        </h3>
+
+                        {Array.isArray(value) ? (
+                          <ul>
+                            {value.map((item, index) => (
+                              <li key={index}>
+                                {typeof item === "object" &&
+                                item !== null
+                                  ? JSON.stringify(
+                                      item,
+                                      null,
+                                      2
+                                    )
+                                  : String(item)}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p>
+                            {typeof value === "object" &&
+                            value !== null
+                              ? JSON.stringify(value, null, 2)
+                              : String(value)}
+                          </p>
+                        )}
+                      </div>
+                    )
+                  )}
+
                   <br />
+
                   <button
                     className="contribution-start-button"
                     onClick={() => setStage(4)}
@@ -635,7 +988,6 @@ function Contribution() {
 
                 <div>
                   <h3>{stages[stage].name}</h3>
-
                   <p>{stages[stage].detail}</p>
                 </div>
               </div>
@@ -644,11 +996,66 @@ function Contribution() {
             {stage === 4 && (
               <div className="review-actions">
                 <button
+  className="contribution-start-button"
+  onClick={handleForkRepository}
+  disabled={forkingRepository}
+>
+  {forkingRepository
+    ? "Forking Repository..."
+    : "Fork Repository"}
+</button>
+
+{forkError && <p>{forkError}</p>}
+
+{forkedRepository && (
+  <p>
+    Repository forked successfully! ✅
+    <br />
+    Fork: {forkedRepository}
+  </p>
+)}
+                <button
                   className="contribution-start-button"
-                  onClick={() => setApproved(true)}
+                  onClick={handleCreateBranch}
+                  disabled={creatingBranch}
                 >
-                  Approve Contribution
+                  {creatingBranch
+                    ? "Creating Branch..."
+                    : "Create GitHub Branch"}
                 </button>
+
+                {branchError && <p>{branchError}</p>}
+
+                {branchName && (
+                  <p>Branch created: {branchName}</p>
+                )}
+
+                <button
+                  className="contribution-start-button"
+                  onClick={handleCommitFile}
+                  disabled={committingFile || !branchName}
+                >
+                  {committingFile
+                    ? "Committing File..."
+                    : "Commit AI Proposal"}
+                </button>
+
+                {commitError && <p>{commitError}</p>}
+
+                {commitSuccess && (
+                  <p>
+                    AI proposal committed successfully! ✅
+                  </p>
+                )}
+
+                {commitSuccess && (
+                  <button
+                    className="contribution-start-button"
+                    onClick={() => setApproved(true)}
+                  >
+                    Approve Contribution
+                  </button>
+                )}
               </div>
             )}
           </>
