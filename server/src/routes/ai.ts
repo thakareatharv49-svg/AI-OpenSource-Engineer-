@@ -461,5 +461,102 @@ Return ONLY valid JSON:
     });
   }
 });
+/* ---------------- Code Review Agent ---------------- */
+
+router.post("/review-code", async (req, res) => {
+  try {
+    const {
+      repository,
+      issue,
+      codeProposal,
+    } = req.body;
+
+    if (!repository || !issue || !codeProposal) {
+      return res.status(400).json({
+        error:
+          "Repository, issue, and code proposal are required",
+      });
+    }
+
+    const result = await generateJSON(`
+You are an expert open-source code reviewer.
+
+Review the proposed code changes for the GitHub issue.
+
+Repository:
+${repository}
+
+Issue:
+${JSON.stringify(issue, null, 2)}
+
+Code Proposal:
+${JSON.stringify(codeProposal, null, 2)}
+
+Review the proposal carefully for:
+
+1. Potential bugs
+2. Security risks
+3. Code quality
+4. Maintainability
+5. Missing tests
+6. Compatibility concerns
+7. Placeholder or incomplete code
+8. Unrealistic assumptions
+9. Incorrect API usage
+10. Whether the proposed changes actually solve the issue
+
+IMPORTANT REVIEW RULES:
+
+- Never automatically approve incomplete or placeholder code.
+- Detect placeholders such as:
+  "if supported"
+  "..."
+  "TODO"
+  "implement here"
+  "write_lance(...)"
+  "assert dataset.success"
+- If code contains placeholders or cannot be verified, use:
+  "Changes Requested" or "Needs More Information".
+- Approve only when the proposal contains sufficiently concrete and technically justified changes.
+- Do not claim that you executed code or tests.
+
+Do not claim that you executed the code or tests.
+
+Return ONLY valid JSON:
+{
+  "overallStatus": "Approved",
+  "summary": "Brief review summary",
+  "bugs": [],
+  "securityIssues": [],
+  "codeQualityIssues": [],
+  "missingTests": [],
+  "suggestions": [],
+  "confidence": 85
+}
+
+Rules:
+- overallStatus MUST be exactly one of:
+  "Approved", "Changes Requested", or "Needs More Information".
+- Choose exactly one overallStatus.
+- confidence MUST be an integer from 0 to 100.
+- Do not claim that you executed code or tests.
+- Use empty arrays when no issues are identified.
+`);
+
+    return res.json({
+      message: "Code review completed",
+      result,
+    });
+  } catch (error) {
+    console.error("Code review error:", error);
+
+    return res.status(500).json({
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to review code",
+    });
+  }
+});
 
 export default router;

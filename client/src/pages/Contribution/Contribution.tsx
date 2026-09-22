@@ -23,6 +23,17 @@ type SolutionPlan = {
   [key: string]: unknown;
 };
 
+type CodeReview = {
+  overallStatus: "Approved" | "Changes Requested" | "Needs More Information";
+  summary: string;
+  bugs: string[];
+  securityIssues: string[];
+  codeQualityIssues: string[];
+  missingTests: string[];
+  suggestions: string[];
+  confidence: number;
+};
+
 type RepositoryAnalysis = {
   summary?: string;
   repositoryOverview?: string;
@@ -45,6 +56,7 @@ function Contribution() {
   const [started, setStarted] = useState(false);
   const [stage, setStage] = useState(0);
   const [approved, setApproved] = useState(false);
+  const [changesRequested, setChangesRequested] = useState(false);
 
   const [creatingPR, setCreatingPR] = useState(false);
   const [prError, setPrError] = useState("");
@@ -98,6 +110,12 @@ const [forkedRepository, setForkedRepository] = useState("");
 
   const [generatingCode, setGeneratingCode] = useState(false);
   const [codeError, setCodeError] = useState("");
+
+  const [codeReview, setCodeReview] =
+    useState<CodeReview | null>(null);
+
+  const [reviewingCode, setReviewingCode] = useState(false);
+  const [reviewError, setReviewError] = useState("");
 
   useEffect(() => {
     if (!started || stage !== 0) return;
@@ -317,6 +335,50 @@ const [forkedRepository, setForkedRepository] = useState("");
       setGeneratingCode(false);
     }
   };
+  const handleReviewCode = async () => {
+    if (!selectedIssue || !codeProposal) return;
+
+    setReviewingCode(true);
+    setReviewError("");
+
+    try {
+      const repository = getRepositoryName(selectedIssue.url);
+
+      const response = await fetch(
+        "http://localhost:5000/api/ai/review-code",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            repository,
+            issue: selectedIssue,
+            codeProposal,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Code review failed");
+      }
+
+      setCodeReview(data.result);
+    } catch (error) {
+      console.error("Code review error:", error);
+
+      setReviewError(
+        error instanceof Error
+          ? error.message
+          : "Failed to review code."
+      );
+    } finally {
+      setReviewingCode(false);
+    }
+  };
+
   const handleForkRepository = async () => {
   if (!selectedIssue) {
     setForkError("No issue selected.");
@@ -972,6 +1034,73 @@ repo: forkedRepository.split("/")[1],
 
                   <button
                     className="contribution-start-button"
+                    onClick={handleReviewCode}
+                    disabled={reviewingCode}
+                  >
+                    {reviewingCode
+                      ? "Reviewing Code..."
+                      : "Run AI Code Review"}
+                  </button>
+
+                  {reviewError && <p>{reviewError}</p>}
+
+                  {codeReview && (
+                    <div className="code-review-results">
+                      {changesRequested && (
+  <p className="changes-requested-message">
+    Changes requested. Review and improve the code proposal before approval.
+  </p>
+)}
+
+<h2>AI Code Review Results</h2>
+
+                      <h3>Status</h3>
+                      <p>{codeReview.overallStatus}</p>
+
+                      <h3>Summary</h3>
+                      <p>{codeReview.summary}</p>
+
+                      <h3>Potential Bugs</h3>
+                      <ul>
+                        {codeReview.bugs.map((item, index) => (
+                          <li key={index}>{item}</li>
+                        ))}
+                      </ul>
+
+                      <h3>Security Issues</h3>
+                      <ul>
+                        {codeReview.securityIssues.map((item, index) => (
+                          <li key={index}>{item}</li>
+                        ))}
+                      </ul>
+
+                      <h3>Code Quality Issues</h3>
+                      <ul>
+                        {codeReview.codeQualityIssues.map((item, index) => (
+                          <li key={index}>{item}</li>
+                        ))}
+                      </ul>
+
+                      <h3>Missing Tests</h3>
+                      <ul>
+                        {codeReview.missingTests.map((item, index) => (
+                          <li key={index}>{item}</li>
+                        ))}
+                      </ul>
+
+                      <h3>Suggestions</h3>
+                      <ul>
+                        {codeReview.suggestions.map((item, index) => (
+                          <li key={index}>{item}</li>
+                        ))}
+                      </ul>
+
+                      <h3>Confidence</h3>
+                      <p>{codeReview.confidence}%</p>
+                    </div>
+                  )}
+                  <button
+                    className="contribution-start-button"
                     onClick={() => setStage(4)}
                   >
                     Continue to Final Review
@@ -1049,12 +1178,21 @@ repo: forkedRepository.split("/")[1],
                 )}
 
                 {commitSuccess && (
-                  <button
-                    className="contribution-start-button"
-                    onClick={() => setApproved(true)}
-                  >
-                    Approve Contribution
-                  </button>
+                  <div className="contribution-action-buttons">
+  <button
+    className="contribution-start-button"
+    onClick={() => setApproved(true)}
+  >
+    Approve Contribution
+  </button>
+
+  <button
+    className="contribution-start-button"
+    onClick={() => { setChangesRequested(true); setStage(3); }}
+  >
+    Request Changes
+  </button>
+</div>
                 )}
               </div>
             )}
@@ -1066,3 +1204,9 @@ repo: forkedRepository.split("/")[1],
 }
 
 export default Contribution;
+
+
+
+
+
+
