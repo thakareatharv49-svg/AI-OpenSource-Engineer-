@@ -145,6 +145,33 @@ const [forkedRepository, setForkedRepository] = useState("");
 
     fetchIssues();
   }, [started, stage]);
+    useEffect(() => {
+    if (
+      started &&
+      stage === 0 &&
+      issues.length > 0 &&
+      !selectedIssue &&
+      !selectingIssue
+    ) {
+      handleAISelection();
+    }
+  }, [
+    started,
+    stage,
+    issues,
+    selectedIssue,
+    selectingIssue,
+  ]);
+    useEffect(() => {
+    if (
+      started &&
+      stage === 0 &&
+      selectedIssue &&
+      aiSelection
+    ) {
+      handleRepositoryAnalysis();
+    }
+  }, [started, stage, selectedIssue, aiSelection]);
 
   const handleAISelection = async () => {
     if (issues.length === 0) return;
@@ -242,7 +269,43 @@ const [forkedRepository, setForkedRepository] = useState("");
       setAnalyzingRepository(false);
     }
   };
-
+  useEffect(() => {
+  if (
+    started &&
+    stage === 1 &&
+    repositoryAnalysis &&
+    !buildingSolution
+  ) {
+    handleBuildSolution();
+  }
+}, [started, stage, repositoryAnalysis, buildingSolution]);
+useEffect(() => {
+  if (
+    started &&
+    stage === 2 &&
+    solutionPlan &&
+    !generatingCode
+  ) {
+    handleGenerateCode();
+  }
+}, [started, stage, solutionPlan, generatingCode]);
+useEffect(() => {
+  if (
+    started &&
+    stage === 3 &&
+    codeProposal &&
+    !codeReview &&
+    !reviewingCode
+  ) {
+    handleReviewCode();
+  }
+}, [
+  started,
+  stage,
+  codeProposal,
+  codeReview,
+  reviewingCode,
+]);
   const handleBuildSolution = async () => {
     if (!selectedIssue || !repositoryAnalysis) return;
 
@@ -1181,7 +1244,10 @@ repo: forkedRepository.split("/")[1],
                   <div className="contribution-action-buttons">
   <button
     className="contribution-start-button"
-    onClick={() => setApproved(true)}
+    onClick={() => {
+  setApproved(true);
+  handleForkRepository();
+}}
   >
     Approve Contribution
   </button>
