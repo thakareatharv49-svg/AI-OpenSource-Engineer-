@@ -81,3 +81,42 @@ test("POST /api/github/pull-request rejects incomplete pull request input", asyn
   assert.equal(response.status, 400);
   assert.match((await response.json()).error, /title.*head branch.*base branch/i);
 });
+
+
+test("POST /api/github/branch rejects malformed Git refs before contacting GitHub", async () => {
+  const response = await fetch(baseUrl + "/api/github/branch", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      owner: "example",
+      repo: "project",
+      branchName: "../unsafe",
+      baseBranch: "main",
+    }),
+  });
+  assert.equal(response.status, 400);
+  assert.match((await response.json()).error, /valid Git refs/i);
+});
+
+test("PUT /api/github/file rejects traversal paths before contacting GitHub", async () => {
+  const response = await fetch(baseUrl + "/api/github/file", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      owner: "example",
+      repo: "project",
+      branchName: "ai-contribution-test",
+      filePath: "../README.md",
+      content: "# unsafe",
+      commitMessage: "test",
+    }),
+  });
+  assert.equal(response.status, 400);
+  assert.match((await response.json()).error, /safe repository-relative path/i);
+});
+
+test("GET /api/github/repository rejects invalid owner or repository path segments", async () => {
+  const response = await fetch(baseUrl + "/api/github/repository/invalid%20owner/project");
+  assert.equal(response.status, 400);
+  assert.match((await response.json()).error, /invalid GitHub repository/i);
+});
