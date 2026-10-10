@@ -191,6 +191,27 @@ router.put("/file", async (req, res) => {
       });
     }
 
+    const pathSegments = String(filePath).split("/");
+    const unsafePath =
+      filePath.startsWith("/") ||
+      filePath.includes("\\") ||
+      pathSegments.some((segment: string) => !segment || segment === "." || segment === "..") ||
+      pathSegments.includes(".git") ||
+      /(^|\\/)\\.env(?:\\.|$)/i.test(filePath) ||
+      /[?#\\u0000-\\u001f]/.test(filePath);
+
+    if (unsafePath) {
+      return res.status(400).json({
+        error: "File path must be a safe repository-relative path",
+      });
+    }
+
+    if (Buffer.byteLength(String(content), "utf8") > 200_000) {
+      return res.status(413).json({
+        error: "File content exceeds the 200 KB limit",
+      });
+    }
+
     const headers = {
       Accept: "application/vnd.github+json",
       Authorization: `Bearer ${token}`,
@@ -198,7 +219,8 @@ router.put("/file", async (req, res) => {
       "Content-Type": "application/json",
     };
 
-    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
+    const encodedPath = pathSegments.map((segment: string) => encodeURIComponent(segment)).join("/");
+    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
 
     // Check whether the file already exists
     const existingResponse = await fetch(
