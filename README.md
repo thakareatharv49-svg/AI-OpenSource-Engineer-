@@ -45,7 +45,7 @@ npm install
 npm run dev
 ```
 
-The API runs on `http://localhost:5000` by default. Set `PORT` in `server/.env` to change it.
+The API runs on `http://localhost:5000` by default and binds to `127.0.0.1` for local-only access. `CLIENT_ORIGINS` controls the allowed browser origins; keep it limited to trusted frontend URLs. Set `PORT` or `HOST` only when needed. Do not expose this token-backed API to the public internet without adding user authentication and HTTPS.
 
 ### 2. Configure and start the frontend
 
