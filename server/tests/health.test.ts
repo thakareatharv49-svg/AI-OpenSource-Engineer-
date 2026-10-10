@@ -152,3 +152,12 @@ test("AI endpoints throttle excessive requests before calling providers", async 
   }
   assert.equal(lastStatus, 429);
 });
+
+
+test("loopback API rejects foreign Host headers", async () => {
+  const response = await fetch(baseUrl + "/", {
+    headers: { Host: "attacker.example" },
+  });
+  assert.equal(response.status, 421);
+  assert.deepEqual(await response.json(), { error: "Invalid Host header" });
+});
