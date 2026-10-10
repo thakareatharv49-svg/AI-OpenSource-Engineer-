@@ -40,3 +40,44 @@ test("GET /api/health returns an OK health status", async () => {
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { status: "ok" });
 });
+
+
+test("POST /api/github/fork rejects missing repository input", async () => {
+  const response = await fetch(baseUrl + "/api/github/fork", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ owner: "", repo: "" }),
+  });
+  assert.equal(response.status, 400);
+  assert.match((await response.json()).error, /owner and repository/i);
+});
+
+test("POST /api/github/branch rejects incomplete branch input", async () => {
+  const response = await fetch(baseUrl + "/api/github/branch", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ owner: "example", repo: "project" }),
+  });
+  assert.equal(response.status, 400);
+  assert.match((await response.json()).error, /branch name.*base branch/i);
+});
+
+test("PUT /api/github/file rejects incomplete file changes", async () => {
+  const response = await fetch(baseUrl + "/api/github/file", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ owner: "example", repo: "project" }),
+  });
+  assert.equal(response.status, 400);
+  assert.match((await response.json()).error, /file path.*content/i);
+});
+
+test("POST /api/github/pull-request rejects incomplete pull request input", async () => {
+  const response = await fetch(baseUrl + "/api/github/pull-request", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ owner: "example", repo: "project" }),
+  });
+  assert.equal(response.status, 400);
+  assert.match((await response.json()).error, /title.*head branch.*base branch/i);
+});
