@@ -728,14 +728,13 @@ useEffect(() => {
       autoRunAttempts.current.add("select-issue");
       void handleAISelection();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     started,
     stage,
     issues,
     selectedIssue,
     selectingIssue,
-    // The handler is intentionally omitted; the effect is guarded by the attempt ref.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   ]);
 
 useEffect(() => {
@@ -790,13 +789,13 @@ useEffect(() => {
     autoRunAttempts.current.add("review-code");
     void handleReviewCode();
   }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [
   started,
   stage,
   codeProposal,
   codeReview,
   reviewingCode,
-  // eslint-disable-next-line react-hooks/exhaustive-deps
 ]);
 
   const stages = [
@@ -856,13 +855,13 @@ useEffect(() => {
       autoRunAttempts.current.add("create-branch");
       void handleCreateBranch();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     approved,
     forkedRepository,
     branchName,
     creatingBranch,
     branchError,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   ]);
 
   useEffect(() => {
@@ -877,13 +876,13 @@ useEffect(() => {
       autoRunAttempts.current.add("commit-proposal");
       void handleCommitFile();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     approved,
     branchName,
     commitSuccess,
     committingFile,
     commitError,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   ]);
 
 
