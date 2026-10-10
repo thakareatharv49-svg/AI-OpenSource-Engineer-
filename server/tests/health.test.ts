@@ -52,6 +52,16 @@ test("POST /api/github/fork rejects missing repository input", async () => {
   assert.match((await response.json()).error, /owner and repository/i);
 });
 
+test("POST /api/github/fork rejects dot-segment repository identifiers", async () => {
+  const response = await fetch(baseUrl + "/api/github/fork", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ owner: "..", repo: "project" }),
+  });
+  assert.equal(response.status, 400);
+  assert.match((await response.json()).error, /invalid GitHub repository/i);
+});
+
 test("POST /api/github/branch rejects incomplete branch input", async () => {
   const response = await fetch(baseUrl + "/api/github/branch", {
     method: "POST",
