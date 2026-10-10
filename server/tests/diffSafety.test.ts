@@ -27,7 +27,7 @@ test("blocks private keys and common provider tokens", () => {
 });
 
 test("blocks sensitive file paths", () => {
-  for (const file of [".env", "config/.env.production", ".npmrc", ".ssh/id_ed25519", "secrets/cloud.json"]) {
+  for (const file of [".env", "config/.env.production", ".npmrc", ".ssh/id_ed25519", "secrets/cloud.json", ".git/config", ".gitmodules"]) {
     const report = inspectProposedChanges([{ file, after: "placeholder content" }]);
     assert.equal(report.safeToCommit, false, file);
   }
