@@ -1,5 +1,6 @@
 import { Router } from "express";
 import dotenv from "dotenv";
+import { inspectProposedChanges } from "../security/diffSafety.js";
 
 dotenv.config();
 
@@ -236,6 +237,20 @@ router.post("/branch", async (req, res) => {
     });
   }
 });
+/* ---------------- Proposed Diff Safety Gate ---------------- */
+
+router.post("/safety-check", (req, res) => {
+  const { changes } = req.body ?? {};
+  const report = inspectProposedChanges(changes);
+  if (!report.safeToCommit) {
+    return res.status(422).json({
+      message: "The proposed changes need security review before they can be committed.",
+      safetyReport: report,
+    });
+  }
+  return res.json({ message: "No configured safety checks were triggered.", safetyReport: report });
+});
+
 /* ---------------- Create or Update GitHub File ---------------- */
 
 router.put("/file", async (req, res) => {
@@ -303,6 +318,15 @@ router.put("/file", async (req, res) => {
     if (Buffer.byteLength(String(content), "utf8") > 200_000) {
       return res.status(413).json({
         error: "File content exceeds the 200 KB limit",
+      });
+    }
+
+    // Enforce the same safety gate server-side so callers cannot bypass the UI.
+    const safetyReport = inspectProposedChanges([{ filePath, content }]);
+    if (!safetyReport.safeToCommit) {
+      return res.status(422).json({
+        error: "File change blocked by the safety gate",
+        safetyReport,
       });
     }
 
