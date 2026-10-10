@@ -93,6 +93,7 @@ const [forkedRepository, setForkedRepository] = useState("");
   const [issues, setIssues] = useState<GitHubIssue[]>([]);
   const [loadingIssues, setLoadingIssues] = useState(false);
   const [issueError, setIssueError] = useState("");
+  const [issueFetchAttempt, setIssueFetchAttempt] = useState(0);
 
   const [selectedIssue, setSelectedIssue] =
     useState<GitHubIssue | null>(null);
@@ -157,7 +158,7 @@ const [forkedRepository, setForkedRepository] = useState("");
     };
 
     fetchIssues();
-  }, [started, stage]);
+  }, [started, stage, issueFetchAttempt]);
     
     
 
@@ -930,7 +931,18 @@ useEffect(() => {
                   <p>Finding real GitHub issues...</p>
                 )}
 
-                {issueError && <p>{issueError}</p>}
+                {issueError && (
+                  <div role="alert">
+                    <p>{issueError}</p>
+                    <button
+                      className="contribution-start-button"
+                      onClick={() => setIssueFetchAttempt((attempt) => attempt + 1)}
+                      disabled={loadingIssues}
+                    >
+                      Retry Issue Search
+                    </button>
+                  </div>
+                )}
 
                 {!loadingIssues &&
                   !issueError &&
