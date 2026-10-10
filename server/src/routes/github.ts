@@ -173,8 +173,9 @@ router.put("/file", async (req, res) => {
       !owner ||
       !repo ||
       !branchName ||
+      typeof filePath !== "string" ||
       !filePath ||
-      content === undefined ||
+      typeof content !== "string" ||
       !commitMessage
     ) {
       return res.status(400).json({
