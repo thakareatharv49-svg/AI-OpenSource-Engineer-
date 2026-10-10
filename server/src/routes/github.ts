@@ -256,7 +256,9 @@ router.put("/file", async (req, res) => {
       typeof filePath !== "string" ||
       !filePath ||
       typeof content !== "string" ||
-      !commitMessage
+      typeof commitMessage !== "string" ||
+      !commitMessage.trim() ||
+      commitMessage.length > 200
     ) {
       return res.status(400).json({
         error:
