@@ -262,10 +262,13 @@ router.post("/select-issue", async (req, res) => {
   try {
     const { issues } = req.body;
 
-    if (!Array.isArray(issues) || issues.length === 0) {
+    if (!Array.isArray(issues) || issues.length === 0 || issues.length > 30) {
       return res.status(400).json({
-        error: "No issues provided",
+        error: "Provide between 1 and 30 issues",
       });
+    }
+    if (Buffer.byteLength(JSON.stringify(issues), "utf8") > 50_000) {
+      return res.status(413).json({ error: "Issue list exceeds the 50 KB limit." });
     }
 
     const result = await generateJSON(`
