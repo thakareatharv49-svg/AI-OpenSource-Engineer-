@@ -6,7 +6,11 @@ dotenv.config();
 const router = Router();
 
 const isValidRepositoryPart = (value: unknown): value is string =>
-  typeof value === "string" && /^[A-Za-z0-9_.-]+$/.test(value);
+  typeof value === "string" &&
+  value.length <= 100 &&
+  value !== "." &&
+  value !== ".." &&
+  /^[A-Za-z0-9_.-]+$/.test(value);
 
 const isValidGitRef = (value: unknown): value is string =>
   typeof value === "string" &&
