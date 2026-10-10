@@ -5,15 +5,37 @@ dotenv.config();
 
 const router = Router();
 
+const isValidRepositoryPart = (value: unknown): value is string =>
+  typeof value === "string" && /^[A-Za-z0-9_.-]+$/.test(value);
+
+const isValidGitRef = (value: unknown): value is string =>
+  typeof value === "string" &&
+  value.length > 0 &&
+  value.length <= 240 &&
+  !value.startsWith("/") &&
+  !value.endsWith("/") &&
+  !value.includes("..") &&
+  !value.includes("@{") &&
+  !/[\\s~^:?*\\[\\]\\\\]/.test(value) &&
+  !value.endsWith(".lock") &&
+  !value.split("/").some((part) => !part || part.startsWith(".") || part.endsWith("."));
+
+const githubHeaders = (token: string) => ({
+  Accept: "application/vnd.github+json",
+  Authorization: `Bearer ${token}`,
+  "X-GitHub-Api-Version": "2022-11-28",
+  "User-Agent": "AI-OpenSource-Engineer",
+});
+
 /* ---------------- Get Repository Information ---------------- */
 
 router.get("/repository/:owner/:repo", async (req, res) => {
   try {
     const { owner, repo } = req.params;
 
-    if (!owner || !repo) {
+    if (!isValidRepositoryPart(owner) || !isValidRepositoryPart(repo)) {
       return res.status(400).json({
-        error: "Repository owner and name are required",
+        error: "Invalid GitHub repository owner or name",
       });
     }
 
@@ -77,9 +99,14 @@ router.post("/branch", async (req, res) => {
   try {
     const { owner, repo, branchName, baseBranch } = req.body;
 
-    if (!owner || !repo || !branchName || !baseBranch) {
+    if (!isValidRepositoryPart(owner) || !isValidRepositoryPart(repo)) {
       return res.status(400).json({
-        error: "Owner, repository, branch name, and base branch are required",
+        error: "Invalid GitHub repository owner or name",
+      });
+    }
+    if (!isValidGitRef(branchName) || !isValidGitRef(baseBranch)) {
+      return res.status(400).json({
+        error: "Branch name and base branch must be valid Git refs",
       });
     }
 
@@ -99,7 +126,7 @@ router.post("/branch", async (req, res) => {
 
     // Get the base branch reference
     const baseResponse = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/git/ref/heads/${baseBranch}`,
+      `https://api.github.com/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(baseBranch)}`,
       { headers }
     );
 
@@ -181,6 +208,17 @@ router.put("/file", async (req, res) => {
       return res.status(400).json({
         error:
           "Owner, repository, branch, file path, content, and commit message are required",
+      });
+    }
+
+    if (!isValidRepositoryPart(owner) || !isValidRepositoryPart(repo)) {
+      return res.status(400).json({
+        error: "Invalid GitHub repository owner or name",
+      });
+    }
+    if (!isValidGitRef(branchName)) {
+      return res.status(400).json({
+        error: "Branch name must be a valid Git ref",
       });
     }
 
@@ -299,16 +337,22 @@ router.post("/pull-request", async (req, res) => {
       baseBranch,
     } = req.body;
 
+    if (!isValidRepositoryPart(owner) || !isValidRepositoryPart(repo)) {
+      return res.status(400).json({
+        error: "Invalid GitHub repository owner or name",
+      });
+    }
     if (
-      !owner ||
-      !repo ||
-      !title ||
-      !headBranch ||
-      !baseBranch
+      typeof title !== "string" ||
+      !title.trim() ||
+      title.length > 256 ||
+      !isValidGitRef(baseBranch) ||
+      typeof headBranch !== "string" ||
+      !/^[A-Za-z0-9_.-]+:[^\\s]+$/.test(headBranch) ||
+      !isValidGitRef(headBranch.split(":").slice(1).join(":"))
     ) {
       return res.status(400).json({
-        error:
-          "Owner, repository, title, head branch, and base branch are required",
+        error: "Title, head branch, and base branch must be valid",
       });
     }
 
