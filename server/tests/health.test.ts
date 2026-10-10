@@ -82,6 +82,22 @@ test("PUT /api/github/file rejects incomplete file changes", async () => {
   assert.match((await response.json()).error, /file path.*content/i);
 });
 
+test("POST /api/github/pull-request rejects missing head repository", async () => {
+  const response = await fetch(baseUrl + "/api/github/pull-request", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      owner: "upstream",
+      repo: "project",
+      title: "Fix issue",
+      headBranch: "my-account:fix-issue",
+      baseBranch: "main",
+    }),
+  });
+  assert.equal(response.status, 400);
+  assert.match((await response.json()).error, /head branch/i);
+});
+
 test("POST /api/github/pull-request rejects incomplete pull request input", async () => {
   const response = await fetch(baseUrl + "/api/github/pull-request", {
     method: "POST",
