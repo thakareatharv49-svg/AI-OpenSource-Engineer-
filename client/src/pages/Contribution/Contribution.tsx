@@ -710,6 +710,7 @@ const [forkedRepository, setForkedRepository] = useState("");
           owner: getRepositoryName(selectedIssue?.url ?? "").split("/")[0],
           repo: getRepositoryName(selectedIssue?.url ?? "").split("/")[1],
           headBranch: forkedRepository.split("/")[0] + ":" + branchName,
+          headRepository: forkedRepository.split("/")[1],
           baseBranch,
           title: "AI Contribution: " + (selectedIssue?.title ?? "Proposed fix"),
           body: [
