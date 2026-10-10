@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./Contribution.css";
 import ContributionProgress from "../../components/contribution/ContributionProgress";
 
@@ -53,7 +53,13 @@ function getRepositoryName(issueUrl: string) {
 }
 
 function Contribution() {
+  // Prevent failed automatic stages from launching an unbounded request loop.
+  // Each stage can still be retried explicitly from its visible action button.
+  const autoRunAttempts = useRef(new Set<string>());
   const [started, setStarted] = useState(false);
+  useEffect(() => {
+    if (!started) autoRunAttempts.current.clear();
+  }, [started]);
   const [stage, setStage] = useState(0);
   const [approved, setApproved] = useState(false);
   const [changesRequested, setChangesRequested] = useState(false);
@@ -151,9 +157,11 @@ const [forkedRepository, setForkedRepository] = useState("");
       stage === 0 &&
       issues.length > 0 &&
       !selectedIssue &&
-      !selectingIssue
+      !selectingIssue &&
+      !autoRunAttempts.current.has("select-issue")
     ) {
-      handleAISelection();
+      autoRunAttempts.current.add("select-issue");
+      void handleAISelection();
     }
   }, [
     started,
@@ -274,9 +282,11 @@ const [forkedRepository, setForkedRepository] = useState("");
     started &&
     stage === 1 &&
     repositoryAnalysis &&
-    !buildingSolution
+    !buildingSolution &&
+    !autoRunAttempts.current.has("build-solution")
   ) {
-    handleBuildSolution();
+    autoRunAttempts.current.add("build-solution");
+    void handleBuildSolution();
   }
 }, [started, stage, repositoryAnalysis, buildingSolution]);
 useEffect(() => {
@@ -284,9 +294,11 @@ useEffect(() => {
     started &&
     stage === 2 &&
     solutionPlan &&
-    !generatingCode
+    !generatingCode &&
+    !autoRunAttempts.current.has("generate-code")
   ) {
-    handleGenerateCode();
+    autoRunAttempts.current.add("generate-code");
+    void handleGenerateCode();
   }
 }, [started, stage, solutionPlan, generatingCode]);
 useEffect(() => {
@@ -295,9 +307,11 @@ useEffect(() => {
     stage === 3 &&
     codeProposal &&
     !codeReview &&
-    !reviewingCode
+    !reviewingCode &&
+    !autoRunAttempts.current.has("review-code")
   ) {
-    handleReviewCode();
+    autoRunAttempts.current.add("review-code");
+    void handleReviewCode();
   }
 }, [
   started,
@@ -638,8 +652,13 @@ useEffect(() => {
 
  
   const handleCreatePullRequest = async () => {
-  if (!branchName) {
-    setPrError("Please create a branch first.");
+  if (!selectedIssue || !forkedRepository) {
+    setPrError("The selected issue and fork are required before creating a pull request.");
+    return;
+  }
+
+  if (!branchName || !commitSuccess || !approved) {
+    setPrError("Approve the contribution and commit the proposal before creating a pull request.");
     return;
   }
 
@@ -655,12 +674,18 @@ useEffect(() => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-         owner: forkedRepository.split("/")[0],
-repo: forkedRepository.split("/")[1],
-          headBranch: branchName,
+          owner: getRepositoryName(selectedIssue?.url ?? "").split("/")[0],
+          repo: getRepositoryName(selectedIssue?.url ?? "").split("/")[1],
+          headBranch: forkedRepository.split("/")[0] + ":" + branchName,
           baseBranch,
-          title: "AI Contribution: Add Proposal",
-          body: "This pull request was created by AI Open Source Engineer.",
+          title: "AI Contribution: " + (selectedIssue?.title ?? "Proposed fix"),
+          body: [
+            "This pull request was prepared by AI Open Source Engineer.",
+            "",
+            "Closes #" + (selectedIssue?.url.split("/").pop() ?? ""),
+            "",
+            "Please review the proposed changes and run the repository test suite before merging.",
+          ].join("\n"),
         }),
       }
     );
@@ -738,8 +763,11 @@ repo: forkedRepository.split("/")[1],
       approved &&
       forkedRepository &&
       !branchName &&
-      !creatingBranch
+      !creatingBranch &&
+      !branchError &&
+      !autoRunAttempts.current.has("create-branch")
     ) {
+      autoRunAttempts.current.add("create-branch");
       void handleCreateBranch();
     }
   }, [
@@ -747,6 +775,7 @@ repo: forkedRepository.split("/")[1],
     forkedRepository,
     branchName,
     creatingBranch,
+    branchError,
   ]);
 
   useEffect(() => {
@@ -754,8 +783,11 @@ repo: forkedRepository.split("/")[1],
       approved &&
       branchName &&
       !commitSuccess &&
-      !committingFile
+      !committingFile &&
+      !commitError &&
+      !autoRunAttempts.current.has("commit-proposal")
     ) {
+      autoRunAttempts.current.add("commit-proposal");
       void handleCommitFile();
     }
   }, [
@@ -763,6 +795,7 @@ repo: forkedRepository.split("/")[1],
     branchName,
     commitSuccess,
     committingFile,
+    commitError,
   ]);
 
 
@@ -1271,11 +1304,39 @@ repo: forkedRepository.split("/")[1],
                   </p>
                 )}
 
-                {branchError && <p>{branchError}</p>}
+                {branchError && (
+                  <div role="alert">
+                    <p>{branchError}</p>
+                    <button
+                      className="contribution-start-button"
+                      onClick={() => {
+                        autoRunAttempts.current.delete("create-branch");
+                        setBranchError("");
+                      }}
+                      disabled={creatingBranch}
+                    >
+                      Retry Branch Creation
+                    </button>
+                  </div>
+                )}
 
                 {branchName && <p>Branch created: {branchName}</p>}
 
-                {commitError && <p>{commitError}</p>}
+                {commitError && (
+                  <div role="alert">
+                    <p>{commitError}</p>
+                    <button
+                      className="contribution-start-button"
+                      onClick={() => {
+                        autoRunAttempts.current.delete("commit-proposal");
+                        setCommitError("");
+                      }}
+                      disabled={committingFile}
+                    >
+                      Retry Proposal Commit
+                    </button>
+                  </div>
+                )}
 
                 {committingFile && <p>Committing AI proposal...</p>}
 
