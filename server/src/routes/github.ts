@@ -222,14 +222,6 @@ router.put("/file", async (req, res) => {
       });
     }
 
-    const token = process.env.GITHUB_TOKEN;
-
-    if (!token) {
-      return res.status(500).json({
-        error: "GITHUB_TOKEN is not configured",
-      });
-    }
-
     const pathSegments = String(filePath).split("/");
     const unsafePath =
       filePath.startsWith("/") ||
@@ -248,6 +240,13 @@ router.put("/file", async (req, res) => {
     if (Buffer.byteLength(String(content), "utf8") > 200_000) {
       return res.status(413).json({
         error: "File content exceeds the 200 KB limit",
+      });
+    }
+
+    const token = process.env.GITHUB_TOKEN;
+    if (!token) {
+      return res.status(500).json({
+        error: "GITHUB_TOKEN is not configured",
       });
     }
 
