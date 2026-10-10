@@ -503,18 +503,17 @@ router.post("/fork", async (req, res) => {
         error: "Owner and repository name are required",
       });
     }
+    if (!isValidRepositoryPart(owner) || !isValidRepositoryPart(repo)) {
+      return res.status(400).json({
+        error: "Invalid GitHub repository owner or name",
+      });
+    }
 
     const token = process.env.GITHUB_TOKEN;
 
     if (!token) {
       return res.status(500).json({
         error: "GITHUB_TOKEN is not configured",
-      });
-    }
-
-    if (!/^[A-Za-z0-9-]+$/.test(owner) || !/^[A-Za-z0-9_.-]+$/.test(repo)) {
-      return res.status(400).json({
-        error: "Invalid GitHub repository owner or name",
       });
     }
 
