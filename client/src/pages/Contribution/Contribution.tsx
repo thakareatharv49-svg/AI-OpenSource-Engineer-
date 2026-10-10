@@ -1326,7 +1326,18 @@ useEffect(() => {
                   </div>
                 )}
 
-                {forkError && <p>{forkError}</p>}
+                {forkError && (
+                  <div role="alert">
+                    <p>{forkError}</p>
+                    <button
+                      className="contribution-start-button"
+                      onClick={() => void handleForkRepository()}
+                      disabled={forkingRepository}
+                    >
+                      {forkingRepository ? "Forking Repository..." : "Retry Fork"}
+                    </button>
+                  </div>
+                )}
 
                 {forkedRepository && (
                   <p>
