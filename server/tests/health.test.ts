@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
-import type { Server } from "node:http";
+import { request as httpRequest, type Server } from "node:http";
 import { app } from "../src/index.js";
 
 let server: Server;
@@ -153,3 +153,30 @@ test("AI endpoints throttle excessive requests before calling providers", async 
   assert.equal(lastStatus, 429);
 });
 
+
+
+test("loopback API rejects foreign Host headers", async () => {
+  const address = server.address();
+  assert.ok(address && typeof address !== "string");
+  const response = await new Promise<{ statusCode: number; body: string }>((resolve, reject) => {
+    const request = httpRequest(
+      {
+        hostname: "127.0.0.1",
+        port: address.port,
+        path: "/",
+        method: "GET",
+        headers: { Host: "attacker.example" },
+      },
+      (incoming) => {
+        let body = "";
+        incoming.setEncoding("utf8");
+        incoming.on("data", (chunk: string) => { body += chunk; });
+        incoming.on("end", () => resolve({ statusCode: incoming.statusCode ?? 0, body }));
+      }
+    );
+    request.on("error", reject);
+    request.end();
+  });
+  assert.equal(response.statusCode, 421);
+  assert.deepEqual(JSON.parse(response.body), { error: "Invalid Host header" });
+});
