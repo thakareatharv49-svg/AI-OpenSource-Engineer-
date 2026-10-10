@@ -20,7 +20,7 @@ const allowedOrigins = (
 
 // When bound to loopback, reject foreign Host headers to reduce DNS-rebinding
 // risk. Explicit non-loopback deployments remain the operator's responsibility.
-const normalizedBindHost = HOST.replace(/^\\[|\\]$/g, "").toLowerCase();
+const normalizedBindHost = (HOST.startsWith("[") && HOST.endsWith("]") ? HOST.slice(1, -1) : HOST).toLowerCase();
 if (["127.0.0.1", "localhost", "::1"].includes(normalizedBindHost)) {
   app.use((req, res, next) => {
     const requestHost = (req.get("host") ?? "").toLowerCase();
