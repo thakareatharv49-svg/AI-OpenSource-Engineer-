@@ -45,14 +45,37 @@ async function fetchRepositoryFiles(repository: string) {
 
   const treeData = await treeResponse.json();
 
+  const sourceExtensions =
+    /\.(ts|tsx|js|jsx|mjs|cjs|py|pyi|go|rs|java|kt|kts|swift|c|h|cc|cpp|hpp|cs|php|rb|ex|exs|erl|hrl|scala|sc|vue|svelte|html|css|scss|sass|less|sql|sh|bash|ps1|yml|yaml|toml|json|md)$/i;
+  const ignoredPath =
+    /(^|\/)(node_modules|vendor|dist|build|coverage|\.git|\.next|\.venv|venv|__pycache__)(\/|$)/i;
+  const ignoredFile =
+    /(^|\/)(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|Cargo\.lock|poetry\.lock|Pipfile\.lock|composer\.lock|Gemfile\.lock)$/i;
+
   const files = treeData.tree
     .filter(
       (file: any) =>
         file.type === "blob" &&
         typeof file.size === "number" &&
+        file.size > 0 &&
         file.size <= 25_000 &&
-        /\.(ts|tsx|js|jsx|json|md)$/.test(file.path)
+        sourceExtensions.test(file.path) &&
+        !ignoredPath.test(file.path) &&
+        !ignoredFile.test(file.path) &&
+        !/\.min\.(js|css)$/i.test(file.path)
     )
+    .sort((a: any, b: any) => {
+      const score = (path: string) => {
+        const normalized = path.replace(/\\/g, "/").toLowerCase();
+        let rank = 0;
+        if (/(^|\/)(src|app|lib|pkg|internal|tests?|spec)(\/|$)/.test(normalized)) rank += 40;
+        if (/\.(ts|tsx|js|jsx|py|go|rs|java|kt|swift|c|h|cpp|cs|php|rb|vue|svelte)$/.test(normalized)) rank += 20;
+        if (/(^|\/)(readme|contributing|pyproject\.toml|go\.mod|cargo\.toml|package\.json)$/.test(normalized)) rank += 10;
+        if (/(^|\/)(example|examples|fixture|fixtures|generated|migrations)(\/|$)/.test(normalized)) rank -= 20;
+        return rank;
+      };
+      return score(b.path) - score(a.path) || a.path.localeCompare(b.path);
+    })
     .slice(0, 10);
 
   const filesWithContent = await Promise.all(
