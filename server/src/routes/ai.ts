@@ -443,7 +443,7 @@ Return ONLY valid JSON:
       "file": "path/to/file",
       "purpose": "...",
       "before": "existing code only if supplied; otherwise empty string",
-      "after": "proposed code or pseudocode",
+      "after": "complete replacement source contents for the target file",
       "explanation": "..."
     }
   ],
@@ -451,7 +451,7 @@ Return ONLY valid JSON:
     {
       "file": "path/to/test_file",
       "description": "...",
-      "code": "proposed test code or pseudocode"
+      "code": "complete runnable test code"
     }
   ],
   "verificationSteps": ["..."],
