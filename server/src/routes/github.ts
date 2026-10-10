@@ -27,6 +27,50 @@ const githubHeaders = (token: string) => ({
   "User-Agent": "AI-OpenSource-Engineer",
 });
 
+type ForkCheck =
+  | { ok: true; login: string }
+  | { ok: false; status: number; error: string };
+
+async function verifyAuthenticatedFork(
+  token: string,
+  owner: string,
+  repo: string
+): Promise<ForkCheck> {
+  const headers = githubHeaders(token);
+  const userResponse = await fetch("https://api.github.com/user", { headers });
+  if (!userResponse.ok) {
+    return { ok: false, status: 502, error: "Unable to verify the GitHub account for this operation." };
+  }
+
+  const user = (await userResponse.json()) as { login?: string };
+  if (!user.login || user.login.toLowerCase() !== owner.toLowerCase()) {
+    return { ok: false, status: 403, error: "Write operations are allowed only on a repository owned by the authenticated GitHub account." };
+  }
+
+  const repositoryResponse = await fetch(
+    `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`,
+    { headers }
+  );
+  if (!repositoryResponse.ok) {
+    return { ok: false, status: repositoryResponse.status === 404 ? 404 : 502, error: "Unable to verify the target repository." };
+  }
+
+  const repository = (await repositoryResponse.json()) as {
+    full_name?: string;
+    fork?: boolean;
+    parent?: { full_name?: string };
+  };
+  if (
+    repository.fork !== true ||
+    !repository.parent?.full_name ||
+    repository.parent.full_name.toLowerCase() === repository.full_name?.toLowerCase()
+  ) {
+    return { ok: false, status: 403, error: "For safety, branch creation and file commits are restricted to a fork of an upstream repository." };
+  }
+
+  return { ok: true, login: user.login };
+}
+
 /* ---------------- Get Repository Information ---------------- */
 
 router.get("/repository/:owner/:repo", async (req, res) => {
@@ -116,6 +160,11 @@ router.post("/branch", async (req, res) => {
       return res.status(500).json({
         error: "GITHUB_TOKEN is not configured",
       });
+    }
+
+    const forkCheck = await verifyAuthenticatedFork(token, owner, repo);
+    if (!forkCheck.ok) {
+      return res.status(forkCheck.status).json({ error: forkCheck.error });
     }
 
     const headers = {
@@ -250,6 +299,11 @@ router.put("/file", async (req, res) => {
       });
     }
 
+    const forkCheck = await verifyAuthenticatedFork(token, owner, repo);
+    if (!forkCheck.ok) {
+      return res.status(forkCheck.status).json({ error: forkCheck.error });
+    }
+
     const headers = {
       Accept: "application/vnd.github+json",
       Authorization: `Bearer ${token}`,
@@ -355,16 +409,31 @@ router.post("/pull-request", async (req, res) => {
       });
     }
 
-    const token = process.env.GITHUB_TOKEN;
+    if (body !== undefined && (typeof body !== "string" || body.length > 20_000)) {
+      return res.status(400).json({ error: "Pull request description must be text no longer than 20,000 characters." });
+    }
 
+    const token = process.env.GITHUB_TOKEN;
     if (!token) {
       return res.status(500).json({
         error: "GITHUB_TOKEN is not configured",
       });
     }
 
+    const authenticatedUserResponse = await fetch("https://api.github.com/user", {
+      headers: githubHeaders(token),
+    });
+    if (!authenticatedUserResponse.ok) {
+      return res.status(502).json({ error: "Unable to verify the GitHub account for pull request creation." });
+    }
+    const authenticatedUser = (await authenticatedUserResponse.json()) as { login?: string };
+    const headOwner = headBranch.split(":")[0];
+    if (!authenticatedUser.login || headOwner.toLowerCase() !== authenticatedUser.login.toLowerCase()) {
+      return res.status(403).json({ error: "Pull requests may only use a head branch owned by the authenticated GitHub account." });
+    }
+
     const response = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/pulls`,
+      `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls`,
       {
         method: "POST",
         headers: {
