@@ -425,6 +425,7 @@ router.post("/pull-request", async (req, res) => {
       title,
       body,
       headBranch,
+      headRepository,
       baseBranch,
     } = req.body;
 
@@ -438,6 +439,7 @@ router.post("/pull-request", async (req, res) => {
       !title.trim() ||
       title.length > 256 ||
       !isValidGitRef(baseBranch) ||
+      !isValidRepositoryPart(headRepository) ||
       typeof headBranch !== "string" ||
       !/^[A-Za-z0-9_.-]+:[^\\s]+$/.test(headBranch) ||
       !isValidGitRef(headBranch.split(":").slice(1).join(":"))
@@ -468,6 +470,25 @@ router.post("/pull-request", async (req, res) => {
     const headOwner = headBranch.split(":")[0];
     if (!authenticatedUser.login || headOwner.toLowerCase() !== authenticatedUser.login.toLowerCase()) {
       return res.status(403).json({ error: "Pull requests may only use a head branch owned by the authenticated GitHub account." });
+    }
+
+    // Confirm the selected head repository is actually a fork of the requested upstream.
+    const headRepositoryResponse = await fetch(
+      `https://api.github.com/repos/${encodeURIComponent(headOwner)}/${encodeURIComponent(headRepository)}`,
+      { headers: githubHeaders(token) }
+    );
+    if (!headRepositoryResponse.ok) {
+      return res.status(403).json({ error: "Unable to verify the selected fork for this pull request." });
+    }
+    const headRepositoryData = (await headRepositoryResponse.json()) as {
+      fork?: boolean;
+      parent?: { full_name?: string };
+    };
+    if (
+      headRepositoryData.fork !== true ||
+      headRepositoryData.parent?.full_name?.toLowerCase() !== `${owner}/${repo}`.toLowerCase()
+    ) {
+      return res.status(403).json({ error: "The pull request head repository must be a fork of the selected upstream repository." });
     }
 
     const response = await fetch(
