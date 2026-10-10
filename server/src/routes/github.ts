@@ -16,7 +16,7 @@ const isValidGitRef = (value: unknown): value is string =>
   !value.endsWith("/") &&
   !value.includes("..") &&
   !value.includes("@{") &&
-  !/[\\s~^:?*\\[\\]\\\\]/.test(value) &&
+  !/[\s~^:?*\[\]\\]/.test(value) &&
   !value.endsWith(".lock") &&
   !value.split("/").some((part) => !part || part.startsWith(".") || part.endsWith("."));
 
