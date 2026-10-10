@@ -206,3 +206,45 @@ test("loopback API rejects foreign Host headers", async () => {
   assert.equal(response.statusCode, 421);
   assert.deepEqual(JSON.parse(response.body), { error: "Invalid Host header" });
 });
+
+
+test("POST /api/github/safety-check allows a clean concrete proposal", async () => {
+  const response = await fetch(baseUrl + "/api/github/safety-check", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      changes: [{ filePath: "src/math.ts", content: "export const add = (a: number, b: number) => a + b;\n" }],
+    }),
+  });
+  assert.equal(response.status, 200);
+  const data = await response.json();
+  assert.equal(data.safetyReport.safeToCommit, true);
+  assert.deepEqual(data.safetyReport.findings, []);
+});
+
+test("POST /api/github/safety-check blocks secret-bearing proposals", async () => {
+  const response = await fetch(baseUrl + "/api/github/safety-check", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      changes: [{ filePath: "src/config.ts", content: 'const token = "ghp_123456789012345678901234567890123456";' }],
+    }),
+  });
+  assert.equal(response.status, 422);
+  const data = await response.json();
+  assert.equal(data.safetyReport.safeToCommit, false);
+  assert.ok(data.safetyReport.findings.some((finding: { severity: string }) => finding.severity === "block"));
+});
+
+test("POST /api/github/safety-check requires manual review for workflow changes", async () => {
+  const response = await fetch(baseUrl + "/api/github/safety-check", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      changes: [{ filePath: ".github/workflows/ci.yml", content: "name: custom workflow\n" }],
+    }),
+  });
+  assert.equal(response.status, 422);
+  const data = await response.json();
+  assert.ok(data.safetyReport.findings.some((finding: { severity: string }) => finding.severity === "review"));
+});
