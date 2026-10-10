@@ -500,8 +500,8 @@ router.post("/fork", async (req, res) => {
     }
 
     if (!data.full_name || !data.owner?.login || !data.name) {
-      return res.status(202).json({
-        message: "GitHub accepted the fork request; the fork may still be initializing. Retry repository lookup shortly.",
+      return res.status(503).json({
+        error: "GitHub accepted the fork request, but the fork is still initializing. Retry the fork step shortly.",
         pending: true,
       });
     }
