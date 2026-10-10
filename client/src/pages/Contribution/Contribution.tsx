@@ -157,35 +157,8 @@ const [forkedRepository, setForkedRepository] = useState("");
 
     fetchIssues();
   }, [started, stage]);
-    useEffect(() => {
-    if (
-      started &&
-      stage === 0 &&
-      issues.length > 0 &&
-      !selectedIssue &&
-      !selectingIssue &&
-      !autoRunAttempts.current.has("select-issue")
-    ) {
-      autoRunAttempts.current.add("select-issue");
-      void handleAISelection();
-    }
-  }, [
-    started,
-    stage,
-    issues,
-    selectedIssue,
-    selectingIssue,
-  ]);
-    useEffect(() => {
-    if (
-      started &&
-      stage === 0 &&
-      selectedIssue &&
-      aiSelection
-    ) {
-      handleRepositoryAnalysis();
-    }
-  }, [started, stage, selectedIssue, aiSelection]);
+    
+    
 
   const handleAISelection = async () => {
     if (issues.length === 0) return;
@@ -284,49 +257,9 @@ const [forkedRepository, setForkedRepository] = useState("");
       setAnalyzingRepository(false);
     }
   };
-  useEffect(() => {
-  if (
-    started &&
-    stage === 1 &&
-    repositoryAnalysis &&
-    !buildingSolution &&
-    !autoRunAttempts.current.has("build-solution")
-  ) {
-    autoRunAttempts.current.add("build-solution");
-    void handleBuildSolution();
-  }
-}, [started, stage, repositoryAnalysis, buildingSolution]);
-useEffect(() => {
-  if (
-    started &&
-    stage === 2 &&
-    solutionPlan &&
-    !generatingCode &&
-    !autoRunAttempts.current.has("generate-code")
-  ) {
-    autoRunAttempts.current.add("generate-code");
-    void handleGenerateCode();
-  }
-}, [started, stage, solutionPlan, generatingCode]);
-useEffect(() => {
-  if (
-    started &&
-    stage === 3 &&
-    codeProposal &&
-    !codeReview &&
-    !reviewingCode &&
-    !autoRunAttempts.current.has("review-code")
-  ) {
-    autoRunAttempts.current.add("review-code");
-    void handleReviewCode();
-  }
-}, [
-  started,
-  stage,
-  codeProposal,
-  codeReview,
-  reviewingCode,
-]);
+  
+
+
   const handleBuildSolution = async () => {
     if (!selectedIssue || !repositoryAnalysis) return;
 
@@ -733,6 +666,83 @@ useEffect(() => {
     setCreatingPR(false);
   }
 };
+
+useEffect(() => {
+    if (
+      started &&
+      stage === 0 &&
+      issues.length > 0 &&
+      !selectedIssue &&
+      !selectingIssue &&
+      !autoRunAttempts.current.has("select-issue")
+    ) {
+      autoRunAttempts.current.add("select-issue");
+      void handleAISelection();
+    }
+  }, [
+    started,
+    stage,
+    issues,
+    selectedIssue,
+    selectingIssue,
+  ]);
+
+useEffect(() => {
+    if (
+      started &&
+      stage === 0 &&
+      selectedIssue &&
+      aiSelection
+    ) {
+      handleRepositoryAnalysis();
+    }
+  }, [started, stage, selectedIssue, aiSelection]);
+
+useEffect(() => {
+  if (
+    started &&
+    stage === 1 &&
+    repositoryAnalysis &&
+    !buildingSolution &&
+    !autoRunAttempts.current.has("build-solution")
+  ) {
+    autoRunAttempts.current.add("build-solution");
+    void handleBuildSolution();
+  }
+}, [started, stage, repositoryAnalysis, buildingSolution]);
+
+useEffect(() => {
+  if (
+    started &&
+    stage === 2 &&
+    solutionPlan &&
+    !generatingCode &&
+    !autoRunAttempts.current.has("generate-code")
+  ) {
+    autoRunAttempts.current.add("generate-code");
+    void handleGenerateCode();
+  }
+}, [started, stage, solutionPlan, generatingCode]);
+
+useEffect(() => {
+  if (
+    started &&
+    stage === 3 &&
+    codeProposal &&
+    !codeReview &&
+    !reviewingCode &&
+    !autoRunAttempts.current.has("review-code")
+  ) {
+    autoRunAttempts.current.add("review-code");
+    void handleReviewCode();
+  }
+}, [
+  started,
+  stage,
+  codeProposal,
+  codeReview,
+  reviewingCode,
+]);
 
   const stages = [
     {
