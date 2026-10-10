@@ -276,8 +276,16 @@ router.put("/file", async (req, res) => {
       filePath.startsWith("/") ||
       filePath.includes("\\") ||
       pathSegments.some((segment: string) => !segment || segment === "." || segment === "..") ||
-      pathSegments.includes(".git") ||
-      /(^|\/)\.env(?:\.|$)/i.test(filePath) ||
+      pathSegments.some((segment: string) =>
+        /^\.env(?:\.|$)/i.test(segment) ||
+        /^\.npmrc$/i.test(segment) ||
+        /^\.pypirc$/i.test(segment) ||
+        /^\.netrc$/i.test(segment) ||
+        /^\.ssh$/i.test(segment) ||
+        /^\.aws$/i.test(segment) ||
+        /^(?:secrets?|credentials?)$/i.test(segment)
+      ) ||
+      /(^|\/)(?:id_rsa|id_ed25519|id_ecdsa|private_key|credentials\.json)$/i.test(filePath) ||
       /[?#\u0000-\u001f]/.test(filePath);
 
     if (unsafePath) {
