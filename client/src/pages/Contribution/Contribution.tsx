@@ -331,6 +331,16 @@ const [forkedRepository, setForkedRepository] = useState("");
             repositoryAnalysis,
             solutionPlan,
             files: repositoryFiles,
+            reviewFeedback: changesRequested && codeReview
+              ? {
+                  summary: codeReview.summary,
+                  bugs: codeReview.bugs,
+                  securityIssues: codeReview.securityIssues,
+                  codeQualityIssues: codeReview.codeQualityIssues,
+                  missingTests: codeReview.missingTests,
+                  suggestions: codeReview.suggestions,
+                }
+              : null,
           }),
         }
       );
@@ -342,6 +352,8 @@ const [forkedRepository, setForkedRepository] = useState("");
       }
 
       setCodeProposal(data.result);
+      setCodeReview(null);
+      autoRunAttempts.current.delete("review-code");
       setStage(3);
     } catch (error) {
       console.error("Code generation error:", error);
@@ -1147,7 +1159,9 @@ useEffect(() => {
                   >
                     {generatingCode
                       ? "Generating Code..."
-                      : "Generate Code"}
+                      : changesRequested
+                        ? "Regenerate Proposal Using Review Feedback"
+                        : "Generate Code"}
                   </button>
 
                   {codeError && <p>{codeError}</p>}
@@ -1274,6 +1288,7 @@ useEffect(() => {
                   <button
                     className="contribution-start-button"
                     onClick={() => setStage(4)}
+                    disabled={!codeReview || reviewingCode}
                   >
                     Continue to Final Review
                   </button>
