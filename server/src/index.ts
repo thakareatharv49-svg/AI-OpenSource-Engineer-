@@ -18,6 +18,22 @@ const allowedOrigins = (
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+// When bound to loopback, reject foreign Host headers to reduce DNS-rebinding
+// risk. Explicit non-loopback deployments remain the operator's responsibility.
+const normalizedBindHost = HOST.replace(/^\\[|\\]$/g, "").toLowerCase();
+if (["127.0.0.1", "localhost", "::1"].includes(normalizedBindHost)) {
+  app.use((req, res, next) => {
+    const requestHost = (req.get("host") ?? "").toLowerCase();
+    const requestHostname = requestHost.startsWith("[")
+      ? requestHost.slice(1, requestHost.indexOf("]"))
+      : requestHost.split(":")[0];
+    if (!["127.0.0.1", "localhost", "::1"].includes(requestHostname)) {
+      return res.status(421).json({ error: "Invalid Host header" });
+    }
+    next();
+  });
+}
+
 app.use(
   cors({
     origin: (origin, callback) => {
