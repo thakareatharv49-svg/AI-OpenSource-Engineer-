@@ -451,16 +451,63 @@ router.post("/fork", async (req, res) => {
       }
     );
 
-    const data = await response.json();
+    let data = await response.json();
 
-    if (!response.ok) {
+    if (!response.ok && response.status === 422) {
+      // GitHub returns 422 when the authenticated user already has a fork.
+      // Reuse that fork only when its parent is the requested upstream repo.
+      const userResponse = await fetch("https://api.github.com/user", {
+        headers: githubHeaders(token),
+      });
+      if (userResponse.ok) {
+        const user = (await userResponse.json()) as { login?: string };
+        if (user.login) {
+          const existingResponse = await fetch(
+            `https://api.github.com/repos/${encodeURIComponent(user.login)}/${encodeURIComponent(repo)}`,
+            { headers: githubHeaders(token) }
+          );
+          if (existingResponse.ok) {
+            const existing = await existingResponse.json();
+            if (
+              typeof existing.parent?.full_name === "string" &&
+              existing.parent.full_name.toLowerCase() === `${owner}/${repo}`.toLowerCase()
+            ) {
+              data = existing;
+            } else {
+              return res.status(409).json({
+                error: "A repository with this name already exists in your account but is not a fork of the selected upstream repository.",
+              });
+            }
+          } else {
+            return res.status(response.status).json({
+              error: data.message || "GitHub rejected the fork request.",
+            });
+          }
+        } else {
+          return res.status(response.status).json({
+            error: data.message || "GitHub rejected the fork request.",
+          });
+        }
+      } else {
+        return res.status(response.status).json({
+          error: data.message || "GitHub rejected the fork request.",
+        });
+      }
+    } else if (!response.ok) {
       return res.status(response.status).json({
         error: data.message || "Failed to fork repository",
       });
     }
 
-    return res.status(201).json({
-      message: "Repository forked successfully",
+    if (!data.full_name || !data.owner?.login || !data.name) {
+      return res.status(202).json({
+        message: "GitHub accepted the fork request; the fork may still be initializing. Retry repository lookup shortly.",
+        pending: true,
+      });
+    }
+
+    return res.status(response.status === 422 ? 200 : 201).json({
+      message: response.status === 422 ? "Existing fork reused successfully" : "Repository forked successfully",
       repository: {
         fullName: data.full_name,
         owner: data.owner.login,
