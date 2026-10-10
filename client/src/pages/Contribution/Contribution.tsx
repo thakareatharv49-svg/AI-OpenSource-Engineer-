@@ -584,11 +584,15 @@ const [forkedRepository, setForkedRepository] = useState("");
 
       const item = change as Record<string, unknown>;
       const filePath = typeof item.file === "string" ? item.file.trim() : "";
-      const content = typeof item.after === "string"
-        ? item.after
-            .replace(/^\\s*\\x60\\x60\\x60[a-zA-Z0-9_-]*\\s*\\n/, "")
-            .replace(/\\n\\x60\\x60\\x60\\s*$/, "")
-        : "";
+      let content = typeof item.after === "string" ? item.after : "";
+      const contentLines = content.split("\n");
+      if (contentLines[0]?.trim().startsWith("```")) {
+        contentLines.shift();
+      }
+      if (contentLines[contentLines.length - 1]?.trim() === "```") {
+        contentLines.pop();
+      }
+      content = contentLines.join("\n");
       const segments = filePath.split("/");
       const unsafePath =
         !filePath ||
