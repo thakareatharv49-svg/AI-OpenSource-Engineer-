@@ -302,6 +302,7 @@ Return ONLY valid JSON:
     return res.json({
       message: "Repository analysis completed",
       result,
+      files: repositoryFiles,
     });
   } catch (error) {
     console.error("Repository analysis error:", error);
@@ -418,8 +419,12 @@ ${JSON.stringify(solutionPlan, null, 2)}
 Available repository files, if supplied:
 ${JSON.stringify(files ?? [], null, 2)}
 
-If actual source files are not supplied, clearly state that the proposal
-is preliminary and do not invent exact existing code.
+Use the supplied source files to make a concrete, minimal implementation.
+For every item in "changes", "after" MUST contain the complete replacement file
+contents (not pseudocode, a diff fragment, or instructions). Preserve unrelated
+existing behavior. Add new files only when needed. Never include secrets.
+If a target file's actual contents were not supplied, do not replace that file;
+instead explain the missing context in "warnings".
 
 Return ONLY valid JSON:
 {
