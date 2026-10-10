@@ -120,3 +120,35 @@ test("GET /api/github/repository rejects invalid owner or repository path segmen
   assert.equal(response.status, 400);
   assert.match((await response.json()).error, /invalid GitHub repository/i);
 });
+
+
+test("PUT /api/github/file rejects credential paths before contacting GitHub", async () => {
+  const response = await fetch(baseUrl + "/api/github/file", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      owner: "example",
+      repo: "project",
+      branchName: "ai-contribution-test",
+      filePath: ".npmrc",
+      content: "//registry.npmjs.org/:_authToken=secret",
+      commitMessage: "test",
+    }),
+  });
+  assert.equal(response.status, 400);
+  assert.match((await response.json()).error, /safe repository-relative path/i);
+});
+
+test("AI endpoints throttle excessive requests before calling providers", async () => {
+  let lastStatus = 0;
+  for (let i = 0; i < 21; i += 1) {
+    const response = await fetch(baseUrl + "/api/ai/select-issue", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ issues: [] }),
+    });
+    lastStatus = response.status;
+    if (i < 20) assert.equal(response.status, 400);
+  }
+  assert.equal(lastStatus, 429);
+});
