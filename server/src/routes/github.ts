@@ -198,8 +198,8 @@ router.put("/file", async (req, res) => {
       filePath.includes("\\") ||
       pathSegments.some((segment: string) => !segment || segment === "." || segment === "..") ||
       pathSegments.includes(".git") ||
-      /(^|\\/)\\.env(?:\\.|$)/i.test(filePath) ||
-      /[?#\\u0000-\\u001f]/.test(filePath);
+      /(^|\/)\.env(?:\.|$)/i.test(filePath) ||
+      /[?#\u0000-\u001f]/.test(filePath);
 
     if (unsafePath) {
       return res.status(400).json({
