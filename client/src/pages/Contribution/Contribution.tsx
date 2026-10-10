@@ -704,6 +704,8 @@ useEffect(() => {
     issues,
     selectedIssue,
     selectingIssue,
+    // The handler is intentionally omitted; the effect is guarded by the attempt ref.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   ]);
 
 useEffect(() => {
@@ -715,6 +717,7 @@ useEffect(() => {
     ) {
       void Promise.resolve().then(() => handleRepositoryAnalysis());
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [started, stage, selectedIssue, aiSelection]);
 
 useEffect(() => {
@@ -728,6 +731,7 @@ useEffect(() => {
     autoRunAttempts.current.add("build-solution");
     void handleBuildSolution();
   }
+// eslint-disable-next-line react-hooks/exhaustive-deps
 }, [started, stage, repositoryAnalysis, buildingSolution]);
 
 useEffect(() => {
@@ -741,6 +745,7 @@ useEffect(() => {
     autoRunAttempts.current.add("generate-code");
     void handleGenerateCode();
   }
+// eslint-disable-next-line react-hooks/exhaustive-deps
 }, [started, stage, solutionPlan, generatingCode]);
 
 useEffect(() => {
@@ -761,6 +766,7 @@ useEffect(() => {
   codeProposal,
   codeReview,
   reviewingCode,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
 ]);
 
   const stages = [
@@ -826,6 +832,7 @@ useEffect(() => {
     branchName,
     creatingBranch,
     branchError,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   ]);
 
   useEffect(() => {
@@ -846,6 +853,7 @@ useEffect(() => {
     commitSuccess,
     committingFile,
     commitError,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   ]);
 
 
