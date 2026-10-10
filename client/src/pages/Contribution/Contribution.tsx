@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "./Contribution.css";
 import ContributionProgress from "../../components/contribution/ContributionProgress";
+import { API_BASE_URL } from "../../lib/api";
 
 type GitHubIssue = {
   id: number;
@@ -138,7 +139,7 @@ const [forkedRepository, setForkedRepository] = useState("");
 
       try {
         const response = await fetch(
-          "http://localhost:5000/api/github/issues"
+          `${API_BASE_URL}/api/github/issues`
         );
 
         if (!response.ok) {
@@ -168,7 +169,7 @@ const [forkedRepository, setForkedRepository] = useState("");
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/ai/select-issue",
+        `${API_BASE_URL}/api/ai/select-issue`,
         {
           method: "POST",
           headers: {
@@ -221,7 +222,7 @@ const [forkedRepository, setForkedRepository] = useState("");
       const repository = getRepositoryName(selectedIssue.url);
 
       const response = await fetch(
-        "http://localhost:5000/api/ai/analyze-repository",
+        `${API_BASE_URL}/api/ai/analyze-repository`,
         {
           method: "POST",
           headers: {
@@ -270,7 +271,7 @@ const [forkedRepository, setForkedRepository] = useState("");
       const repository = getRepositoryName(selectedIssue.url);
 
       const response = await fetch(
-        "http://localhost:5000/api/ai/build-solution",
+        `${API_BASE_URL}/api/ai/build-solution`,
         {
           method: "POST",
           headers: {
@@ -317,7 +318,7 @@ const [forkedRepository, setForkedRepository] = useState("");
       const repository = getRepositoryName(selectedIssue.url);
 
       const response = await fetch(
-        "http://localhost:5000/api/ai/generate-code",
+        `${API_BASE_URL}/api/ai/generate-code`,
         {
           method: "POST",
           headers: {
@@ -363,7 +364,7 @@ const [forkedRepository, setForkedRepository] = useState("");
       const repository = getRepositoryName(selectedIssue.url);
 
       const response = await fetch(
-        "http://localhost:5000/api/ai/review-code",
+        `${API_BASE_URL}/api/ai/review-code`,
         {
           method: "POST",
           headers: {
@@ -411,7 +412,7 @@ const [forkedRepository, setForkedRepository] = useState("");
     const [owner, repo] = repository.split("/");
 
     const response = await fetch(
-      "http://localhost:5000/api/github/fork",
+      `${API_BASE_URL}/api/github/fork`,
       {
         method: "POST",
         headers: {
@@ -463,7 +464,7 @@ const [forkedRepository, setForkedRepository] = useState("");
       }
 
       const repositoryResponse = await fetch(
-        `http://localhost:5000/api/github/repository/${owner}/${repo}`
+        `${API_BASE_URL}/api/github/repository/${owner}/${repo}`
       );
 
       const repositoryData = await repositoryResponse.json();
@@ -480,7 +481,7 @@ const [forkedRepository, setForkedRepository] = useState("");
       const newBranchName = `ai-contribution-${Date.now()}`;
 
       const response = await fetch(
-        "http://localhost:5000/api/github/branch",
+        `${API_BASE_URL}/api/github/branch`,
         {
           method: "POST",
           headers: {
@@ -574,7 +575,7 @@ const [forkedRepository, setForkedRepository] = useState("");
       // Commit actual proposed source files, not a JSON description of the proposal.
       // Sequential writes avoid racing GitHub's branch-head updates.
       for (const change of normalizedChanges) {
-        const response = await fetch("http://localhost:5000/api/github/file", {
+        const response = await fetch(`${API_BASE_URL}/api/github/file`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -621,7 +622,7 @@ const [forkedRepository, setForkedRepository] = useState("");
 
   try {
     const response = await fetch(
-      "http://localhost:5000/api/github/pull-request",
+      `${API_BASE_URL}/api/github/pull-request`,
       {
         method: "POST",
         headers: {
