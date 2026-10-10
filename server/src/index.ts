@@ -2,12 +2,13 @@ import githubRouter from "./routes/github.js";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import { pathToFileURL } from "node:url";
 import aiRouter from "./routes/ai.js";
 
 dotenv.config();
 
 const app = express();
-const PORT = 5000;
+const PORT = Number(process.env.PORT ?? 5000);
 
 app.use(cors());
 app.use(express.json());
@@ -130,6 +131,11 @@ app.get("/api/github/issues", async (_req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+export { app };
+
+// Avoid opening a network listener when the app is imported by tests.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  app.listen(PORT, () => {
+    console.log("Server running on http://localhost:" + PORT);
+  });
+}
