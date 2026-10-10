@@ -34,6 +34,11 @@ type CodeReview = {
   confidence: number;
 };
 
+type RepositoryFile = {
+  path: string;
+  content: string;
+};
+
 type RepositoryAnalysis = {
   summary?: string;
   repositoryOverview?: string;
@@ -99,6 +104,7 @@ const [forkedRepository, setForkedRepository] = useState("");
 
   const [repositoryAnalysis, setRepositoryAnalysis] =
     useState<RepositoryAnalysis | null>(null);
+  const [repositoryFiles, setRepositoryFiles] = useState<RepositoryFile[]>([]);
 
   const [analyzingRepository, setAnalyzingRepository] =
     useState(false);
@@ -264,6 +270,7 @@ const [forkedRepository, setForkedRepository] = useState("");
       }
 
       setRepositoryAnalysis(data.result);
+      setRepositoryFiles(Array.isArray(data.files) ? data.files : []);
       setStage(1);
     } catch (error) {
       console.error("Repository analysis error:", error);
@@ -388,6 +395,7 @@ useEffect(() => {
             issue: selectedIssue,
             repositoryAnalysis,
             solutionPlan,
+            files: repositoryFiles,
           }),
         }
       );
@@ -578,79 +586,92 @@ useEffect(() => {
     }
   };
   const handleCommitFile = async () => {
-  console.log("Commit AI Proposal button clicked");
-
-  if (!branchName) {
-    setCommitError("Please create a branch first.");
-    return;
-  }
-
-  if (!forkedRepository) {
-    setCommitError("Please fork the repository first.");
-    return;
-  }
-
-  if (!codeProposal) {
-    setCommitError("Code proposal is not available.");
-    return;
-  }
-
-  setCommittingFile(true);
-  setCommitError("");
-  setCommitSuccess(false);
-
-  try {
-    const [owner, repo] = forkedRepository.split("/");
-
-    console.log("Commit details:", {
-      owner,
-      repo,
-      branchName,
-    });
-
-    const response = await fetch(
-      "http://localhost:5000/api/github/file",
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          owner,
-          repo,
-          branchName,
-          filePath: "ai-contribution-proposal.json",
-          content: JSON.stringify(codeProposal, null, 2),
-          commitMessage: "Add AI contribution proposal",
-        }),
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data.error || "Failed to commit file."
-      );
+    if (!branchName || !forkedRepository || !codeProposal) {
+      setCommitError("A fork, branch, and reviewed code proposal are required.");
+      return;
     }
 
-    console.log("File committed successfully:", data);
+    const changes = codeProposal.changes;
+    if (!Array.isArray(changes) || changes.length === 0) {
+      setCommitError("The proposal contains no concrete file changes. Request a new code proposal before committing.");
+      return;
+    }
 
-    setCommitSuccess(true);
-  } catch (error) {
-    console.error("File commit error:", error);
+    const normalizedChanges: Array<{ filePath: string; content: string }> = [];
+    for (const change of changes) {
+      if (!change || typeof change !== "object") {
+        setCommitError("The proposal contains an invalid file change.");
+        return;
+      }
 
-    setCommitError(
-      error instanceof Error
-        ? error.message
-        : "Failed to commit file."
-    );
-  } finally {
-    setCommittingFile(false);
-  }
-};
+      const item = change as Record<string, unknown>;
+      const filePath = typeof item.file === "string" ? item.file.trim() : "";
+      const content = typeof item.after === "string" ? item.after : "";
+      const segments = filePath.split("/");
+      const unsafePath =
+        !filePath ||
+        filePath.startsWith("/") ||
+        filePath.includes("\\") ||
+        segments.some((segment) => !segment || segment === "." || segment === "..") ||
+        filePath.startsWith(".git/") ||
+        /(^|\/)\.env(?:\.|$)/i.test(filePath);
 
- 
+      if (unsafePath) {
+        setCommitError("The proposal contains an unsafe or invalid file path: " + filePath);
+        return;
+      }
+      if (!content.trim() || /(^|\n)\s*(?:\.\.\.|TODO:\s*implement|implementation goes here|insert code here)\s*(?:\n|$)/i.test(content)) {
+        setCommitError("The proposal for " + filePath + " is empty or contains an obvious placeholder.");
+        return;
+      }
+      normalizedChanges.push({ filePath, content });
+    }
+
+    setCommittingFile(true);
+    setCommitError("");
+    setCommitSuccess(false);
+
+    try {
+      const parts = forkedRepository.split("/");
+      const [owner, repo] = parts;
+      if (!owner || !repo) {
+        throw new Error("The fork repository name is invalid.");
+      }
+
+      // Commit actual proposed source files, not a JSON description of the proposal.
+      // Sequential writes avoid racing GitHub's branch-head updates.
+      for (const change of normalizedChanges) {
+        const response = await fetch("http://localhost:5000/api/github/file", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            owner,
+            repo,
+            branchName,
+            filePath: change.filePath,
+            content: change.content,
+            commitMessage: "AI contribution: update " + change.filePath,
+          }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(
+            data.error || "Failed to commit " + change.filePath + "."
+          );
+        }
+      }
+
+      setCommitSuccess(true);
+    } catch (error) {
+      setCommitError(
+        error instanceof Error ? error.message : "Failed to commit proposed changes."
+      );
+    } finally {
+      setCommittingFile(false);
+    }
+  };
+
   const handleCreatePullRequest = async () => {
   if (!selectedIssue || !forkedRepository) {
     setPrError("The selected issue and fork are required before creating a pull request.");
