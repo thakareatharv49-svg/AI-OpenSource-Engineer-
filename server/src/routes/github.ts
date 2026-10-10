@@ -357,15 +357,30 @@ router.post("/fork", async (req, res) => {
       });
     }
 
+    const token = process.env.GITHUB_TOKEN;
+
+    if (!token) {
+      return res.status(500).json({
+        error: "GITHUB_TOKEN is not configured",
+      });
+    }
+
+    if (!/^[A-Za-z0-9-]+$/.test(owner) || !/^[A-Za-z0-9_.-]+$/.test(repo)) {
+      return res.status(400).json({
+        error: "Invalid GitHub repository owner or name",
+      });
+    }
+
     const response = await fetch(
       `https://api.github.com/repos/${owner}/${repo}/forks`,
       {
         method: "POST",
         headers: {
-  Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-  Accept: "application/vnd.github+json",
-  "X-GitHub-Api-Version": "2022-11-28",
-},
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+          "User-Agent": "AI-OpenSource-Engineer",
+        },
       }
     );
 
