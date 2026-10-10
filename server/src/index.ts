@@ -40,6 +40,39 @@ app.use((_req, res, next) => {
   next();
 });
 
+const aiRequestBuckets = new Map<string, { count: number; resetAt: number }>();
+const AI_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const AI_RATE_LIMIT_MAX = 20;
+
+app.use("/api/ai", (req, res, next) => {
+  const now = Date.now();
+  for (const [key, bucket] of aiRequestBuckets) {
+    if (bucket.resetAt <= now) aiRequestBuckets.delete(key);
+  }
+
+  const key = req.ip || req.socket.remoteAddress || "unknown";
+  let bucket = aiRequestBuckets.get(key);
+  if (!bucket || bucket.resetAt <= now) {
+    bucket = { count: 0, resetAt: now + AI_RATE_LIMIT_WINDOW_MS };
+    aiRequestBuckets.set(key, bucket);
+  }
+
+  bucket.count += 1;
+  res.setHeader("RateLimit-Policy", `${AI_RATE_LIMIT_MAX};w=600`);
+  res.setHeader("RateLimit-Limit", String(AI_RATE_LIMIT_MAX));
+  res.setHeader("RateLimit-Remaining", String(Math.max(0, AI_RATE_LIMIT_MAX - bucket.count)));
+  res.setHeader("RateLimit-Reset", String(Math.ceil((bucket.resetAt - now) / 1000)));
+
+  if (bucket.count > AI_RATE_LIMIT_MAX) {
+    res.setHeader("Retry-After", String(Math.ceil((bucket.resetAt - now) / 1000)));
+    return res.status(429).json({
+      error: "AI request limit reached. Please wait before trying again.",
+    });
+  }
+
+  next();
+});
+
 app.use("/api/ai", aiRouter);
 app.use("/api/github", githubRouter);
 
