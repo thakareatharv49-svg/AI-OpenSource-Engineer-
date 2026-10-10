@@ -398,7 +398,37 @@ const [forkedRepository, setForkedRepository] = useState("");
         throw new Error(data.error || "Code review failed");
       }
 
-      setCodeReview(data.result);
+      const review = data.result as Partial<CodeReview> | undefined;
+      const allowedStatuses = [
+        "Approved",
+        "Changes Requested",
+        "Needs More Information",
+      ] as const;
+      const overallStatus: CodeReview["overallStatus"] =
+        allowedStatuses.includes(String(review?.overallStatus) as typeof allowedStatuses[number])
+          ? (review?.overallStatus as CodeReview["overallStatus"])
+          : "Needs More Information";
+      const stringList = (value: unknown): string[] =>
+        Array.isArray(value)
+          ? value.filter((item): item is string => typeof item === "string")
+          : [];
+
+      setCodeReview({
+        overallStatus,
+        summary:
+          typeof review?.summary === "string"
+            ? review.summary
+            : "The AI response did not include a review summary.",
+        bugs: stringList(review?.bugs),
+        securityIssues: stringList(review?.securityIssues),
+        codeQualityIssues: stringList(review?.codeQualityIssues),
+        missingTests: stringList(review?.missingTests),
+        suggestions: stringList(review?.suggestions),
+        confidence:
+          typeof review?.confidence === "number" && Number.isFinite(review.confidence)
+            ? Math.min(100, Math.max(0, Math.round(review.confidence)))
+            : 0,
+      });
     } catch (error) {
       console.error("Code review error:", error);
 
