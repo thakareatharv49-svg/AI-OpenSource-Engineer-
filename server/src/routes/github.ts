@@ -352,7 +352,7 @@ router.post("/pull-request", async (req, res) => {
       !isValidGitRef(headBranch.split(":").slice(1).join(":"))
     ) {
       return res.status(400).json({
-        error: "Title, head branch, and base branch must be valid",
+        error: "Title, head branch, and base branch must be valid; title is required",
       });
     }
 
