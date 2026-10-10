@@ -49,6 +49,8 @@ async function fetchRepositoryFiles(repository: string) {
     .filter(
       (file: any) =>
         file.type === "blob" &&
+        typeof file.size === "number" &&
+        file.size <= 100_000 &&
         /\.(ts|tsx|js|jsx|json|md)$/.test(file.path)
     )
     .slice(0, 20);
@@ -56,7 +58,10 @@ async function fetchRepositoryFiles(repository: string) {
   const filesWithContent = await Promise.all(
     files.map(async (file: any) => {
       const fileResponse = await fetch(
-        `https://api.github.com/repos/${repository}/contents/${file.path}?ref=${defaultBranch}`,
+        `https://api.github.com/repos/${repository}/contents/${file.path
+          .split("/")
+          .map(encodeURIComponent)
+          .join("/")}?ref=${encodeURIComponent(defaultBranch)}`,
         { headers }
       );
 
@@ -282,11 +287,10 @@ ${JSON.stringify(repositoryFiles, null, 2)}
 Issue:
 ${JSON.stringify(issue, null, 2)}
 
-Use the available file paths to identify potentially relevant files.
-
-Do not claim to have inspected file contents.
-Do not invent exact source code.
-Clearly distinguish confirmed information from assumptions.
+Inspect the supplied file paths and source contents to identify the most relevant files.
+Base findings on the actual supplied content, and clearly distinguish confirmed facts
+from assumptions. Do not invent files, functions, APIs, or source code. If the bounded
+file sample is insufficient, explain what additional files must be inspected.
 
 Return ONLY valid JSON:
 {
