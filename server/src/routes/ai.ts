@@ -50,10 +50,10 @@ async function fetchRepositoryFiles(repository: string) {
       (file: any) =>
         file.type === "blob" &&
         typeof file.size === "number" &&
-        file.size <= 100_000 &&
+        file.size <= 25_000 &&
         /\.(ts|tsx|js|jsx|json|md)$/.test(file.path)
     )
-    .slice(0, 20);
+    .slice(0, 10);
 
   const filesWithContent = await Promise.all(
     files.map(async (file: any) => {
