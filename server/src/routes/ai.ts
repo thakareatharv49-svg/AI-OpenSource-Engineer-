@@ -537,7 +537,7 @@ Do not claim that you executed the code or tests.
 
 Return ONLY valid JSON:
 {
-  "overallStatus": "Approved",
+  "overallStatus": "Needs More Information",
   "summary": "Brief review summary",
   "bugs": [],
   "securityIssues": [],
@@ -548,6 +548,8 @@ Return ONLY valid JSON:
 }
 
 Rules:
+- The JSON above is a schema example, not a suggested verdict. Evaluate the actual proposal.
+- Use "Needs More Information" when source context or evidence is insufficient.
 - overallStatus MUST be exactly one of:
   "Approved", "Changes Requested", or "Needs More Information".
 - Choose exactly one overallStatus.
