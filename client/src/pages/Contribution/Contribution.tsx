@@ -618,6 +618,32 @@ const [forkedRepository, setForkedRepository] = useState("");
     setCommitSuccess(false);
 
     try {
+      // Server-side final gate: never trust the browser's local validation alone.
+      const safetyResponse = await fetch(`${API_BASE_URL}/api/github/safety-check`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          changes: normalizedChanges.map((change) => ({
+            filePath: change.filePath,
+            content: change.content,
+          })),
+        }),
+      });
+      const safetyData = await safetyResponse.json();
+      if (!safetyResponse.ok || safetyData.safetyReport?.safeToCommit !== true) {
+        const findings = Array.isArray(safetyData.safetyReport?.findings)
+          ? safetyData.safetyReport.findings
+              .map((finding: { file?: string; reason?: string }) =>
+                `${finding.file ?? "proposal"}: ${finding.reason ?? "manual review required"}`
+              )
+              .join("; ")
+          : "";
+        throw new Error(
+          "Safety gate stopped this commit. Review the proposed changes before retrying." +
+          (findings ? " " + findings : "")
+        );
+      }
+
       const parts = forkedRepository.split("/");
       const [owner, repo] = parts;
       if (!owner || !repo) {
