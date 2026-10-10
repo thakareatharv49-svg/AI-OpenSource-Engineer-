@@ -87,9 +87,14 @@ GitHub Actions runs these frontend and backend checks on pushes and pull request
 
 ## Safety and current limitations
 
+- The API binds to loopback by default and rejects foreign `Host` headers in loopback mode to reduce DNS-rebinding risk. Do not set `HOST` to a public interface unless you have added real user authentication, HTTPS, and deployment-grade abuse controls.
+- Browser CORS is an additional boundary, not authentication. The API uses a local-process limit of 20 AI requests per client IP per 10 minutes to reduce accidental or abusive provider spend; this is not a shared or deployment-grade rate limiter.
+- Branch creation and file commits are restricted to repositories owned by the authenticated GitHub account and verified as forks. Pull-request creation only accepts a head branch owned by the authenticated account.
+- Commits reject common credential/private-key paths such as `.env`, `.npmrc`, `.pypirc`, `.ssh`, `.aws`, secret/credential directories, and common private-key filenames. This is defense in depth, not a guarantee that arbitrary file contents contain no secrets.
+- AI prompts explicitly treat issue text, repository files, source comments, and review feedback as untrusted data. Prompt-injection defenses are best-effort; inspect every proposed diff.
 - Review generated file contents before approval. AI output can be wrong even when the reviewer says it is approved.
-- The application commits the proposed replacement contents for the files listed in the proposal; it does not execute the target repository's tests or prove the change is correct.
-- Keep secrets in local environment files or GitHub secret storage. Do not paste them into issues or generated proposals.
+- The application commits proposed replacement contents for the files listed in the proposal; it does not execute the target repository's tests or prove the change is correct. Run appropriate tests in a sandbox before submitting a pull request.
+- Keep secrets in local environment files or GitHub secret storage. Never commit real keys or paste them into issues or generated proposals.
 - The first version reads a bounded set of repository source files. Large repositories may need more targeted file retrieval before a proposal is reliable.
 
 ## Goal
