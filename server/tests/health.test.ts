@@ -132,6 +132,22 @@ test("GET /api/github/repository rejects invalid owner or repository path segmen
 });
 
 
+test("PUT /api/github/file rejects oversized commit messages", async () => {
+  const response = await fetch(baseUrl + "/api/github/file", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      owner: "example",
+      repo: "project",
+      branchName: "ai-contribution-test",
+      filePath: "README.md",
+      content: "# safe",
+      commitMessage: "x".repeat(201),
+    }),
+  });
+  assert.equal(response.status, 400);
+});
+
 test("PUT /api/github/file rejects credential paths before contacting GitHub", async () => {
   const response = await fetch(baseUrl + "/api/github/file", {
     method: "PUT",
