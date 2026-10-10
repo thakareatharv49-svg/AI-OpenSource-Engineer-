@@ -353,6 +353,7 @@ const [forkedRepository, setForkedRepository] = useState("");
 
       setCodeProposal(data.result);
       setCodeReview(null);
+      setChangesRequested(false);
       autoRunAttempts.current.delete("review-code");
       setStage(3);
     } catch (error) {
@@ -1234,7 +1235,7 @@ useEffect(() => {
                     <div className="code-review-results">
                       {changesRequested && (
   <p className="changes-requested-message">
-    Changes requested. Review and improve the code proposal before approval.
+    Changes requested. Regenerate the proposal using the review feedback before approval.
   </p>
 )}
 
