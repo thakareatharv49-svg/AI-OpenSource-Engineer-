@@ -97,7 +97,11 @@ app.get("/api/github/auth", async (_req, res) => {
 app.get("/api/github/issues", async (_req, res) => {
   try {
     const response = await fetch(
-      "https://api.github.com/search/issues?q=is%3Aissue%20is%3Aopen%20label%3Agood-first-issue&sort=updated&order=desc",
+      "https://api.github.com/search/issues?q=" +
+        encodeURIComponent(
+          'is:issue is:open (label:"good first issue" OR label:good-first-issue)'
+        ) +
+        "&sort=updated&order=desc&per_page=30",
       {
         headers: {
           Accept: "application/vnd.github+json",
