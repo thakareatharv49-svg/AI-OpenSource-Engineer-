@@ -1379,12 +1379,26 @@ useEffect(() => {
                         setApproved(true);
                         void handleForkRepository();
                       }}
-                      disabled={forkingRepository}
+                      disabled={
+                        forkingRepository ||
+                        !codeReview ||
+                        codeReview.overallStatus !== "Approved"
+                      }
+                      title={
+                        codeReview?.overallStatus !== "Approved"
+                          ? "The AI review must approve the proposal before it can be committed."
+                          : undefined
+                      }
                     >
                       {forkingRepository
                         ? "Forking Repository..."
                         : "Approve Contribution"}
                     </button>
+                    {codeReview?.overallStatus !== "Approved" && (
+                      <p role="status">
+                        Resolve the review findings and regenerate the proposal before approval.
+                      </p>
+                    )}
 
                     <button
                       className="contribution-start-button"
