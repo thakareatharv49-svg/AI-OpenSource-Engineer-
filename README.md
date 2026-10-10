@@ -93,7 +93,10 @@ GitHub Actions runs these frontend and backend checks on pushes and pull request
 - Commits reject common credential/private-key paths such as `.env`, `.npmrc`, `.pypirc`, `.ssh`, `.aws`, secret/credential directories, and common private-key filenames. This is defense in depth, not a guarantee that arbitrary file contents contain no secrets.
 - AI prompts explicitly treat issue text, repository files, source comments, and review feedback as untrusted data. Prompt-injection defenses are best-effort; inspect every proposed diff.
 - Review generated file contents before approval. AI output can be wrong even when the reviewer says it is approved.
-- The application commits proposed replacement contents for the files listed in the proposal; it does not execute the target repository's tests or prove the change is correct. Run appropriate tests in a sandbox before submitting a pull request.
+- The server never executes generated code or test snippets. This is intentional: executing untrusted repository code inside the API process could expose local files, environment secrets, or the GitHub token. The API runs static safety checks only.
+- The repository CI uses disposable GitHub-hosted runners, read-only repository permissions, checkout without persisted credentials, and job timeouts. This protects this project's own CI; it does not guarantee that an external repository's test infrastructure is safe.
+- For target-project tests, use a disposable VM/container with no secrets and restricted network access. Review the diff first. Do not execute generated tests on a developer machine with credentials available.
+- The application commits proposed replacement contents for the files listed in the proposal; it does not execute the target repository's tests or prove the change is correct. External CI results are evidence only when they are actually observed; never assume a test passed.
 - Keep secrets in local environment files or GitHub secret storage. Never commit real keys or paste them into issues or generated proposals.
 - The first version reads a bounded set of repository source files. Large repositories may need more targeted file retrieval before a proposal is reliable.
 
