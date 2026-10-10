@@ -695,7 +695,7 @@ useEffect(() => {
       selectedIssue &&
       aiSelection
     ) {
-      handleRepositoryAnalysis();
+      void Promise.resolve().then(() => handleRepositoryAnalysis());
     }
   }, [started, stage, selectedIssue, aiSelection]);
 
