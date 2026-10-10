@@ -148,6 +148,39 @@ test("PUT /api/github/file rejects oversized commit messages", async () => {
   assert.equal(response.status, 400);
 });
 
+test("PUT /api/github/file blocks secret-bearing content before GitHub access", async () => {
+  const response = await fetch(baseUrl + "/api/github/file", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      owner: "example",
+      repo: "project",
+      branchName: "ai-contribution-test",
+      filePath: "src/config.ts",
+      content: 'const token = "ghp_123456789012345678901234567890123456";',
+      commitMessage: "test",
+    }),
+  });
+  assert.equal(response.status, 422);
+  assert.match((await response.json()).error, /safety gate/i);
+});
+
+test("PUT /api/github/file requires manual review for workflow changes", async () => {
+  const response = await fetch(baseUrl + "/api/github/file", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      owner: "example",
+      repo: "project",
+      branchName: "ai-contribution-test",
+      filePath: ".github/workflows/ci.yml",
+      content: "name: custom workflow\n",
+      commitMessage: "test",
+    }),
+  });
+  assert.equal(response.status, 422);
+});
+
 test("PUT /api/github/file rejects credential paths before contacting GitHub", async () => {
   const response = await fetch(baseUrl + "/api/github/file", {
     method: "PUT",
