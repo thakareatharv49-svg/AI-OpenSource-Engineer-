@@ -1,108 +1,97 @@
-# 🤖 AI Open Source Engineer
+# AI Open Source Engineer
 
-An AI-powered platform that helps developers discover open-source issues, analyze repositories, generate solutions, and create pull requests.
+An AI-assisted open-source contribution workflow that discovers issues, analyzes repository source, drafts and reviews concrete file changes, and prepares a contribution in a fork. **A person must approve the contribution, and creating the pull request remains a separate, explicit action.**
 
-## 🚀 Overview
+## Features
 
-AI Open Source Engineer aims to simplify open-source contributions by automating the development workflow.
+- Discover open GitHub issues labelled `good-first-issue`
+- Use AI to select an issue and analyze repository source files
+- Generate an implementation plan and proposed file contents
+- Review the proposal with an AI reviewer
+- After human approval, fork the upstream repository, create a branch, and commit the proposed source files
+- Create a pull request against the original repository only when the user clicks **Create Pull Request**
+- Retry failed branch and file-commit operations without starting an unbounded request loop
 
-Instead of manually searching for issues and preparing solutions, developers can use AI-assisted agents to streamline the process.
+## Stack
 
-## ✨ Features
+- **Frontend:** React, TypeScript, Vite, React Router
+- **Backend:** Node.js, Express, TypeScript
+- **Integrations:** GitHub API, Gemini, OpenAI, and local Ollama fallback
 
-- 🔍 AI-powered issue discovery
-- 🧠 AI issue selection
-- 📊 Repository analysis
-- 📝 Solution planning
-- 💻 AI code proposal generation
-- 🍴 GitHub repository forking
-- 🌿 Automated branch creation
-- 📦 File commit automation
-- 🔀 Pull request creation
-- ✅ Final contribution verification
+## Requirements
 
-## 🏗️ Project Architecture
+- Node.js 22 or newer
+- npm
+- A GitHub token with the permissions needed to read public repositories, create forks, push to your fork, and open pull requests
+- At least one configured AI provider: Gemini, OpenAI, or a local Ollama installation with the configured model available
 
-The project consists of two main parts:
+## Run locally
 
-### Frontend
+Open two terminals from the repository root.
 
-- React
-- TypeScript
-- Vite
-- React Router
+### 1. Configure the backend
 
-### Backend
+```powershell
+cd server
+Copy-Item .env.example .env
+```
 
-- Node.js
-- Express.js
-- TypeScript
-- GitHub API
-- AI API integration
+Edit `server/.env` and add your `GITHUB_TOKEN` and whichever AI provider key(s) you use. Never commit real API keys.
 
-## 🔄 Workflow
+Start the backend:
 
-1. Discover open-source issues.
-2. Select a suitable issue using AI.
-3. Analyze the repository.
-4. Generate a solution plan.
-5. Generate a code proposal.
-6. Fork the repository.
-7. Create a new branch.
-8. Commit the proposed changes.
-9. Create a pull request.
-10. Wait for maintainer review.
-
-## 📁 Project Structure
-
-```text
-AI-OpenSource-Engineer/
-│
-├── client/          # React frontend
-│
-├── server/          # Express backend
-│
-├── README.md
-│
-└── .gitignore
-
-⚙️ Installation
-1. Clone the repository
-git clone https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-.git
-2. Install frontend dependencies
-cd client
+```powershell
 npm install
-3. Install backend dependencies
+npm run dev
+```
+
+The API runs on `http://localhost:5000` by default. Set `PORT` in `server/.env` to change it.
+
+### 2. Configure and start the frontend
+
+In a second terminal:
+
+```powershell
+cd client
+Copy-Item .env.example .env
+npm install
+npm run dev
+```
+
+The frontend uses `VITE_API_BASE_URL` from `client/.env`; it defaults to `http://localhost:5000`.
+
+### 3. Verify the backend
+
+Open `http://localhost:5000/api/health`. A healthy server returns:
+
+```json
+{"status":"ok"}
+```
+
+## Checks
+
+Run from the repository root:
+
+```powershell
+cd client
+npm ci
+npm run build
+npm run lint
 cd ../server
-npm install
-4. Configure environment variables
+npm ci
+npm run typecheck
+npm test
+```
 
-Create a .env file inside the server directory.
+GitHub Actions runs these frontend and backend checks on pushes and pull requests to `main`.
 
-Add the required API keys and configuration values.
+## Safety and current limitations
 
-Never commit secret API keys to GitHub.
+- Review generated file contents before approval. AI output can be wrong even when the reviewer says it is approved.
+- The application commits the proposed replacement contents for the files listed in the proposal; it does not execute the target repository's tests or prove the change is correct.
+- Keep secrets in local environment files or GitHub secret storage. Do not paste them into issues or generated proposals.
+- The first version reads a bounded set of repository source files. Large repositories may need more targeted file retrieval before a proposal is reliable.
 
-5. Start the backend
-npm run dev
-6. Start the frontend
+## Goal
 
-Open another terminal:
-
-cd client
-npm run dev
-🎯 Project Goal
-
-To build an AI-powered open-source development assistant that automates repetitive contribution tasks while keeping developers involved in the final verification process.
-
-🛠️ Project Status
-
-🚧 Under active development.
-
-👨‍💻 Author
-
-Atharv Narendra Thakare
-
-GitHub: @thakareatharv49-svg
-
-⭐ If you find this project interesting, consider giving it a star!
+Help developers make real, reviewable open-source contributions while keeping human approval and pull-request creation under their control.
