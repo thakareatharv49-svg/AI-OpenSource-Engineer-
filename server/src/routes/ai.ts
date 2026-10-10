@@ -216,7 +216,7 @@ ${prompt}`;
       },
       body: JSON.stringify({
         model: "llama3.2:3b",
-        prompt: `${prompt}
+        prompt: `${safePrompt}
 
 IMPORTANT:
 Return ONLY valid JSON.
