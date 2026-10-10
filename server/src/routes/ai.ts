@@ -385,6 +385,7 @@ router.post("/generate-code", async (req, res) => {
       repositoryAnalysis,
       solutionPlan,
       files,
+      reviewFeedback,
     } = req.body;
 
     if (
@@ -422,6 +423,9 @@ ${JSON.stringify(solutionPlan, null, 2)}
 
 Available repository files, if supplied:
 ${JSON.stringify(files ?? [], null, 2)}
+
+Previous review feedback to address, if this is a revision:
+${JSON.stringify(reviewFeedback ?? null, null, 2)}
 
 Use the supplied source files to make a concrete, minimal implementation.
 For every item in "changes", "after" MUST contain the complete replacement file
