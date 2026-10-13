@@ -284,7 +284,7 @@ Definition of done: inspect the complete diff; pass backend tests/typecheck, fro
 
 ## 17. Milestone 13 — Cloud-provider credential coverage
 
-**Merged in PR #47 on 2026-10-13 (merge commit `d1d4e2a6703b70c0cd6b976309d2880674e2a90a`).** Add high-confidence proposal-content detection for Google OAuth client secrets, Twilio API keys, Shopify access tokens, DigitalOcean personal access tokens, and Azure Storage connection-string credentials. Add regression cases for each format and short placeholder examples. Avoid recording realistic contiguous credential samples in repository fixtures because repository secret-scanning protections may block them; construct deterministic fixtures from harmless fragments instead.
+**Merged in PR #47 on 2026-10-13 (merge commit `d1d4e2a6703b70c0cd6b976309d2880674e2a90a`).** The proposal safety gate adds high-confidence proposal-content detection for Google OAuth client secrets, Twilio API keys, Shopify access tokens, DigitalOcean personal access tokens, and Azure Storage connection-string credentials. Add regression cases for each format and short placeholder examples. Avoid recording realistic contiguous credential samples in repository fixtures because repository secret-scanning protections may block them; construct deterministic fixtures from harmless fragments instead.
 
 Scope: static, pattern-based defense in depth only. It cannot prove a proposal contains no secrets and does not scan repository history, external dependencies, or credentials outside proposed file content.
 
@@ -293,6 +293,15 @@ Definition of done: inspect final diff; pass backend typecheck/tests, frontend b
 
 ## 18. Milestone 14 — Deterministic and de-duplicated safety findings
 
-**Implementation in progress on branch `security/deterministic-safety-findings`.** Normalize safety-report output by removing duplicate findings with the same severity, file, and reason, then sort findings deterministically. This makes repeated evaluations and UI/API comparisons stable while preserving distinct findings and the existing blocking/review semantics.
+**Merged in PR #48 on 2026-10-13 (merge commit `f006827da104465da36e8e10bb4b89d746930d0a`).** Normalize safety-report output by removing duplicate findings with the same severity, file, and reason, then sort findings deterministically. This makes repeated evaluations and UI/API comparisons stable while preserving distinct findings and the existing blocking/review semantics.
 
 Definition of done: add regression coverage for repeated detections and input-order independence; pass backend tests/typecheck, frontend build/lint, production dependency audit, and CodeQL on the final PR head. This improves report consistency; it does not increase the scanner's ability to recognize unknown secrets or replace human review.
+
+
+## 19. Milestone 15 — AWS secret and session credential assignment detection
+
+**Implementation in progress on branch `security/aws-credential-detection`.** Extend proposal-content scanning to recognize long AWS `aws_secret_access_key` and `aws_session_token` assignments, not only access-key IDs. Add regression coverage for positive assignment samples and short/environment-variable documentation placeholders. Detection is case-insensitive for the assignment key and retains explicit placeholder exclusions.
+
+Scope: static heuristic detection of proposed content only. It is not a complete secret scanner, does not scan repository history or dependencies, and cannot replace review or secret-management controls.
+
+Definition of done: pass backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL on the final PR head; review the diff and merge only after all required checks pass.
