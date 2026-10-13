@@ -584,7 +584,7 @@ Rules:
 
     const qualityGate = validateGeneratedProposal(codeProposal);
     const reviewResult = enforceProposalReviewGate(validatedResult, qualityGate);
-    const reviewEvent = { event: "ai.review.result", at: new Date().toISOString(), verdict: validatedResult.overallStatus, confidence: validatedResult.confidence, deterministicFindings: qualityGate.safetyReport.findings.length };
+    const reviewEvent = { event: "ai.review.result", at: new Date().toISOString(), verdict: reviewResult.overallStatus, confidence: reviewResult.confidence, deterministicFindings: qualityGate.safetyReport.findings.length };
     console.log(JSON.stringify(reviewEvent));
     void persistOperationalEvent(reviewEvent).catch(() => undefined);
     return res.json({ message: "Code review completed", result: reviewResult, qualityGate });
