@@ -5,6 +5,7 @@ import { Router } from "express";
 import { validateGeneratedProposal } from "../security/proposalQuality.js";
 import { persistOperationalEvent } from "../security/sharedRedis.js";
 import { repositoryContextBudget, selectRelevantRepositoryFiles } from "../security/repositoryContext.js";
+import { validateIssueSelectionResult } from "../security/issueSelection.js";
 
 dotenv.config();
 
@@ -220,9 +221,14 @@ Return ONLY valid JSON:
 }
 `);
 
+    const validatedResult = validateIssueSelectionResult(result, issues);
+    if (!validatedResult) {
+      return res.status(502).json({ error: "The AI provider returned an invalid issue selection. Retry selection with the current issue list." });
+    }
+
     return res.json({
       message: "AI issue selection completed",
-      result,
+      result: validatedResult,
     });
   } catch (error) {
     console.error("AI selection error:", error);
