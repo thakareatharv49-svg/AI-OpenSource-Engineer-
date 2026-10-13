@@ -389,3 +389,12 @@ Definition of done: backend typecheck/tests, frontend build/lint, production dep
 Scope: filename/path-based defense in depth only. It does not parse these formats or establish that templates are secret-free. Keep content scanning and human approval in place.
 
 Definition of done: review the final diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head; merge only after all required checks pass.
+
+
+## 32. Milestone 28 — Developer-tool authentication store protection
+
+**Implementation in progress on branch `feat/milestone-28-developer-auth-stores`.** Extend the path-based safety gate to block common developer-tool authentication stores and package-manager credential files: Git credential stores, GitHub CLI auth under `.config/gh/`, Bundler config, Cargo credentials, Poetry auth, and Composer auth. Add regression tests for both root-level and nested paths.
+
+Scope: filename/path-based defense in depth; this does not parse or validate credential contents. Existing content scanning and human approval remain in place.
+
+Definition of done: backend typecheck/tests, frontend build/lint, and CodeQL pass on the final PR head; merge only after all required checks pass.
