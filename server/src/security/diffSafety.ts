@@ -29,6 +29,9 @@ const unsafePathPatterns = [
 ];
 
 const secretPatterns: Array<{ pattern: RegExp; reason: string }> = [
+  { pattern: /\bsb_secret_[A-Za-z0-9_-]{20,}\b/, reason: "Supabase secret API key pattern detected" },
+  { pattern: /\bre_[A-Za-z0-9]{32,}\b/, reason: "Resend API key pattern detected" },
+  { pattern: /\br8_[A-Za-z0-9]{32,}\b/, reason: "Replicate API token pattern detected" },
   { pattern: /\bsk-or-v1-[A-Za-z0-9]{20,}\b/, reason: "OpenRouter API key pattern detected" },
   { pattern: /\bgsk_[A-Za-z0-9]{20,}\b/, reason: "Groq API key pattern detected" },
   { pattern: /-----BEGIN (?:(?:RSA |EC |OPENSSH |DSA |ENCRYPTED )?PRIVATE KEY|PGP PRIVATE KEY BLOCK)-----/, reason: "Private key material detected" },
