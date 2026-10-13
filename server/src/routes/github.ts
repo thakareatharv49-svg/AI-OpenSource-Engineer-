@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { createHash } from "node:crypto";
 import dotenv from "dotenv";
 import { inspectProposedChanges } from "../security/diffSafety.js";
 
@@ -209,8 +210,31 @@ router.post("/branch", async (req, res) => {
     const branchData = await branchResponse.json();
 
     if (!branchResponse.ok) {
+      if (branchResponse.status === 422) {
+        // The create request may have succeeded even if the client lost its response.
+        // Reuse only an existing branch still at the exact requested base; never overwrite it.
+        const existingRefResponse = await fetch(
+          `https://api.github.com/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branchName)}`,
+          { headers }
+        );
+        if (existingRefResponse.ok) {
+          const existingRef = await existingRefResponse.json();
+          if (existingRef.object?.sha === baseSha) {
+            return res.status(200).json({
+              message: "Branch already exists at the requested base; safely reusing it",
+              branch: { name: branchName, sha: baseSha, ref: existingRef.ref },
+              reused: true,
+            });
+          }
+          return res.status(409).json({
+            error: "The branch already exists at a different commit. It was left unchanged; inspect it before retrying.",
+            retryable: false,
+          });
+        }
+      }
       return res.status(branchResponse.status).json({
         error: branchData.message || "Failed to create branch",
+        retryable: branchResponse.status === 408 || branchResponse.status === 429 || branchResponse.status >= 500,
       });
     }
 
@@ -221,6 +245,7 @@ router.post("/branch", async (req, res) => {
         sha: baseSha,
         ref: branchData.ref,
       },
+      reused: false,
     });
   } catch (error) {
     console.error("Branch creation error:", error);
@@ -451,6 +476,16 @@ router.post("/commit-proposal", async (req, res) => {
       });
     }
 
+    const proposalIdempotencyKey = createHash("sha256")
+      .update(JSON.stringify({
+        message: commitMessage.trim(),
+        changes: (changes as Array<{ filePath: string; content: string }>)
+          .map(change => ({ filePath: change.filePath.trim(), content: change.content }))
+          .sort((a, b) => a.filePath.localeCompare(b.filePath)),
+      }))
+      .digest("hex")
+      .slice(0, 24);
+
     const token = res.locals.githubSession?.accessToken as string | undefined;
     if (!token) {
       return res.status(401).json({ error: "Sign in with GitHub to continue.", code: "AUTH_REQUIRED" });
@@ -483,6 +518,20 @@ router.post("/commit-proposal", async (req, res) => {
     if (!commitResponse.ok || typeof parentData.tree?.sha !== "string") {
       return res.status(commitResponse.status || 502).json({
         error: parentData.message || "Unable to read the target branch tree",
+        retryable: commitResponse.status === 408 || commitResponse.status === 429 || commitResponse.status >= 500,
+      });
+    }
+
+    // If a previous request advanced the ref but its HTTP response was lost,
+    // the deterministic trailer prevents creating a duplicate commit on retry.
+    if (typeof parentData.message === "string" && parentData.message.includes(`[ai-ose-proposal:${proposalIdempotencyKey}]`)) {
+      return res.status(200).json({
+        message: "Proposal was already committed; returning the existing commit",
+        commit: { sha: parentSha, htmlUrl: `https://github.com/${owner}/${repo}/commit/${parentSha}` },
+        branch: branchName,
+        filesCommitted: changes.length,
+        alreadyCommitted: true,
+        safetyReport,
       });
     }
 
@@ -523,7 +572,7 @@ router.post("/commit-proposal", async (req, res) => {
       method: "POST",
       headers,
       body: JSON.stringify({
-        message: commitMessage.trim(),
+        message: `${commitMessage.trim()}\n\n[ai-ose-proposal:${proposalIdempotencyKey}]`,
         tree: treeData.sha,
         parents: [parentSha],
       }),
