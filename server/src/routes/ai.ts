@@ -3,6 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 import { Router } from "express";
 import { validateGeneratedProposal } from "../security/proposalQuality.js";
+import { persistOperationalEvent } from "../security/sharedRedis.js";
 import { repositoryContextBudget, selectRelevantRepositoryFiles } from "../security/repositoryContext.js";
 
 dotenv.config();
@@ -447,14 +448,15 @@ Return ONLY valid JSON:
 }
 `);
 
-    const qualityGate = validateGeneratedProposal(result);
+    const qualityEvent = { event: "ai.proposal.quality", at: new Date().toISOString(), validStructure: qualityGate.validStructure, readyForHumanReview: qualityGate.readyForHumanReview, safeToCommit: qualityGate.safeToCommit, fileCount: qualityGate.fileCount, findingCount: qualityGate.safetyReport.findings.length };
+    console.log(JSON.stringify(qualityEvent));
+    void persistOperationalEvent(qualityEvent).catch(() => undefined);
     if (!qualityGate.validStructure) {
       return res.status(502).json({
         error: "The AI provider returned an incomplete code proposal. Retry generation or provide more source context.",
         qualityGate,
       });
     }
-    console.log(JSON.stringify({ event: "ai.proposal.quality", validStructure: qualityGate.validStructure, readyForHumanReview: qualityGate.readyForHumanReview, safeToCommit: qualityGate.safeToCommit, fileCount: qualityGate.fileCount, findingCount: qualityGate.safetyReport.findings.length }));
     return res.json({ message: "Code proposal generated", result, qualityGate });
   } catch (error) {
     console.error("Code generation error:", error);
@@ -559,7 +561,9 @@ Rules:
       result.summary = [typeof result.summary === "string" ? result.summary : "", "Deterministic safety checks require follow-up before approval."].filter(Boolean).join(" ");
       result.securityIssues = [...(Array.isArray(result.securityIssues) ? result.securityIssues : []), ...qualityGate.reasons];
     }
-    console.log(JSON.stringify({ event: "ai.review.result", verdict: result?.overallStatus ?? "invalid", confidence: Number.isInteger(result?.confidence) ? result.confidence : null, deterministicFindings: qualityGate.safetyReport.findings.length }));
+    const reviewEvent = { event: "ai.review.result", at: new Date().toISOString(), verdict: result?.overallStatus ?? "invalid", confidence: Number.isInteger(result?.confidence) ? result.confidence : null, deterministicFindings: qualityGate.safetyReport.findings.length };
+    console.log(JSON.stringify(reviewEvent));
+    void persistOperationalEvent(reviewEvent).catch(() => undefined);
     return res.json({ message: "Code review completed", result, qualityGate });
   } catch (error) {
     console.error("Code review error:", error);
