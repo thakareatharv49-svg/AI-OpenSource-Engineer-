@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
+import { spawnSync } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -65,4 +66,28 @@ test("rejects writes from another user and serializes concurrent stale updates",
   ]);
   assert.equal(results.filter(result => result.status === "fulfilled").length, 1);
   assert.equal(results.filter(result => result.status === "rejected").length, 1);
+});
+
+test("contribution state survives a separate Node process restart", async () => {
+  const { record } = await createContribution({ ...input, idempotencyKey: "restart-12345678" });
+  await transitionContribution({
+    user: input.user,
+    id: record.id,
+    to: "analyzing",
+    expectedVersion: record.version,
+    message: "Persist before restart",
+  });
+  const moduleUrl = new URL("../src/security/contributionLifecycle.ts", import.meta.url).href;
+  const childCode = "const mod = await import(" + JSON.stringify(moduleUrl) + "); console.log(JSON.stringify(await mod.listContributions('test-user')));";
+  const child = spawnSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", childCode], {
+    encoding: "utf8",
+    env: { ...process.env, CONTRIBUTION_STATE_PATH: process.env.CONTRIBUTION_STATE_PATH },
+  });
+  assert.equal(child.status, 0, child.stderr);
+  const records = JSON.parse(child.stdout.trim()) as Array<{ id: string; state: string; version: number; events: unknown[] }>;
+  const restored = records.find(item => item.id === record.id);
+  assert.ok(restored, "the child process should read the persisted contribution");
+  assert.equal(restored.state, "analyzing");
+  assert.equal(restored.version, record.version + 1);
+  assert.ok(restored.events.length >= 2);
 });
