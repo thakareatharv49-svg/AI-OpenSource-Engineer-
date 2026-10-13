@@ -6,7 +6,7 @@ import { validateGeneratedProposal } from "../security/proposalQuality.js";
 import { persistOperationalEvent } from "../security/sharedRedis.js";
 import { repositoryContextBudget, selectRelevantRepositoryFiles } from "../security/repositoryContext.js";
 import { validateIssueSelectionResult } from "../security/issueSelection.js";
-import { validateCodeReviewResult } from "../security/codeReview.js";
+import { enforceProposalReviewGate, validateCodeReviewResult } from "../security/codeReview.js";
 import { validateRepositoryAnalysisResult } from "../security/repositoryAnalysis.js";
 import { validateImplementationPlanResult } from "../security/implementationPlan.js";
 
@@ -583,15 +583,11 @@ Rules:
     }
 
     const qualityGate = validateGeneratedProposal(codeProposal);
-    if (qualityGate.safetyReport.findings.length > 0) {
-      validatedResult.overallStatus = "Changes Requested";
-      validatedResult.summary = [validatedResult.summary, "Deterministic safety checks require follow-up before approval."].filter(Boolean).join(" ");
-      validatedResult.securityIssues = [...validatedResult.securityIssues, ...qualityGate.reasons];
-    }
-    const reviewEvent = { event: "ai.review.result", at: new Date().toISOString(), verdict: validatedResult.overallStatus, confidence: validatedResult.confidence, deterministicFindings: qualityGate.safetyReport.findings.length };
+    const reviewResult = enforceProposalReviewGate(validatedResult, qualityGate);
+    const reviewEvent = { event: "ai.review.result", at: new Date().toISOString(), verdict: reviewResult.overallStatus, confidence: reviewResult.confidence, deterministicFindings: qualityGate.safetyReport.findings.length };
     console.log(JSON.stringify(reviewEvent));
     void persistOperationalEvent(reviewEvent).catch(() => undefined);
-    return res.json({ message: "Code review completed", result: validatedResult, qualityGate });
+    return res.json({ message: "Code review completed", result: reviewResult, qualityGate });
   } catch (error) {
     console.error("Code review error:", error);
 
