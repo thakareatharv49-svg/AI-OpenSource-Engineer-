@@ -37,6 +37,12 @@ Example request:
 
 Supported Node checks: `test`, `lint`, `build`, `typecheck`. The matching `package.json` script is executed inside the container. Supported Python checks: `test` uses `python -m unittest`; `lint`, `build`, and `typecheck` currently use `python -m compileall -q .`.
 
+## Repository snapshots
+
+The proposal-review UI first requests a bounded snapshot from `POST /api/sandbox/snapshot`. The server uses the configured GitHub token to read the repository default branch, selects up to 80 eligible text files (maximum 200 KB each and 800 KB total), prioritizes manifests and tests, and excludes common generated directories, secret-like files, and GitHub workflow files. This is not a full clone; large repositories may omit relevant files. The response never includes the token. The snapshot endpoint is opt-in with the sandbox feature flag.
+
+**Dependency policy:** dependencies are not installed automatically. Execution has no network access. This avoids running untrusted package installation/lifecycle scripts in the API process or during a network-enabled setup step. Checks that require third-party packages may fail until a separately isolated, reviewed dependency-preparation mechanism is added.
+
 ## Cancellation
 
 The caller supplies a UUID `runId` in `POST /api/sandbox/run`. While that request is running, a second request to `POST /api/sandbox/cancel` with the same `runId` requests termination of the matching active container. The run request returns a `cancelled` result when cancellation is handled. Cancellation is best-effort: a Docker daemon or host failure can prevent immediate termination, so this endpoint is not a substitute for operator-level container monitoring.
