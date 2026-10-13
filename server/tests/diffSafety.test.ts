@@ -295,3 +295,32 @@ test("allows non-HTTP URLs with documentation placeholders", () => {
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks additional platform API token formats without storing literal credentials", () => {
+  const samples = [
+    "sb_secret_" + "a".repeat(32),
+    "re_" + "b".repeat(32),
+    "r8_" + "c".repeat(40),
+  ];
+  const reasons = [
+    "Supabase secret API key pattern detected",
+    "Resend API key pattern detected",
+    "Replicate API token pattern detected",
+  ];
+  samples.forEach((sample, index) => {
+    const report = inspectProposedChanges([{ file: "src/platform-config.ts", after: 'const apiKey = "' + sample + '";' }]);
+    assert.equal(report.safeToCommit, false, reasons[index]);
+    assert.ok(report.findings.some((finding) => finding.reason === reasons[index]));
+  });
+});
+
+test("does not block public or placeholder platform key examples", () => {
+  const report = inspectProposedChanges([{ file: "docs/platform-config.md", after: [
+    "sb_publishable_" + "a".repeat(32),
+    "re_your_resend_key",
+    "r8_your_replicate_token",
+  ].join("\n") }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
