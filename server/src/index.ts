@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 import aiRouter from "./routes/ai.js";
 import sandboxRouter from "./routes/sandbox.js";
 import authRouter from "./routes/auth.js";
+import lifecycleRouter from "./routes/lifecycle.js";
 import { attachGithubSession, requireGithubSession, requireTrustedOrigin } from "./security/session.js";
 
 dotenv.config();
@@ -110,6 +111,7 @@ app.use("/api/ai", (req, res, next) => {
 });
 
 app.use("/api/auth", authRouter);
+app.use("/api/lifecycle", attachGithubSession, requireTrustedOrigin, lifecycleRouter);
 app.use("/api/ai", requireTrustedOrigin, requireGithubSession, aiRouter);
 app.use("/api/sandbox", attachGithubSession, auditSensitiveRequest, sandboxRouter);
 app.use("/api/github", attachGithubSession, auditSensitiveRequest, githubRouter);

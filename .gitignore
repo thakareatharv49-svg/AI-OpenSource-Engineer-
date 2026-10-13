@@ -20,3 +20,6 @@ yarn-error.log*
 Thumbs.db
 
 temp-github/
+
+# Local durable contribution lifecycle state (including server/.data)
+**/.data/

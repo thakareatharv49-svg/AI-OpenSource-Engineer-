@@ -146,12 +146,24 @@ Implemented on the milestone branch:
 **Deployment safety gate:** the session store and AI rate limiter are currently process-local. Startup now refuses non-loopback binds, because exposing an in-memory session store or per-process quota to the public internet or multiple instances would be unsafe. Sessions are lost on restart, and the OAuth flow has not been verified with real credentials in this session. Before a public deployment, implement and test a shared durable session store and distributed rate limiter, enforce HTTPS at the edge, configure production OAuth callback/origin values and secure cookies, add durable audit retention and explicit per-user quotas, and run a live OAuth/fork/commit/PR flow. Do not bypass the loopback guard or claim production readiness.
 
 ### Milestone 4: Recovery and contribution lifecycle
-- Track workflow state durably so refreshes/restarts do not lose the contribution progress.
-- Use explicit states for fork pending, fork ready, branch ready, commit preparing, commit complete, failed, and retryable.
-- Make retries idempotent where possible and avoid duplicate branches/commits.
-- Handle forks that are still initializing, stale branch heads, GitHub API rate limits, timeouts, and partial external failures.
-- Add cancellation, clear error recovery, and cleanup/rollback options where safe.
-- Never force-update a branch to hide a concurrency conflict.
+
+**Implementation status: lifecycle API, Contribution UI state tracking, browser refresh restoration, explicit cancellation, and idempotent branch/proposal retries are implemented on the Milestone 4 branch. Latest verified CI for commit `a36afd2cacae1894834248dbcea693a0addc07ff` passed; the newest GitHub retry-safety commit still needs its own CI result. Live restart/GitHub fault-injection verification and cancellation/cleanup UX remain.**
+
+Implemented in this slice:
+- Atomic-write JSON state store with private directory/file permissions, bounded retention (500 workflows), and bounded event history (100 events per workflow).
+- Authenticated, user-scoped lifecycle endpoints: list, idempotent create, read-by-ID, and version-checked transition.
+- Explicit states for discovery, analysis, planning, proposal/review, human approval, fork, branch, commit, retryable/failed, and cancellation.
+- Legal-transition enforcement, optimistic concurrency via `expectedVersion`, user isolation, idempotency-key collision detection, retry counts, credential-pattern redaction, and event timestamps.
+- Tests for owner isolation, durable reads, idempotent create, key collisions, illegal transitions, stale versions, retry recovery, message redaction, and concurrent writes.
+- The Contribution UI updates lifecycle state at analysis, proposal, review, fork, branch, and commit checkpoints. A bounded browser-local snapshot restores editor context after refresh; it never stores the OAuth token.
+- Fork retries reuse an existing branch only if it is still at the requested base SHA. Atomic proposal commits carry a deterministic idempotency trailer so a retry after a lost response can recognize an already-committed proposal.
+- The JSON store is deliberately single-process/local-only. Do not use it as a shared production store or expose this server publicly; shared durable storage and distributed locking are later deployment requirements.
+
+Remaining before Milestone 4 is complete:
+- Add automated mocked-GitHub tests for uncertain branch-create and atomic-commit responses, including idempotent retry behavior.
+- Verify restart persistence and the authenticated issue-to-commit recovery path locally; CI cannot substitute for a real GitHub OAuth/Docker run.
+- Verify server restart persistence and GitHub failure cases in a configured local run.
+- Preserve the non-force branch update; never hide concurrency conflicts by overwriting a newer branch head.
 
 ### Milestone 5: Code quality and scalable execution
 - Improve repository file selection and language-aware source analysis.
@@ -191,4 +203,4 @@ A milestone is not done just because files were changed. It should have:
 
 ## 9. Current next action
 
-Run the local Docker smoke test documented in `docs/isolated-sandbox.md` to complete Milestone 2 runtime verification. Dependency installation remains intentionally disabled until a separate preparation mechanism can keep package acquisition and any lifecycle/build scripts outside the untrusted execution boundary. Milestone 1 still has a separate live authenticated end-to-end verification gap because this session cannot inspect the user's local `.env` or operate the running app with their credentials.
+Finish remaining Milestone 4 work by wiring lifecycle state into the Contribution UI, adding safe resume behavior for fork/branch/commit operations, and testing restart/failure recovery. The local Docker smoke test for Milestone 2 and the live authenticated end-to-end verification for Milestone 1 remain separate verification gaps. Dependency installation remains intentionally disabled until a separately isolated preparation mechanism is designed.

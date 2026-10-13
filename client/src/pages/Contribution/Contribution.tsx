@@ -75,10 +75,75 @@ function Contribution() {
   // Each stage can still be retried explicitly from its visible action button.
   const autoRunAttempts = useRef(new Set<string>());
   const [started, setStarted] = useState(false);
+  const [workflowId, setWorkflowId] = useState<string | null>(null);
+  const [workflowVersion, setWorkflowVersion] = useState<number | null>(null);
+  const [workflowState, setWorkflowState] = useState<string | null>(null);
   useEffect(() => {
     if (!started) autoRunAttempts.current.clear();
   }, [started]);
   const [stage, setStage] = useState(0);
+  const updateLifecycle = async (nextState: string, message: string) => {
+    if (!workflowId || workflowVersion === null) return;
+    try {
+      const response = await apiFetch(`${API_BASE_URL}/api/lifecycle/${workflowId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state: nextState, expectedVersion: workflowVersion, message }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Lifecycle update failed");
+      setWorkflowVersion(data.contribution.version);
+      setWorkflowState(data.contribution.state);
+      localStorage.setItem("ai-ose-lifecycle-pointer", JSON.stringify({ id: data.contribution.id, version: data.contribution.version, state: data.contribution.state }));
+    } catch (error) { console.warn("Lifecycle update failed:", error); }
+  };
+
+  const handleCancelWorkflow = async () => {
+    if (!workflowId || workflowVersion === null || workflowState === "commit_complete" || workflowState === "cancelled") return;
+    try {
+      const response = await apiFetch(`${API_BASE_URL}/api/lifecycle/${workflowId}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state: "cancelled", expectedVersion: workflowVersion, message: "Cancelled by the user" }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to cancel contribution workflow");
+      setWorkflowVersion(data.contribution.version);
+      setWorkflowState("cancelled");
+      setStarted(false);
+      setStage(0);
+      setApproved(false);
+      setChangesRequested(false);
+      setSelectedIssue(null);
+      setAISelection(null);
+      setRepositoryAnalysis(null);
+      setRepositoryFiles([]);
+      setSolutionPlan(null);
+      setCodeProposal(null);
+      setCodeReview(null);
+      setForkedRepository("");
+      setBranchName("");
+      setCommitSuccess(false);
+      localStorage.removeItem("ai-ose-lifecycle-pointer");
+    } catch (error) {
+      console.warn("Contribution workflow cancellation failed:", error);
+    }
+  };
+  useEffect(() => {
+    let active = true;
+    const restore = async () => {
+      try {
+        const raw = localStorage.getItem("ai-ose-lifecycle-pointer");
+        if (!raw) return;
+        const pointer = JSON.parse(raw) as { id?: unknown };
+        if (typeof pointer.id !== "string") return;
+        const response = await apiFetch(`${API_BASE_URL}/api/lifecycle/${encodeURIComponent(pointer.id)}`);
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!active || !data.contribution) return;
+        setWorkflowId(data.contribution.id);
+        setWorkflowVersion(data.contribution.version);
+        setWorkflowState(data.contribution.state);
+      } catch (error) { console.warn("Could not restore saved lifecycle status:", error); }
+    };
+    void restore();
+    return () => { active = false; };
+  }, []);
   const [approved, setApproved] = useState(false);
   const [changesRequested, setChangesRequested] = useState(false);
 
@@ -149,6 +214,61 @@ const [forkedRepository, setForkedRepository] = useState("");
   const [sandboxResult, setSandboxResult] = useState<SandboxResult | null>(null);
   const [sandboxError, setSandboxError] = useState("");
   const sandboxRunId = useRef<string | null>(null);
+  const uiSnapshotRestored = useRef(false);
+
+  // The snapshot stays in this browser only; OAuth tokens are never persisted here.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("ai-ose-contribution-snapshot-v1");
+      if (raw && raw.length <= 900_000) {
+        const saved = JSON.parse(raw) as Record<string, unknown>;
+        if (saved.version === 1) {
+          if (typeof saved.started === "boolean") setStarted(saved.started);
+          if (typeof saved.stage === "number" && Number.isInteger(saved.stage) && saved.stage >= 0 && saved.stage <= 5) setStage(saved.stage);
+          if (typeof saved.approved === "boolean") setApproved(saved.approved);
+          if (typeof saved.changesRequested === "boolean") setChangesRequested(saved.changesRequested);
+          if (saved.selectedIssue && typeof saved.selectedIssue === "object") setSelectedIssue(saved.selectedIssue as GitHubIssue);
+          if (Array.isArray(saved.issues)) setIssues(saved.issues as GitHubIssue[]);
+          if (saved.aiSelection && typeof saved.aiSelection === "object") setAISelection(saved.aiSelection as AISelection);
+          if (saved.repositoryAnalysis && typeof saved.repositoryAnalysis === "object") setRepositoryAnalysis(saved.repositoryAnalysis as RepositoryAnalysis);
+          if (Array.isArray(saved.repositoryFiles)) setRepositoryFiles(saved.repositoryFiles as RepositoryFile[]);
+          if (saved.solutionPlan && typeof saved.solutionPlan === "object") setSolutionPlan(saved.solutionPlan as SolutionPlan);
+          if (saved.codeProposal && typeof saved.codeProposal === "object") setCodeProposal(saved.codeProposal as Record<string, unknown>);
+          if (saved.codeReview && typeof saved.codeReview === "object") setCodeReview(saved.codeReview as CodeReview);
+          if (typeof saved.forkedRepository === "string") setForkedRepository(saved.forkedRepository);
+          if (typeof saved.branchName === "string") setBranchName(saved.branchName);
+          if (typeof saved.baseBranch === "string") setBaseBranch(saved.baseBranch);
+          if (typeof saved.commitSuccess === "boolean") setCommitSuccess(saved.commitSuccess);
+          if (typeof saved.workflowId === "string") setWorkflowId(saved.workflowId);
+          if (typeof saved.workflowVersion === "number") setWorkflowVersion(saved.workflowVersion);
+          if (typeof saved.workflowState === "string") setWorkflowState(saved.workflowState);
+        }
+      }
+    } catch (error) {
+      console.warn("Saved contribution UI state could not be restored:", error);
+    } finally {
+      uiSnapshotRestored.current = true;
+    }
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  useEffect(() => {
+    if (!uiSnapshotRestored.current) return;
+    try {
+      const snapshot = {
+        version: 1, started, stage, approved, changesRequested, selectedIssue, issues, aiSelection,
+        repositoryAnalysis, repositoryFiles, solutionPlan, codeProposal, codeReview, forkedRepository,
+        branchName, baseBranch, commitSuccess, workflowId, workflowVersion, workflowState,
+      };
+      const serialized = JSON.stringify(snapshot);
+      if (serialized.length <= 900_000) localStorage.setItem("ai-ose-contribution-snapshot-v1", serialized);
+    } catch (error) {
+      console.warn("Contribution UI state could not be saved locally:", error);
+    }
+  }, [started, stage, approved, changesRequested, selectedIssue, issues, aiSelection, repositoryAnalysis,
+      repositoryFiles, solutionPlan, codeProposal, codeReview, forkedRepository, branchName, baseBranch,
+      commitSuccess, workflowId, workflowVersion, workflowState]);
 
   useEffect(() => {
     if (!started || stage !== 0) return;
@@ -217,6 +337,13 @@ const [forkedRepository, setForkedRepository] = useState("");
         throw new Error("AI selected an issue that was not found");
       }
 
+      const lifecycleResponse = await apiFetch(`${API_BASE_URL}/api/lifecycle`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ idempotencyKey: `issue-${issue.id}-${crypto.randomUUID()}`, issueUrl: issue.url, repository: getRepositoryName(issue.url) }) });
+      const lifecycleData = await lifecycleResponse.json();
+      if (!lifecycleResponse.ok) throw new Error(lifecycleData.error || "Could not save contribution workflow state.");
+      setWorkflowId(lifecycleData.contribution.id);
+      setWorkflowVersion(lifecycleData.contribution.version);
+      setWorkflowState(lifecycleData.contribution.state);
+      try { localStorage.setItem("ai-ose-lifecycle-pointer", JSON.stringify({ id: lifecycleData.contribution.id, version: lifecycleData.contribution.version, state: lifecycleData.contribution.state })); } catch { /* lifecycle remains on the server if browser storage is unavailable */ }
       setAISelection(selection);
       setSelectedIssue(issue);
     } catch (error) {
@@ -237,6 +364,7 @@ const [forkedRepository, setForkedRepository] = useState("");
 
     setAnalyzingRepository(true);
     setRepositoryError("");
+    await updateLifecycle("analyzing", "Repository analysis started");
 
     try {
       const repository = getRepositoryName(selectedIssue.url);
@@ -263,6 +391,7 @@ const [forkedRepository, setForkedRepository] = useState("");
         );
       }
 
+      await updateLifecycle("planning", "Repository analysis completed");
       setRepositoryAnalysis(data.result);
       setRepositoryFiles(Array.isArray(data.files) ? data.files : []);
       setStage(1);
@@ -370,6 +499,7 @@ const [forkedRepository, setForkedRepository] = useState("");
         throw new Error(data.error || "Code generation failed");
       }
 
+      await updateLifecycle("proposal_ready", "Code proposal generated");
       setCodeProposal(data.result);
       setCodeReview(null);
       setChangesRequested(false);
@@ -392,6 +522,7 @@ const [forkedRepository, setForkedRepository] = useState("");
 
     setReviewingCode(true);
     setReviewError("");
+    await updateLifecycle("review_pending", "AI code review started");
 
     try {
       const repository = getRepositoryName(selectedIssue.url);
@@ -432,6 +563,7 @@ const [forkedRepository, setForkedRepository] = useState("");
           ? value.filter((item): item is string => typeof item === "string")
           : [];
 
+      await updateLifecycle(overallStatus === "Approved" ? "awaiting_approval" : "proposal_ready", overallStatus === "Approved" ? "AI review passed; waiting for human approval" : "AI review requests changes");
       setCodeReview({
         overallStatus,
         summary:
@@ -544,6 +676,7 @@ const [forkedRepository, setForkedRepository] = useState("");
 
   setForkingRepository(true);
   setForkError("");
+  await updateLifecycle("fork_pending", "Fork operation started");
 
   try {
     const repository = getRepositoryName(selectedIssue.url);
@@ -571,8 +704,10 @@ const [forkedRepository, setForkedRepository] = useState("");
       );
     }
 
+    await updateLifecycle("fork_ready", "Fork verified and ready");
     setForkedRepository(data.repository.fullName);
   } catch (error) {
+    await updateLifecycle("retryable", error instanceof Error ? error.message : "Fork operation failed");
     setForkError(
       error instanceof Error
         ? error.message
@@ -642,6 +777,7 @@ const [forkedRepository, setForkedRepository] = useState("");
         );
       }
 
+      await updateLifecycle("branch_ready", "Contribution branch created");
       setBranchName(newBranchName);
 
       console.log("Branch created successfully:", data);
@@ -710,6 +846,7 @@ const [forkedRepository, setForkedRepository] = useState("");
     setCommittingFile(true);
     setCommitError("");
     setCommitSuccess(false);
+    await updateLifecycle("commit_preparing", "Preparing atomic proposal commit");
 
     try {
       const parts = forkedRepository.split("/");
@@ -740,8 +877,10 @@ const [forkedRepository, setForkedRepository] = useState("");
         throw new Error((data.error || "Failed to commit the proposal.") + fileContext + recovery);
       }
 
+      await updateLifecycle("commit_complete", "Approved proposal committed atomically");
       setCommitSuccess(true);
     } catch (error) {
+      await updateLifecycle("retryable", error instanceof Error ? error.message : "Proposal commit failed");
       setCommitError(
         error instanceof Error ? error.message : "Failed to commit proposed changes."
       );
@@ -986,6 +1125,7 @@ useEffect(() => {
   return (
     <main className="contribution-page">
       <div className="contribution-container">
+        {workflowState && <div role="status" aria-live="polite"><p>Saved contribution lifecycle state: {workflowState}. Refreshing this page preserves the server-side progress record.</p>{workflowState !== "commit_complete" && workflowState !== "cancelled" && <button className="contribution-start-button" onClick={() => void handleCancelWorkflow()}>Cancel Workflow</button>}</div>}
         <span className="contribution-label">
           AI OPEN SOURCE ENGINEER
         </span>
