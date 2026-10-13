@@ -18,6 +18,7 @@ Example request:
 
 ```json
 {
+  "runId": "8c7d9e10-2b3a-4c5d-8e6f-1234567890ab",
   "runtime": "node",
   "check": "test",
   "timeoutMs": 30000,
@@ -35,6 +36,16 @@ Example request:
 ```
 
 Supported Node checks: `test`, `lint`, `build`, `typecheck`. The matching `package.json` script is executed inside the container. Supported Python checks: `test` uses `python -m unittest`; `lint`, `build`, and `typecheck` currently use `python -m compileall -q .`.
+
+## Cancellation
+
+The caller supplies a UUID `runId` in `POST /api/sandbox/run`. While that request is running, a second request to `POST /api/sandbox/cancel` with the same `runId` requests termination of the matching active container. The run request returns a `cancelled` result when cancellation is handled. Cancellation is best-effort: a Docker daemon or host failure can prevent immediate termination, so this endpoint is not a substitute for operator-level container monitoring.
+
+Example cancellation body:
+
+```json
+{ "runId": "8c7d9e10-2b3a-4c5d-8e6f-1234567890ab" }
+```
 
 ## Local Docker smoke test (PowerShell)
 
@@ -63,6 +74,6 @@ Expected result: `status = passed`, exit code `0`, and a summary saying the sand
 - Only supplied UTF-8 text files are included. The runner does not clone a repository, upload directories, install dependencies, or integrate with the proposal UI yet.
 - Network access is disabled inside the container. Node checks that need third-party packages will fail until a safe offline dependency preparation flow is implemented.
 - Each request is limited to 80 files, 200 KB per file, 800 KB total, 60 seconds, and 32,000 characters per output stream.
-- The host-side input snapshot is mounted read-only at `/input`; the container copies it into a size-limited 128 MiB tmpfs at `/workspace`. Generated files therefore cannot grow the host-mounted input snapshot. The container also uses a read-only root filesystem, no network, dropped capabilities, no-new-privileges, non-root UID, PID/memory/CPU/file-descriptor limits, a 64 MiB `/tmp`, and automatic temporary-workspace cleanup.
-- Container isolation depends on the Docker daemon and host configuration. For hostile code or multi-user production, use a stronger disposable VM/microVM boundary and add authentication, quotas, cancellation, monitoring, and abuse controls. The workspace tmpfs limits per-run writable workspace size, but does not replace host-level Docker storage monitoring or a hardened VM boundary.
+- The host-side input snapshot is mounted read-only at `/input`; the container copies it into a per-run 128 MiB tmpfs at `/workspace`. Generated files cannot grow the host-mounted input snapshot. The container also uses a read-only root filesystem, no network, dropped capabilities, no-new-privileges, non-root UID, PID/memory/CPU/file-descriptor limits, a 64 MiB `/tmp`, and automatic temporary-workspace cleanup.
+- Container isolation depends on the Docker daemon and host configuration. For hostile code or multi-user production, use a stronger disposable VM/microVM boundary and add authentication, quotas, disk limits, cancellation, monitoring, and abuse controls.
 - A successful result only proves the selected check exited successfully against the supplied workspace. It does not prove correctness or upstream CI success.
