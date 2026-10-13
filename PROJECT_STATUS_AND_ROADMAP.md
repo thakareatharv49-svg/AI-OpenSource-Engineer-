@@ -336,18 +336,25 @@ Definition of done: pass backend typecheck/tests, frontend build/lint, productio
 
 ## 24. Milestone 20 — Additional AI-provider credential coverage
 
-**Implementation in PR: milestones 20–22.** Add high-confidence detection for OpenRouter (`sk-or-v1-`) and Groq (`gsk_`) API-key formats. Regression tests construct synthetic values from harmless fragments rather than storing a complete realistic token literal.
+**Merged in PR #53 on 2026-10-13 (merge commit `6b1b5077578ab991692663e186ca77d4eee84722`).** Add high-confidence detection for OpenRouter (`sk-or-v1-`) and Groq (`gsk_`) API-key formats. Regression tests construct synthetic values from harmless fragments rather than storing a complete realistic token literal.
 
 Scope: proposal-content heuristic only; formats can change and this does not scan history or dependencies.
 
 ## 25. Milestone 21 — Broader private-key format detection
 
-**Implementation in PR: milestones 20–22.** Expand private-key marker detection to include encrypted PEM private keys, PGP private-key blocks, and PuTTY private-key headers, with marker-only fixtures that do not include actual key material.
+**Merged in PR #53 on 2026-10-13 (merge commit `6b1b5077578ab991692663e186ca77d4eee84722`).** Expand private-key marker detection to include encrypted PEM private keys, PGP private-key blocks, and PuTTY private-key headers, with marker-only fixtures that do not include actual key material.
 
 Scope: marker-based detection can miss unfamiliar formats and may need review for false positives.
 
 ## 26. Milestone 22 — Credentials embedded in non-HTTP service URLs
 
-**Implementation in PR: milestones 20–22.** Detect embedded username/password pairs in FTP/FTPS, AMQP/AMQPS, SSH, and SFTP URLs, with placeholder exclusions and regression tests. Existing HTTP(S) checks remain unchanged.
+**Merged in PR #53 on 2026-10-13 (merge commit `6b1b5077578ab991692663e186ca77d4eee84722`).** Detect embedded username/password pairs in FTP/FTPS, AMQP/AMQPS, SSH, and SFTP URLs, with placeholder exclusions and regression tests. Existing HTTP(S) checks remain unchanged.
 
 Scope: proposal-content heuristic only; it does not validate whether credentials are live or scan repository history/dependencies.
+
+
+## 27. Milestone 23 — Additional platform API-token detection
+
+**Implementation in PR: milestone 23.** Detect high-confidence Supabase secret-key (`sb_secret_`), Resend API-key (`re_`), and Replicate token (`r8_`) formats. Tests generate synthetic token-shaped values from harmless fragments and verify that Supabase publishable-key examples and short placeholders remain allowed.
+
+Scope: pattern-based detection of proposed content only; token formats can change, and the check does not validate token activity or scan repository history/dependencies.
