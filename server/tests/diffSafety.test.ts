@@ -324,3 +324,20 @@ test("does not block public or placeholder platform key examples", () => {
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks sensitive infrastructure state and deployment credential artifacts", () => {
+  for (const file of ["infra/terraform.tfstate", "infra/terraform.tfstate.backup", "infra/prod.tfvars", "infra/prod.tfvars.json", "deploy/kubeconfig", ".kube/config", "deploy/service-account.json", "deploy/prod-service-account.json"]) {
+    const report = inspectProposedChanges([{ file, after: "synthetic placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) => finding.reason === "Sensitive infrastructure state or deployment credential artifact cannot be committed"), file);
+  }
+});
+
+test("allows explicitly named infrastructure examples and templates", () => {
+  for (const file of ["infra/prod.tfvars.example", "infra/terraform.tfvars.sample", "infra/service-account.json.template", "docs/kubeconfig.example"]) {
+    const report = inspectProposedChanges([{ file, after: "replace-me-with-your-own-value\n" }]);
+    assert.equal(report.safeToCommit, true, file);
+    assert.deepEqual(report.findings, [], file);
+  }
+});
