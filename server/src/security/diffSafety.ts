@@ -95,6 +95,9 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
   const exampleFile = /\.(?:example|sample|template)(?:\.json)?$/i.test(normalized);
   if (exampleFile) return false;
   return /(?:^|\/)\.terraform(?:\/|$)/i.test(normalized) ||
+    /(?:^|\/)\.minikube(?:\/|$)/i.test(normalized) ||
+    /(?:^|\/)\.kube\/cache(?:\/|$)/i.test(normalized) ||
+    /(?:^|\/)\.config\/(?:op|1password)(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.azure(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.config\/gcloud(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.docker\/config\.json$/i.test(normalized) ||
