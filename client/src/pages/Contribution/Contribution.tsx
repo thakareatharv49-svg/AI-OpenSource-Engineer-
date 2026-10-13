@@ -618,60 +618,32 @@ const [forkedRepository, setForkedRepository] = useState("");
     setCommitSuccess(false);
 
     try {
-      // Server-side final gate: never trust the browser's local validation alone.
-      const safetyResponse = await fetch(`${API_BASE_URL}/api/github/safety-check`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          changes: normalizedChanges.map((change) => ({
-            filePath: change.filePath,
-            content: change.content,
-          })),
-        }),
-      });
-      const safetyData = await safetyResponse.json();
-      if (!safetyResponse.ok || safetyData.safetyReport?.safeToCommit !== true) {
-        const findings = Array.isArray(safetyData.safetyReport?.findings)
-          ? safetyData.safetyReport.findings
-              .map((finding: { file?: string; reason?: string }) =>
-                `${finding.file ?? "proposal"}: ${finding.reason ?? "manual review required"}`
-              )
-              .join("; ")
-          : "";
-        throw new Error(
-          "Safety gate stopped this commit. Review the proposed changes before retrying." +
-          (findings ? " " + findings : "")
-        );
-      }
-
       const parts = forkedRepository.split("/");
       const [owner, repo] = parts;
       if (!owner || !repo) {
         throw new Error("The fork repository name is invalid.");
       }
 
-      // Commit actual proposed source files, not a JSON description of the proposal.
-      // Sequential writes avoid racing GitHub's branch-head updates.
-      for (const change of normalizedChanges) {
-        const response = await fetch(`${API_BASE_URL}/api/github/file`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            owner,
-            repo,
-            branchName,
-            filePath: change.filePath,
-            content: change.content,
-            commitMessage: "AI contribution: update " + change.filePath,
-          }),
-        });
-
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(
-            data.error || "Failed to commit " + change.filePath + "."
-          );
-        }
+      // The server validates the entire proposal and writes one Git commit.
+      // This prevents a failed multi-file proposal from leaving partial commits.
+      const response = await fetch(`${API_BASE_URL}/api/github/commit-proposal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          owner,
+          repo,
+          branchName,
+          commitMessage: "AI contribution: " + (selectedIssue?.title ?? "implement proposed fix"),
+          changes: normalizedChanges,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        const fileContext = typeof data.failedFile === "string" ? ` (file: ${data.failedFile})` : "";
+        const recovery = data.branchUnchanged === true
+          ? " The branch was not updated; you can safely retry after resolving the error."
+          : "";
+        throw new Error((data.error || "Failed to commit the proposal.") + fileContext + recovery);
       }
 
       setCommitSuccess(true);
