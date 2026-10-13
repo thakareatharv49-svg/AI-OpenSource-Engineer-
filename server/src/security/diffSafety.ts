@@ -78,8 +78,11 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
   const normalized = path.replace(/\\/g, "/");
   const exampleFile = /\.(?:example|sample|template)(?:\.json)?$/i.test(normalized);
   if (exampleFile) return false;
-  return /(?:^|\/)[^/]+\.tfvars(?:\.json)?$/i.test(normalized) ||
+  return /(?:^|\/)\.terraform(?:\/|$)/i.test(normalized) ||
+    /(?:^|\/)[^/]+\.tfvars(?:\.json)?$/i.test(normalized) ||
     /(?:^|\/)terraform\.tfstate(?:\..*)?$/i.test(normalized) ||
+    /(?:^|\/)[^/]+\.tfplan$/i.test(normalized) ||
+    /\.(?:p12|pfx|jks|keystore|kdbx)$/i.test(normalized) ||
     /(?:^|\/)kubeconfig$/i.test(normalized) ||
     /(?:^|\/)\.kube\/config$/i.test(normalized) ||
     /(?:^|\/)(?:service[-_]?account|[^/]*[-_]service[-_]account)\.json$/i.test(normalized);

@@ -55,6 +55,34 @@ test("detects secrets obscured by invisible or compatibility Unicode characters"
   }
 });
 
+test("blocks Terraform working directories, saved plans, and private keystore artifacts", () => {
+  for (const file of [
+    ".terraform/providers/registry.terraform.io/hashicorp/aws/5.0.0/provider.exe",
+    "infra/.terraform/modules/modules.json",
+    "infra/prod.tfplan",
+    "infra/plan.TFPLAN",
+    "certs/production.p12",
+    "certs/signing-key.pfx",
+    "certs/release.jks",
+    "secrets/app.keystore",
+    "backups/password-vault.kdbx",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) => finding.severity === "block"), file);
+  }
+});
+
+test("allows explicitly named infrastructure and keystore templates", () => {
+  const report = inspectProposedChanges([
+    { file: "infra/prod.tfplan.example", after: "placeholder content" },
+    { file: "certs/signing-key.p12.sample", after: "placeholder content" },
+    { file: "infra/.terraform.template", after: "placeholder content" },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
+
 test("blocks sensitive file paths", () => {
   for (const file of [".env", "config/.env.production", ".npmrc", ".ssh/id_ed25519", "secrets/cloud.json", ".git/config", ".gitmodules"]) {
     const report = inspectProposedChanges([{ file, after: "placeholder content" }]);
