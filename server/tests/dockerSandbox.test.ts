@@ -67,3 +67,77 @@ testCase("Python test checks require a test file but compile checks do not", asy
   });
   assert.doesNotMatch(compileResult.summary, /requires at least one test file/i);
 });
+
+
+import { EventEmitter } from "node:events";
+import { access } from "node:fs/promises";
+import { PassThrough } from "node:stream";
+import { spawn } from "node:child_process";
+
+function createMockSpawn(mode: "pass" | "fail" | "timeout") {
+  const calls: Array<{ command: string; args: string[] }> = [];
+  const spawnProcess = ((command: string, args: string[]) => {
+    calls.push({ command, args });
+    const child = new EventEmitter() as any;
+    if (args[0] === "kill") {
+      setImmediate(() => child.emit("close", 0));
+      return child;
+    }
+    child.stdout = new PassThrough();
+    child.stderr = new PassThrough();
+    child.kill = () => true;
+    if (mode !== "timeout") {
+      setImmediate(() => {
+        child.stdout.write("sandbox stdout");
+        child.stderr.write("sandbox stderr");
+        child.emit("close", mode === "pass" ? 0 : 2);
+      });
+    }
+    return child;
+  }) as typeof spawn;
+  return { spawnProcess, calls };
+}
+
+testCase("sandbox captures process output and removes the temporary workspace", async () => {
+  const mock = createMockSpawn("pass");
+  const result = await runSandbox({
+    runtime: "node",
+    check: "test",
+    files: [{ path: "package.json", content: '{"scripts":{"test":"node --test"}}' }],
+  }, { spawnProcess: mock.spawnProcess });
+
+  assert.equal(result.status, "passed");
+  assert.equal(result.exitCode, 0);
+  assert.equal(result.stdout, "sandbox stdout");
+  assert.equal(result.stderr, "sandbox stderr");
+  assert.equal(mock.calls.length, 1);
+  assert.equal(mock.calls[0].command, "docker");
+  const mount = mock.calls[0].args.find((arg) => arg.startsWith("type=bind,src="));
+  assert.ok(mount);
+  const workspace = mount!.slice("type=bind,src=".length).split(",dst=/workspace")[0];
+  await assert.rejects(access(workspace));
+});
+
+testCase("sandbox reports non-zero exit codes as failed checks", async () => {
+  const mock = createMockSpawn("fail");
+  const result = await runSandbox({
+    runtime: "node",
+    check: "test",
+    files: [{ path: "package.json", content: '{"scripts":{"test":"node --test"}}' }],
+  }, { spawnProcess: mock.spawnProcess });
+  assert.equal(result.status, "failed");
+  assert.equal(result.exitCode, 2);
+});
+
+testCase("sandbox timeout requests container termination and reports timed_out", async () => {
+  const mock = createMockSpawn("timeout");
+  const result = await runSandbox({
+    runtime: "node",
+    check: "test",
+    timeoutMs: 1000,
+    files: [{ path: "package.json", content: '{"scripts":{"test":"node --test"}}' }],
+  }, { spawnProcess: mock.spawnProcess });
+
+  assert.equal(result.status, "timed_out");
+  assert.ok(mock.calls.some((call) => call.args[0] === "kill"));
+});

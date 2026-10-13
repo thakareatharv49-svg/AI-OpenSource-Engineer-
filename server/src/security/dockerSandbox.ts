@@ -130,7 +130,9 @@ export function buildSandboxDockerArgs(workspacePath: string, request: SandboxRe
 
 export async function runSandbox(
   request: SandboxRequest,
+  dependencies: { spawnProcess?: typeof spawn } = {},
 ): Promise<SandboxResult> {
+  const spawnProcess = dependencies.spawnProcess ?? spawn;
   const invalid = validateRequest(request);
   if (invalid) {
     return {
@@ -173,7 +175,7 @@ export async function runSandbox(
       let timedOut = false;
       let truncated = false;
       let settled = false;
-      const child = spawn("docker", args, { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+      const child = spawnProcess("docker", args, { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
       const finish = (value: { code: number | null; stdout: string; stderr: string; timedOut: boolean; truncated: boolean }) => {
         if (settled) return;
         settled = true;
@@ -183,7 +185,7 @@ export async function runSandbox(
       const timer = setTimeout(() => {
         timedOut = true;
         child.kill("SIGKILL");
-        const killer = spawn("docker", ["kill", containerName], { stdio: "ignore", windowsHide: true });
+        const killer = spawnProcess("docker", ["kill", containerName], { stdio: "ignore", windowsHide: true });
         killer.on("error", () => finish({ code: null, stdout, stderr, timedOut, truncated }));
         killer.on("close", () => finish({ code: null, stdout, stderr, timedOut, truncated }));
       }, timeoutMs);
