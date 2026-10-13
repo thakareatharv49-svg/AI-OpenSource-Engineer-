@@ -164,13 +164,16 @@ Remaining before Milestone 4 is complete:
 - Preserve the non-force branch update; never hide concurrency conflicts by overwriting a newer branch head.
 
 ### Milestone 5: Code quality and scalable execution
-- Improve repository file selection and language-aware source analysis.
-- Use relevant tests and repository conventions when generating changes.
-- Add deterministic validation where possible before relying on AI review.
-- Add evaluation fixtures for common issue types, languages, regressions, and malicious prompt injection.
-- Measure end-to-end success rate, review acceptance rate, build/test pass rate, cost, latency, and retry frequency.
-- Improve large-repository support with targeted file retrieval and bounded context.
-- Add clear progress, logs, and readable diffs without claiming success prematurely.
+
+**Implementation status: issue-aware bounded repository context and deterministic evaluation fixtures implemented; CI verification required before merge.**
+
+- Added deterministic issue-aware ranking for source files, matching paths, tests, and language/build manifests instead of selecting a broad path-only top ten.
+- Added default limits of 16 files, 20 KB per file, and 120 KB aggregate context; helper limits are capped.
+- Excluded dependency/build/generated directories, lockfiles, binary extensions, oversized files, and common secret-like paths.
+- Bounded fetched content by UTF-8 bytes and exposed context size and truncation metadata in repository analysis responses.
+- Added fixtures for Python, Go, TypeScript/frontend issues, test/manifest inclusion, deterministic budgets, generated/secret-like filtering, and prompt-injection text as untrusted data.
+- This remains a bounded GitHub-tree sample, not a complete clone or semantic index. Large/truncated repositories may need targeted retrieval.
+- Selector tests cannot prove AI patches are correct or accepted upstream. Live GitHub OAuth, model providers, and Docker isolation remain separate local checks.
 
 ### Later milestone: production readiness
 - Add operational metrics, structured logs, tracing, error reporting, backup/retention policy, and incident guidance.
