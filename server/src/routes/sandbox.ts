@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { requireGithubSession } from "../security/session.js";
-import { requireGithubSession } from "../security/session.js";
+
 import { runSandbox, type SandboxCheck, type SandboxFile, type SandboxRuntime } from "../security/dockerSandbox.js";
 
 const router = Router();
@@ -80,7 +80,9 @@ async function fetchSandboxRepositorySnapshot(repository: string, token: string)
 router.use((req, res, next) => {
   if (process.env.SANDBOX_ENABLED !== "true") { next(); return; }
   requireGithubSession(req, res, next);
-});\n\nlet sandboxBusy = false;
+});
+
+let sandboxBusy = false;
 let activeRun: { runId: string; controller: AbortController } | null = null;
 
 router.post("/snapshot", async (req, res) => {
