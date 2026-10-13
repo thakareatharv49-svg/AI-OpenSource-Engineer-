@@ -310,7 +310,7 @@ const [forkedRepository, setForkedRepository] = useState("");
       setWorkflowId(lifecycleData.contribution.id);
       setWorkflowVersion(lifecycleData.contribution.version);
       setWorkflowState(lifecycleData.contribution.state);
-      localStorage.setItem("ai-ose-lifecycle-pointer", JSON.stringify({ id: lifecycleData.contribution.id, version: lifecycleData.contribution.version, state: lifecycleData.contribution.state }));
+      try { localStorage.setItem("ai-ose-lifecycle-pointer", JSON.stringify({ id: lifecycleData.contribution.id, version: lifecycleData.contribution.version, state: lifecycleData.contribution.state })); } catch { /* lifecycle remains on the server if browser storage is unavailable */ }
       setAISelection(selection);
       setSelectedIssue(issue);
     } catch (error) {
@@ -674,6 +674,7 @@ const [forkedRepository, setForkedRepository] = useState("");
     await updateLifecycle("fork_ready", "Fork verified and ready");
     setForkedRepository(data.repository.fullName);
   } catch (error) {
+    await updateLifecycle("retryable", error instanceof Error ? error.message : "Fork operation failed");
     setForkError(
       error instanceof Error
         ? error.message
@@ -846,6 +847,7 @@ const [forkedRepository, setForkedRepository] = useState("");
       await updateLifecycle("commit_complete", "Approved proposal committed atomically");
       setCommitSuccess(true);
     } catch (error) {
+      await updateLifecycle("retryable", error instanceof Error ? error.message : "Proposal commit failed");
       setCommitError(
         error instanceof Error ? error.message : "Failed to commit proposed changes."
       );
