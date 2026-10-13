@@ -2,40 +2,66 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { validateGeneratedProposal } from "../src/security/proposalQuality.js";
 
-test("accepts a concrete proposal for human review without claiming it was executed", () => {
-  const gate = validateGeneratedProposal({
-    summary: "Fix parser boundary handling",
-    changes: [{ file: "src/parser.ts", after: "export function parse(input: string) { return input.trim(); }\n" }],
-  });
-  assert.equal(gate.validStructure, true);
-  assert.equal(gate.readyForHumanReview, true);
-  assert.equal(gate.safeToCommit, true);
+const valid = {
+  summary: "Handle empty parser input safely.",
+  assumptions: ["The public API should remain unchanged."],
+  changes: [{
+    file: "src/parser.ts",
+    purpose: "Handle empty input.",
+    before: "export function parse(input: string) { return input.split(','); }",
+    after: "export function parse(input: string) { return input ? input.split(',') : []; }",
+    explanation: "Avoids splitting an empty input into an unintended value.",
+  }],
+  tests: [{ file: "tests/parser.test.ts", description: "Empty input returns an empty list.", code: "assert.deepEqual(parse(''), []);" }],
+  verificationSteps: ["Run the parser tests."],
+  warnings: [],
+};
+
+test("accepts a well-formed bounded proposal without bypassing safety review", () => {
+  const result = validateGeneratedProposal(valid);
+  assert.equal(result.validStructure, true);
+  assert.equal(result.readyForHumanReview, true);
+  assert.equal(result.safeToCommit, true);
+  assert.equal(result.fileCount, 1);
 });
 
-test("rejects malformed and empty model proposals deterministically", () => {
-  assert.equal(validateGeneratedProposal({ summary: "empty", changes: [] }).readyForHumanReview, false);
-  assert.equal(validateGeneratedProposal({ summary: "", changes: [{ file: "src/a.ts", after: "x" }] }).validStructure, false);
-  assert.equal(validateGeneratedProposal({ summary: "missing content", changes: [{ file: "src/a.ts" }] }).validStructure, false);
+test("rejects non-object proposals and missing or oversized required fields", () => {
+  assert.equal(validateGeneratedProposal(null).validStructure, false);
+  assert.equal(validateGeneratedProposal([]).validStructure, false);
+  assert.equal(validateGeneratedProposal({ ...valid, summary: " " }).validStructure, false);
+  assert.equal(validateGeneratedProposal({ ...valid, changes: [] }).validStructure, false);
+  assert.equal(validateGeneratedProposal({ ...valid, changes: [{ ...valid.changes[0], after: "x".repeat(200_001) }] }).validStructure, false);
+  assert.equal(validateGeneratedProposal({ ...valid, summary: "x".repeat(4_001) }).validStructure, false);
 });
 
-test("blocks secret-bearing and traversal proposals even if the model claims success", () => {
-  for (const change of [
-    { file: "../outside.ts", after: "export const value = 1;" },
-    { file: "src/config.ts", after: 'const token = "ghp_123456789012345678901234567890123456";' },
-  ]) {
-    const gate = validateGeneratedProposal({ summary: "Looks good", changes: [change] });
-    assert.equal(gate.readyForHumanReview, false);
-    assert.equal(gate.safeToCommit, false);
-    assert.ok(gate.reasons.length > 0);
-  }
+test("rejects malformed change metadata and duplicate or unsafe paths", () => {
+  assert.equal(validateGeneratedProposal({ ...valid, changes: [{ ...valid.changes[0], purpose: 3 }] }).validStructure, false);
+  assert.equal(validateGeneratedProposal({ ...valid, changes: [{ ...valid.changes[0], file: "../outside.ts" }] }).safeToCommit, false);
+  assert.equal(validateGeneratedProposal({ ...valid, changes: [valid.changes[0], valid.changes[0]] }).safeToCommit, false);
 });
 
-test("flags risky build/workflow and placeholder changes for manual review", () => {
-  const gate = validateGeneratedProposal({
-    summary: "Update CI",
-    changes: [{ file: ".github/workflows/ci.yml", after: "name: example\n" }],
-  });
-  assert.equal(gate.readyForHumanReview, true);
-  assert.equal(gate.safeToCommit, false);
-  assert.ok(gate.safetyReport.findings.some((finding) => finding.severity === "review"));
+test("rejects malformed optional lists and test entries", () => {
+  assert.equal(validateGeneratedProposal({ ...valid, assumptions: ["ok", 4] }).validStructure, false);
+  assert.equal(validateGeneratedProposal({ ...valid, verificationSteps: "run tests" }).validStructure, false);
+  assert.equal(validateGeneratedProposal({ ...valid, tests: [{ file: "tests/a.test.ts", description: "test", code: "" }] }).validStructure, false);
+  assert.equal(validateGeneratedProposal({ ...valid, tests: Array(31).fill(valid.tests[0]) }).validStructure, false);
+});
+
+test("rejects proposals that exceed the aggregate size limit", () => {
+  const large = {
+    ...valid,
+    changes: [
+      { ...valid.changes[0], after: "x".repeat(180_000) },
+      { ...valid.changes[0], file: "src/second.ts", after: "y".repeat(180_000) },
+      { ...valid.changes[0], file: "src/third.ts", after: "z".repeat(180_000) },
+    ],
+  };
+  assert.equal(validateGeneratedProposal(large).validStructure, false);
+});
+
+test("keeps safety findings distinct from structural validity", () => {
+  const result = validateGeneratedProposal({ ...valid, changes: [{ ...valid.changes[0], after: "const token = 'ghp_123456789012345678901234567890123456';" }] });
+  assert.equal(result.validStructure, true);
+  assert.equal(result.readyForHumanReview, false);
+  assert.equal(result.safeToCommit, false);
 });
