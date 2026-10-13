@@ -77,7 +77,7 @@ import { access } from "node:fs/promises";
 import { PassThrough } from "node:stream";
 import { spawn } from "node:child_process";
 
-function createMockSpawn(mode: "pass" | "fail" | "timeout") {
+function createMockSpawn(mode: "pass" | "fail" | "timeout" | "large-output") {
   const calls: Array<{ command: string; args: string[] }> = [];
   const spawnProcess = ((command: string, args: string[]) => {
     calls.push({ command, args });
@@ -91,9 +91,9 @@ function createMockSpawn(mode: "pass" | "fail" | "timeout") {
     child.kill = () => true;
     if (mode !== "timeout") {
       setImmediate(() => {
-        child.stdout.write("sandbox stdout");
-        child.stderr.write("sandbox stderr");
-        child.emit("close", mode === "pass" ? 0 : 2);
+        child.stdout.write(mode === "large-output" ? "x".repeat(40_000) : "sandbox stdout");
+        child.stderr.write(mode === "large-output" ? "y".repeat(40_000) : "sandbox stderr");
+        child.emit("close", mode === "fail" ? 2 : 0);
       });
     }
     return child;
@@ -144,4 +144,19 @@ testCase("sandbox timeout requests container termination and reports timed_out",
 
   assert.equal(result.status, "timed_out");
   assert.ok(mock.calls.some((call) => call.args[0] === "kill"));
+});
+
+
+testCase("sandbox bounds captured stdout and stderr", async () => {
+  const mock = createMockSpawn("large-output");
+  const result = await runSandbox({
+    runtime: "node",
+    check: "test",
+    files: [{ path: "package.json", content: '{"scripts":{"test":"node --test"}}' }],
+  }, { spawnProcess: mock.spawnProcess });
+
+  assert.equal(result.status, "passed");
+  assert.equal(result.stdout.length, 32_000);
+  assert.equal(result.stderr.length, 32_000);
+  assert.equal(result.outputTruncated, true);
 });
