@@ -1,6 +1,6 @@
 # AI Open Source Engineer — Project Memory, Status, and Roadmap
 
-Last updated: 2026-10-13
+Last updated: 2026-10-14
 
 ## 1. Project purpose
 
@@ -270,6 +270,13 @@ Definition of done: inspect the final diff; pass backend tests/typecheck, fronte
 
 ## 15. Milestone 11 — Broader provider credential pattern coverage
 
-**Implementation in progress on branch `security/expand-secret-pattern-coverage`.** Extend the proposal safety gate with targeted detection for Slack access tokens and webhook URLs, Stripe API keys, npm tokens, PyPI upload tokens, and SendGrid API keys. Add deterministic regression tests for each pattern. This remains heuristic defense in depth: it cannot identify every secret format, and matches must be reviewed for false positives. The scanner checks proposal content only; it does not scan the entire repository history or external dependencies.
+**Merged in PR #45 on 2026-10-13 (merge commit `047c2aec58e62d8aef913deb8187daebad52014b`).** The proposal safety gate now detects common Slack access tokens and webhook URLs, Stripe API keys, npm tokens, PyPI upload tokens, and SendGrid API keys, with deterministic regression tests. This remains heuristic defense in depth: it cannot identify every secret format, and matches must be reviewed for false positives. The scanner checks proposal content only; it does not scan the entire repository history or external dependencies.
 
 Definition of done: inspect the complete diff; pass backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL on the PR head; merge only when required checks pass. Keep real OAuth, Redis, Docker, and end-to-end verification gaps explicit.
+
+
+## 16. Milestone 12 — Additional developer-platform credential coverage
+
+**Implementation in progress on branch `security/expand-gitlab-huggingface-discord-secret-coverage`.** Extend the proposal safety gate to detect GitLab personal/deploy/runner tokens, Hugging Face access tokens, Anthropic API keys, and Discord webhook URLs. Add deterministic positive regression cases and short documentation-placeholder cases to reduce avoidable false positives. Pattern matching is defense in depth and does not establish that a proposal contains no secrets; token formats evolve, and repository history/dependencies are outside this scanner's scope.
+
+Definition of done: inspect the complete diff; pass backend tests/typecheck, frontend build/lint, production dependency audit, and CodeQL on the PR head; merge only after required checks pass. Keep live OAuth, Redis, Docker, and authenticated end-to-end verification gaps explicit.
