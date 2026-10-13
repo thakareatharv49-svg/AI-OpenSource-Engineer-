@@ -28,7 +28,7 @@ export function selectSandboxSnapshotCandidates(entries: GitTreeEntry[]): GitTre
       if (file.type !== "blob" || typeof file.sha !== "string" || typeof file.size !== "number") return false;
       if (file.size <= 0 || file.size > SNAPSHOT_MAX_FILE_BYTES || file.path.length > 240) return false;
       const parts = file.path.split("/");
-      if (file.path.startsWith("/") || file.path.includes("\\") || /[?#\\u0000-\\u001f]/.test(file.path) || parts.some((part: string) => !part || part === "." || part === "..")) return false;
+      if (file.path.startsWith("/") || file.path.includes("\\") || /[?#\u0000-\u001f]/.test(file.path) || parts.some((part: string) => !part || part === "." || part === "..")) return false;
       if (SNAPSHOT_IGNORED_PATH.test(file.path) || SNAPSHOT_IGNORED_FILE.test(file.path)) return false;
       return SNAPSHOT_EXTENSIONS.test(file.path);
     })
