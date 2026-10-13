@@ -216,3 +216,33 @@ test("allows ordinary Azure URL and short signature placeholders", () => {
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks database connection strings with embedded credentials", () => {
+  const samples = [
+    "postgresql://appuser:" + "a".repeat(18) + "@db.example.internal:5432/app",
+    "mongodb+srv://service:" + "b".repeat(18) + "@cluster.example.mongodb.net/app",
+    "redis://default:" + "c".repeat(18) + "@cache.example.internal:6379",
+    "mysql://appuser:" + "d".repeat(18) + "@db.example.internal/app",
+  ];
+  for (const sample of samples) {
+    const report = inspectProposedChanges([{ file: "src/database.ts", after: sample }]);
+    assert.equal(report.safeToCommit, false, "embedded database credentials must be blocked");
+    assert.ok(report.findings.some((finding) =>
+      finding.reason === "Database connection string contains embedded credentials"
+    ));
+  }
+});
+
+test("allows database connection strings using environment-variable placeholders", () => {
+  const report = inspectProposedChanges([{
+    file: "docs/database.md",
+    after: [
+      "postgresql://appuser:example@db.example.internal/app",
+      "mongodb+srv://service:${DATABASE_PASSWORD}@cluster.example.mongodb.net/app",
+      "redis://default:your-password@cache.example.internal:6379",
+    ].join("\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
