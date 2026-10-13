@@ -32,7 +32,7 @@ const allowedOrigins = (
 const normalizedBindHost = (HOST.startsWith("[") && HOST.endsWith("]") ? HOST.slice(1, -1) : HOST).toLowerCase();
 const isLoopbackBind = ["127.0.0.1", "localhost", "::1"].includes(normalizedBindHost);
 if (!isLoopbackBind) {
-  throw new Error("Refusing non-loopback bind: contribution lifecycle state is still local/single-process. Keep HOST on loopback until every stateful component has a shared durable backend and deployment checks pass.");
+  throw new Error("Refusing non-loopback bind: shared-store integration and production security verification are not yet approved. Keep HOST on loopback until live validation and deployment review are complete.");
 }
 if (["127.0.0.1", "localhost", "::1"].includes(normalizedBindHost)) {
   app.use((req, res, next) => {
@@ -73,7 +73,7 @@ app.use((_req, res, next) => {
 const aiRequestBuckets = new Map<string, { count: number; resetAt: number }>();
 const AI_RATE_LIMIT_WINDOW_MS = readBoundedInteger("AI_RATE_LIMIT_WINDOW_MS", 10 * 60 * 1000, 10_000, 24 * 60 * 60 * 1000);
 const AI_RATE_LIMIT_MAX = readBoundedInteger("AI_RATE_LIMIT_MAX", 20, 1, 1000);
-const AI_DAILY_QUOTA = readBoundedInteger("AI_DAILY_QUOTA", 200, AI_RATE_LIMIT_MAX, 100_000);
+const AI_DAILY_QUOTA = readBoundedInteger("AI_DAILY_QUOTA", Math.max(200, AI_RATE_LIMIT_MAX), AI_RATE_LIMIT_MAX, 100_000);
 function readBoundedInteger(name: string, fallback: number, min: number, max: number): number {
   const raw = process.env[name];
   if (raw === undefined || raw === "") return fallback;

@@ -40,7 +40,7 @@ export function createOAuthState(): string {
   const now = Date.now();
   for (const [state, expiresAt] of oauthStates) if (expiresAt <= now) oauthStates.delete(state);
   const state = randomBytes(32).toString("base64url");
-  oauthStates.set(state, now + OAUTH_STATE_TTL_MS);
+  if (!sharedRedisConfigured()) oauthStates.set(state, now + OAUTH_STATE_TTL_MS);
   return state;
 }
 
@@ -73,7 +73,7 @@ export function createGithubSession(input: Omit<GithubSession, "id" | "createdAt
   const now = Date.now();
   for (const [id, session] of sessions) if (session.expiresAt <= now) sessions.delete(id);
   const session: GithubSession = { ...input, id: randomUUID(), createdAt: now, expiresAt: now + SESSION_TTL_MS };
-  sessions.set(session.id, session);
+  if (!sharedRedisConfigured()) sessions.set(session.id, session);
   return session;
 }
 

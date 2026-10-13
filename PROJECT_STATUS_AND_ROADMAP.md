@@ -191,16 +191,17 @@ Limits that remain explicit:
 **Implementation status: shared Redis session/rate-limit/audit adapters and production configuration gates implemented on the milestone branch; awaiting CI and review. Public deployment remains blocked by the local contribution lifecycle store.**
 
 - Added an HTTPS-only Upstash Redis REST adapter with short timeouts and atomic Lua-backed quota increments.
+- Contribution lifecycle state can use a shared Redis document with Lua compare-and-set writes, retry on transient conflicts, optimistic version checks, and bounded retention (50 records and 20 events per record in shared mode). The local JSON store remains the default for local development.
 - OAuth state is one-time and TTL-bound in Redis when configured; opaque GitHub sessions are shared across processes and expire after eight hours. OAuth tokens remain server-side.
 - AI endpoints enforce configurable burst limits and a per-user daily quota. Shared-store failures fail closed with 503; local development uses a bounded in-memory fallback.
 - Security audit and AI request events can be retained in a Redis list capped at 5,000 records with a 30-day TTL; payloads exclude prompts, source code, and credentials.
 - Production config validation requires OAuth credentials, HTTPS URLs and frontend origins, shared Redis configuration, and disabled sandbox execution.
 - Added unit tests for configuration gates, Redis quota scripts, audit retention, HTTPS-only endpoints, and shared-session reads.
 
-**Deployment gate remains active:** the contribution lifecycle store is still a local JSON file with process-local serialization. The server continues to refuse non-loopback binds; do not bypass this check. A real Redis service, live OAuth credentials, and Docker runtime were not available for end-to-end validation. Migrate lifecycle state to shared durable storage with atomic version checks before enabling multi-instance deployment.
+**Deployment gate remains active:** the shared Redis paths are covered by mocked REST tests, but no live Redis service, live OAuth credentials, or Docker runtime was available for end-to-end validation. The server continues to refuse non-loopback binds until the shared backend and production controls are verified in a real environment; do not bypass this check.
 
 ### Remaining production-readiness work
-- Move contribution lifecycle records to shared durable storage with cross-instance atomic version checks and idempotency guarantees.
+- Verify the shared lifecycle backend against a real Redis service, including concurrent writers, restart recovery, and idempotency under contention.
 - Add deployment/release automation, backup/restore drills, tracing/error reporting, and incident runbooks.
 - Run live Redis/OAuth/fork/commit tests and adversarial security review.
 - Run the documented Docker smoke test separately; keep sandbox disabled in production.
