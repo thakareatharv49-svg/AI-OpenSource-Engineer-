@@ -415,6 +415,154 @@ router.put("/file", async (req, res) => {
     });
   }
 });
+/* ---------------- Atomic Proposal Commit ---------------- */
+
+// Validate the whole proposal, build a single Git tree/commit, then advance the
+// branch ref once. A failure before the final ref update leaves the branch unchanged.
+router.post("/commit-proposal", async (req, res) => {
+  try {
+    const { owner, repo, branchName, commitMessage, changes } = req.body ?? {};
+
+    if (!isValidRepositoryPart(owner) || !isValidRepositoryPart(repo)) {
+      return res.status(400).json({ error: "Invalid GitHub repository owner or name" });
+    }
+    if (!isValidGitRef(branchName)) {
+      return res.status(400).json({ error: "Branch name must be a valid Git ref" });
+    }
+    if (typeof commitMessage !== "string" || !commitMessage.trim() || commitMessage.length > 200) {
+      return res.status(400).json({ error: "Commit message must be non-empty text no longer than 200 characters" });
+    }
+
+    const safetyReport = inspectProposedChanges(changes);
+    if (!safetyReport.safeToCommit) {
+      return res.status(422).json({
+        error: "Proposal blocked by the safety gate",
+        safetyReport,
+      });
+    }
+
+    const token = process.env.GITHUB_TOKEN;
+    if (!token) {
+      return res.status(500).json({ error: "GITHUB_TOKEN is not configured" });
+    }
+
+    const forkCheck = await verifyAuthenticatedFork(token, owner, repo);
+    if (!forkCheck.ok) {
+      return res.status(forkCheck.status).json({ error: forkCheck.error });
+    }
+
+    const headers = {
+      ...githubHeaders(token),
+      "Content-Type": "application/json",
+    };
+    const apiBase = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
+    const refResponse = await fetch(
+      `${apiBase}/git/ref/heads/${encodeURIComponent(branchName)}`,
+      { headers }
+    );
+    const refData = await refResponse.json();
+    if (!refResponse.ok || typeof refData.object?.sha !== "string") {
+      return res.status(refResponse.status || 502).json({
+        error: refData.message || "Unable to read the target branch head",
+      });
+    }
+    const parentSha = refData.object.sha;
+
+    const commitResponse = await fetch(`${apiBase}/git/commits/${encodeURIComponent(parentSha)}`, { headers });
+    const parentData = await commitResponse.json();
+    if (!commitResponse.ok || typeof parentData.tree?.sha !== "string") {
+      return res.status(commitResponse.status || 502).json({
+        error: parentData.message || "Unable to read the target branch tree",
+      });
+    }
+
+    const treeEntries: Array<{ path: string; mode: "100644"; type: "blob"; sha: string }> = [];
+    for (const change of changes as Array<{ filePath?: unknown; content?: unknown }>) {
+      // inspectProposedChanges already validated the full proposal and normalized field types.
+      const filePath = (change.filePath as string).trim();
+      const blobResponse = await fetch(`${apiBase}/git/blobs`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ content: change.content, encoding: "utf-8" }),
+      });
+      const blobData = await blobResponse.json();
+      if (!blobResponse.ok || typeof blobData.sha !== "string") {
+        return res.status(blobResponse.status || 502).json({
+          error: blobData.message || `Unable to prepare proposed file: ${filePath}`,
+          failedFile: filePath,
+          branchUnchanged: true,
+        });
+      }
+      treeEntries.push({ path: filePath, mode: "100644", type: "blob", sha: blobData.sha });
+    }
+
+    const treeResponse = await fetch(`${apiBase}/git/trees`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ base_tree: parentData.tree.sha, tree: treeEntries }),
+    });
+    const treeData = await treeResponse.json();
+    if (!treeResponse.ok || typeof treeData.sha !== "string") {
+      return res.status(treeResponse.status || 502).json({
+        error: treeData.message || "Unable to prepare the proposal tree",
+        branchUnchanged: true,
+      });
+    }
+
+    const newCommitResponse = await fetch(`${apiBase}/git/commits`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        message: commitMessage.trim(),
+        tree: treeData.sha,
+        parents: [parentSha],
+      }),
+    });
+    const newCommitData = await newCommitResponse.json();
+    if (!newCommitResponse.ok || typeof newCommitData.sha !== "string") {
+      return res.status(newCommitResponse.status || 502).json({
+        error: newCommitData.message || "Unable to create the proposal commit",
+        branchUnchanged: true,
+      });
+    }
+
+    // Non-force update: if another writer moved the branch, GitHub rejects this
+    // update instead of overwriting their work. All proposed files land together.
+    const updateRefResponse = await fetch(
+      `${apiBase}/git/refs/heads/${encodeURIComponent(branchName)}`,
+      {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({ sha: newCommitData.sha, force: false }),
+      }
+    );
+    const updateRefData = await updateRefResponse.json();
+    if (!updateRefResponse.ok) {
+      return res.status(updateRefResponse.status).json({
+        error: updateRefData.message || "Unable to advance the branch to the proposal commit",
+        branchUnchanged: true,
+        retryable: updateRefResponse.status === 409 || updateRefResponse.status === 422,
+      });
+    }
+
+    return res.status(201).json({
+      message: "Proposal committed atomically",
+      commit: {
+        sha: newCommitData.sha,
+        htmlUrl: newCommitData.html_url,
+      },
+      branch: branchName,
+      filesCommitted: treeEntries.length,
+      safetyReport,
+    });
+  } catch (error) {
+    console.error("Atomic proposal commit error:", error);
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : "Failed to commit the proposal",
+    });
+  }
+});
+
 /* ---------------- Create GitHub Pull Request ---------------- */
 
 router.post("/pull-request", async (req, res) => {
