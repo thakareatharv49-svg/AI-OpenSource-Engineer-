@@ -36,6 +36,28 @@ Example request:
 
 Supported Node checks: `test`, `lint`, `build`, `typecheck`. The matching `package.json` script is executed inside the container. Supported Python checks: `test` uses `python -m unittest`; `lint`, `build`, and `typecheck` currently use `python -m compileall -q .`.
 
+## Local Docker smoke test (PowerShell)
+
+Run this only on a machine you control, with Docker Desktop running and the backend bound to loopback. Set `SANDBOX_ENABLED=true` in `server/.env`, restart the backend, and then run:
+
+```powershell
+$runId = [guid]::NewGuid().ToString()
+$body = @{
+  runId = $runId
+  runtime = "node"
+  check = "test"
+  timeoutMs = 30000
+  files = @(
+    @{ path = "package.json"; content = '{"scripts":{"test":"node --test"}}' },
+    @{ path = "test/basic.test.js"; content = "const test = require('node:test'); const assert = require('node:assert/strict'); test('works', () => assert.equal(1 + 1, 2));" }
+  )
+} | ConvertTo-Json -Depth 5
+
+Invoke-RestMethod -Uri "http://127.0.0.1:5000/api/sandbox/run" -Method Post -ContentType "application/json" -Body $body
+```
+
+Expected result: `status = passed`, exit code `0`, and a summary saying the sandbox check completed successfully. If Docker is missing or stopped, the endpoint should report that isolated execution is unavailable. Turn `SANDBOX_ENABLED` back off when you finish. This smoke test uses Node's built-in test runner and does not download dependencies.
+
 ## Current constraints
 
 - Only supplied UTF-8 text files are included. The runner does not clone a repository, upload directories, install dependencies, or integrate with the proposal UI yet.
