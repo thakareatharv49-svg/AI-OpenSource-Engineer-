@@ -411,8 +411,17 @@ Definition of done: review the final diff; backend typecheck/tests, frontend bui
 
 ## 34. Milestone 30 — Local secret-manager and Kubernetes cache artifact protection
 
-**Implementation in progress on branch `feat/milestone-30-local-secret-store-protection`.** Extend proposal path safety to block common local secret-manager and encryption key artifacts: HashiCorp Vault token files, SOPS age private-key files, age key files, Minikube local credentials, Kubernetes discovery caches, and 1Password CLI configuration locations. Add regression tests for blocked paths and explicit documentation-template exemptions.
+**Merged in PR #62 on 2026-10-13 (merge commit `76c486e780a9bacc9e7fd0eec4c8cb80afccd413`).** Extend proposal path safety to block common local secret-manager and encryption key artifacts: HashiCorp Vault token files, SOPS age private-key files, age key files, Minikube local credentials, Kubernetes discovery caches, and 1Password CLI configuration locations. Add regression tests for blocked paths and explicit documentation-template exemptions.
 
 Scope: filename/path-based defense in depth only. These checks do not parse file formats or establish whether credentials are live. Broad local-state directories may contain non-secret data; keep exceptions narrow and review findings manually.
 
 Definition of done: inspect the final diff; backend typecheck/tests, frontend build/lint, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
+
+
+## 35. Milestone 31 — Desktop password-manager, OS keyring, and GPG private-key artifact protection
+
+**Implementation in progress on branch `feat/milestone-31-desktop-secret-store-protection`.** Extend path-based proposal safety to block common local secret-storage artifacts: GPG private-key storage under `.gnupg/private-keys-v1.d/`, password-store contents under `.password-store/`, Linux desktop keyrings under `.local/share/keyrings/`, and local configuration/state locations for KeePassXC, KWallet, Bitwarden, and the Bitwarden CLI. Add regression tests for nested paths and explicitly named documentation-template exemptions.
+
+Scope: filename/path-based defense in depth only. It does not parse encrypted stores, establish whether contents are sensitive or live, or replace credential scanning and human review. Some application configuration files may be non-secret, so the matcher is limited to named local store locations.
+
+Definition of done: inspect the final diff; backend typecheck/tests, frontend build/lint, dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
