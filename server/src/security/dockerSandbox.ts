@@ -104,7 +104,7 @@ function validateRequest(input: SandboxRequest): string | null {
 }
 
 export function buildSandboxDockerArgs(workspacePath: string, request: SandboxRequest): string[] {
-  const command = CHECK_COMMANDS[request.runtime][request.check];
+  const command = `cp -R /input/. /workspace/ && ${CHECK_COMMANDS[request.runtime][request.check]}`;
   const mountSource = path.resolve(workspacePath).split(String.fromCharCode(92)).join("/");
   return [
     "run",
@@ -118,9 +118,10 @@ export function buildSandboxDockerArgs(workspacePath: string, request: SandboxRe
     "--cpus=1",
     "--ulimit=nofile=256:256",
     "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m",
+    "--tmpfs", "/workspace:rw,nosuid,nodev,size=128m,mode=1777",
     "--user=65532:65532",
     "--workdir=/workspace",
-    "--mount", `type=bind,src=${mountSource},dst=/workspace,rw`,
+    "--mount", `type=bind,src=${mountSource},dst=/input,readonly`,
     IMAGES[request.runtime],
     "sh",
     "-lc",
