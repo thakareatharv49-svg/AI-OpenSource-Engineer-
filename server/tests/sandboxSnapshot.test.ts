@@ -12,6 +12,7 @@ testCase("snapshot prioritizes manifests and tests while excluding secrets and g
     { path: "node_modules/pkg/index.js", type: "blob", size: 20, sha: "f" },
     { path: ".github/workflows/ci.yml", type: "blob", size: 20, sha: "g" },
     { path: "../escape.ts", type: "blob", size: 20, sha: "h" },
+    { path: "src/bad?.ts", type: "blob", size: 20, sha: "j" },
     { path: "README.md", type: "blob", size: 100, sha: "i" },
   ]);
   assert.equal(selected[0].path, "package.json");
@@ -22,6 +23,7 @@ testCase("snapshot prioritizes manifests and tests while excluding secrets and g
   assert.ok(!selected.some((file) => file.path.includes("node_modules")));
   assert.ok(!selected.some((file) => file.path.includes(".github/workflows")));
   assert.ok(!selected.some((file) => file.path.startsWith("..")));
+  assert.ok(!selected.some((file) => file.path.includes("?")));
 });
 
 testCase("snapshot candidates enforce file-count and file-size limits", () => {
