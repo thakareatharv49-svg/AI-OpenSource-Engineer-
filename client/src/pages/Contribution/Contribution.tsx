@@ -461,34 +461,46 @@ const [forkedRepository, setForkedRepository] = useState("");
 
   const handleRunSandboxCheck = async () => {
     if (!codeProposal) return;
-    const changes = Array.isArray(codeProposal.changes) ? codeProposal.changes : [];
-    const snapshot = new Map<string, string>();
-    for (const file of repositoryFiles) {
-      if (file && typeof file.path === "string" && typeof file.content === "string") {
-        snapshot.set(file.path, file.content);
-      }
-    }
-    for (const change of changes) {
-      if (!change || typeof change !== "object") continue;
-      const item = change as Record<string, unknown>;
-      if (typeof item.file !== "string" || typeof item.after !== "string") continue;
-      const content = item.after;
-      const lines = content.split("\n");
-      if (lines[0]?.trim().startsWith("```")) lines.shift();
-      if (lines.length && lines[lines.length - 1].trim() === "```") lines.pop();
-      snapshot.set(item.file.trim(), lines.join("\n"));
-    }
-    const files = Array.from(snapshot, ([path, content]) => ({ path, content }));
-    if (files.length === 0) {
-      setSandboxError("No repository snapshot or proposed files are available to test.");
+    if (!selectedIssue) {
+      setSandboxError("Select an issue before preparing a repository snapshot.");
       return;
     }
-    const runId = crypto.randomUUID();
-    sandboxRunId.current = runId;
-    setSandboxRunning(true);
+
+    let runId: string | null = null;
     setSandboxError("");
     setSandboxResult(null);
     try {
+      const repository = getRepositoryName(selectedIssue.url);
+      const snapshotResponse = await fetch(`${API_BASE_URL}/api/sandbox/snapshot`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repository }),
+      });
+      const snapshotData = await snapshotResponse.json();
+      if (!snapshotResponse.ok) throw new Error(snapshotData.error || "Repository snapshot preparation failed.");
+
+      const snapshot = new Map<string, string>();
+      for (const file of snapshotData.files as RepositoryFile[]) {
+        if (file && typeof file.path === "string" && typeof file.content === "string") {
+          snapshot.set(file.path, file.content);
+        }
+      }
+      const changes = Array.isArray(codeProposal.changes) ? codeProposal.changes : [];
+      for (const change of changes) {
+        if (!change || typeof change !== "object") continue;
+        const item = change as Record<string, unknown>;
+        if (typeof item.file !== "string" || typeof item.after !== "string") continue;
+        const lines = item.after.split("\n");
+        if (lines[0]?.trim().startsWith("```")) lines.shift();
+        if (lines.length && lines[lines.length - 1].trim() === "```") lines.pop();
+        snapshot.set(item.file.trim(), lines.join("\n"));
+      }
+      const files = Array.from(snapshot, ([path, content]) => ({ path, content }));
+      if (files.length === 0) throw new Error("No eligible repository files or proposed changes are available to test.");
+
+      runId = crypto.randomUUID();
+      sandboxRunId.current = runId;
+      setSandboxRunning(true);
       const response = await fetch(`${API_BASE_URL}/api/sandbox/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -500,7 +512,7 @@ const [forkedRepository, setForkedRepository] = useState("");
     } catch (error) {
       setSandboxError(error instanceof Error ? error.message : "Isolated check failed.");
     } finally {
-      if (sandboxRunId.current === runId) sandboxRunId.current = null;
+      if (runId && sandboxRunId.current === runId) sandboxRunId.current = null;
       setSandboxRunning(false);
     }
   };
