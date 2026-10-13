@@ -433,6 +433,22 @@ router.post("/commit-proposal", async (req, res) => {
       return res.status(400).json({ error: "Commit message must be non-empty text no longer than 200 characters" });
     }
 
+    if (
+      !Array.isArray(changes) ||
+      changes.length === 0 ||
+      changes.length > 30 ||
+      changes.some((change: unknown) =>
+        !change ||
+        typeof change !== "object" ||
+        typeof (change as { filePath?: unknown }).filePath !== "string" ||
+        typeof (change as { content?: unknown }).content !== "string"
+      )
+    ) {
+      return res.status(400).json({
+        error: "A proposal must contain 1 to 30 changes with a filePath and text content for every file",
+      });
+    }
+
     const safetyReport = inspectProposedChanges(changes);
     if (!safetyReport.safeToCommit) {
       return res.status(422).json({
