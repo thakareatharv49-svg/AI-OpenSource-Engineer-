@@ -105,7 +105,7 @@ function validateRequest(input: SandboxRequest): string | null {
 
 export function buildSandboxDockerArgs(workspacePath: string, request: SandboxRequest): string[] {
   const command = CHECK_COMMANDS[request.runtime][request.check];
-  const mountSource = path.resolve(workspacePath).replace(/\\\\/g, "/");
+  const mountSource = path.resolve(workspacePath).split(String.fromCharCode(92)).join("/");
   return [
     "run",
     "--rm",
