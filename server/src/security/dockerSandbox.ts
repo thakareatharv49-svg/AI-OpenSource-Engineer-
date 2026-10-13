@@ -97,7 +97,7 @@ function validateRequest(input: SandboxRequest): string | null {
   if (input.runtime === "node" && !input.files.some((file) => file.path === "package.json")) {
     return "Node checks require a package.json file.";
   }
-  if (input.runtime === "python" && !input.files.some((file) => /(^|\/)(test[^/]*\.py|[^/]*_test\.py)$/.test(file.path))) {
+  if (input.runtime === "python" && input.check === "test" && !input.files.some((file) => /(^|\/)(test[^/]*\.py|[^/]*_test\.py)$/.test(file.path))) {
     return "Python test execution requires at least one test file; compile checks may use any Python source.";
   }
   return null;
