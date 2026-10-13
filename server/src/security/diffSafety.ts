@@ -45,7 +45,7 @@ const secretPatterns: Array<{ pattern: RegExp; reason: string }> = [
   { pattern: /https?:\/\/discord(?:app)?\.com\/api\/webhooks\/\d{17,20}\/[A-Za-z0-9._-]{50,}/, reason: "Discord webhook URL detected" },
   { pattern: /\bAKIA[0-9A-Z]{16}\b/, reason: "AWS access key pattern detected" },
   { pattern: /\bAIza[0-9A-Za-z_-]{30,}\b/, reason: "Google API key pattern detected" },
-  { pattern: /\bsk-(?:proj-)?[A-Za-z0-9_-]{24,}\b/, reason: "AI-provider API key pattern detected" },
+  { pattern: /\bsk-(?!ant-)(?:proj-)?[A-Za-z0-9_-]{24,}\b/, reason: "AI-provider API key pattern detected" },
   { pattern: /\b(?:api[_-]?key|access[_-]?token|client[_-]?secret|password)\s*[:=]\s*["']?(?!your_|example|changeme|placeholder|\$\{|process\.env)[A-Za-z0-9_\-/+=]{20,}/i, reason: "Possible hard-coded credential detected" },
 ];
 
