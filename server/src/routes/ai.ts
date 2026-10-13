@@ -7,6 +7,7 @@ import { persistOperationalEvent } from "../security/sharedRedis.js";
 import { repositoryContextBudget, selectRelevantRepositoryFiles } from "../security/repositoryContext.js";
 import { validateIssueSelectionResult } from "../security/issueSelection.js";
 import { validateCodeReviewResult } from "../security/codeReview.js";
+import { validateRepositoryAnalysisResult } from "../security/repositoryAnalysis.js";
 
 dotenv.config();
 
@@ -293,9 +294,14 @@ Return ONLY valid JSON:
 }
 `);
 
+    const validatedResult = validateRepositoryAnalysisResult(result, repositoryFiles.map((file) => file.path));
+    if (!validatedResult) {
+      return res.status(502).json({ error: "The AI provider returned an invalid repository analysis. Retry analysis with the current repository context." });
+    }
+
     return res.json({
       message: "Repository analysis completed",
-      result,
+      result: validatedResult,
       files: repositoryFiles,
       context: repositoryContext.context,
     });
