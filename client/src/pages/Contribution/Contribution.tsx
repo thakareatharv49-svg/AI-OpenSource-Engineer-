@@ -462,8 +462,20 @@ const [forkedRepository, setForkedRepository] = useState("");
   const handleRunSandboxCheck = async () => {
     if (!codeProposal) return;
     const changes = Array.isArray(codeProposal.changes) ? codeProposal.changes : [];
+    if (!selectedIssue) {
+      setSandboxError("Select an issue before preparing a repository snapshot.");
+      return;
+    }
+    const repository = getRepositoryName(selectedIssue.url);
+    const snapshotResponse = await fetch(`${API_BASE_URL}/api/sandbox/snapshot`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ repository }),
+    });
+    const snapshotData = await snapshotResponse.json();
+    if (!snapshotResponse.ok) throw new Error(snapshotData.error || "Repository snapshot preparation failed.");
     const snapshot = new Map<string, string>();
-    for (const file of repositoryFiles) {
+    for (const file of snapshotData.files as RepositoryFile[]) {
       if (file && typeof file.path === "string" && typeof file.content === "string") {
         snapshot.set(file.path, file.content);
       }
