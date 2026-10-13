@@ -47,6 +47,7 @@ app.use(
 
       callback(new Error("Origin is not allowed by CORS"));
     },
+    credentials: true,
   })
 );
 app.use(express.json({ limit: "1mb" }));
@@ -92,9 +93,10 @@ app.use("/api/ai", (req, res, next) => {
   next();
 });
 
-app.use("/api/ai", aiRouter);
-app.use("/api/sandbox", sandboxRouter);
-app.use("/api/github", githubRouter);
+app.use("/api/auth", authRouter);
+app.use("/api/ai", attachGithubSession, requireTrustedOrigin, requireGithubSession, aiRouter);
+app.use("/api/sandbox", attachGithubSession, sandboxRouter);
+app.use("/api/github", attachGithubSession, githubRouter);
 
 app.get("/", (_req, res) => {
   res.json({
