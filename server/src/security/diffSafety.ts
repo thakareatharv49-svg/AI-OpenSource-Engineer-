@@ -47,13 +47,22 @@ const reviewPatterns: Array<{ pattern: RegExp; reason: string }> = [
 
 function isSafeRelativePath(path: string): boolean {
   const segments = path.split("/");
+  const windowsReservedName = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
   return (
     path.length > 0 &&
+    path === path.trim() &&
     path.length <= 240 &&
     !path.startsWith("/") &&
     !path.includes("\\") &&
-    !/[?#\u0000-\u001f]/.test(path) &&
-    segments.every((segment) => segment.length > 0 && segment !== "." && segment !== "..")
+    !path.includes(":") &&
+    !/[?#\u0000-\u001f\u007f]/.test(path) &&
+    segments.every((segment) =>
+      segment.length > 0 &&
+      segment !== "." &&
+      segment !== ".." &&
+      !/[. ]$/.test(segment) &&
+      !windowsReservedName.test(segment)
+    )
   );
 }
 
@@ -87,7 +96,7 @@ export function inspectProposedChanges(input: unknown): SafetyReport {
     }
 
     const item = candidate as { file?: unknown; filePath?: unknown; after?: unknown; content?: unknown };
-    const file = typeof item.file === "string" ? item.file.trim() : typeof item.filePath === "string" ? item.filePath.trim() : "";
+    const file = typeof item.file === "string" ? item.file : typeof item.filePath === "string" ? item.filePath : "";
     const content = typeof item.after === "string" ? item.after : typeof item.content === "string" ? item.content : "";
     if (!isSafeRelativePath(file)) {
       findings.push({ severity: "block", file: file || `(change ${index + 1})`, reason: "Unsafe or invalid repository-relative file path" });
