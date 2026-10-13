@@ -77,7 +77,7 @@ async function fetchSandboxRepositorySnapshot(repository: string): Promise<{ fil
 }
 
 
-let sandboxBusy = false;
+router.use((req, res, next) => {\n  if (process.env.SANDBOX_ENABLED !== "true") { next(); return; }\n  requireGithubSession(req, res, next);\n});\n\nimport { requireGithubSession } from "../security/session.js";\n\nlet sandboxBusy = false;
 let activeRun: { runId: string; controller: AbortController } | null = null;
 
 router.post("/snapshot", async (req, res) => {
