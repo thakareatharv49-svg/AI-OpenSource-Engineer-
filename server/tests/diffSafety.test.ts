@@ -246,3 +246,20 @@ test("allows database connection strings using environment-variable placeholders
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks JWT-like bearer tokens in proposed content", () => {
+  const token = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0." + "a".repeat(28);
+  const report = inspectProposedChanges([{ file: "src/auth.ts", after: `const token = "${token}";` }]);
+  assert.equal(report.safeToCommit, false);
+  assert.ok(report.findings.some((finding) => finding.reason === "JWT-like bearer token detected"));
+});
+
+test("blocks credentialed HTTP URLs but allows documentation placeholders", () => {
+  const secret = inspectProposedChanges([{ file: "src/client.ts", after: "https://serviceuser:" + "p".repeat(18) + "@api.example.internal/v1" }]);
+  assert.equal(secret.safeToCommit, false);
+  assert.ok(secret.findings.some((finding) => finding.reason === "URL contains embedded credentials"));
+  const placeholder = inspectProposedChanges([{ file: "docs/client.md", after: "https://service:example@api.example.internal/v1" }]);
+  assert.equal(placeholder.safeToCommit, true);
+  assert.deepEqual(placeholder.findings, []);
+});
