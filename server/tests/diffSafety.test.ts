@@ -369,3 +369,35 @@ test("allows explicitly named infrastructure examples and templates", () => {
     assert.deepEqual(report.findings, [], file);
   }
 });
+
+
+test("blocks common cloud CLI, container registry, and infrastructure-tool credential artifacts", () => {
+  for (const file of [
+    ".azure/accessTokens.json",
+    "home/.azure/azureProfile.json",
+    ".config/gcloud/credentials.db",
+    ".config/gcloud/access_tokens.db",
+    "home/.config/gcloud/application_default_credentials.json",
+    ".docker/config.json",
+    "home/.pulumi/credentials.json",
+    ".terraformrc",
+    "infra/terraform.rc",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "synthetic placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) =>
+      finding.reason === "Sensitive infrastructure state or deployment credential artifact cannot be committed"
+    ), file);
+  }
+});
+
+test("allows explicitly named cloud credential templates", () => {
+  const report = inspectProposedChanges([
+    { file: ".docker/config.json.example", after: '{"auths":{}}' },
+    { file: ".azure/accessTokens.json.sample", after: "replace-with-local-token-cache" },
+    { file: ".config/gcloud/credentials.db.template", after: "local-only" },
+    { file: ".terraformrc.example", after: 'credentials "app.terraform.io" {}' },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});

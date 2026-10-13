@@ -368,6 +368,15 @@ Scope: path-based defense-in-depth; file naming varies, and content scanning sti
 
 ## 29. Milestone 25 — Broader infrastructure artifact path protection
 
-**Implementation in PR: milestone 25.** Extend path-based protection to Terraform working directories and saved plan files, plus common private certificate, Java keystore, and password-vault file extensions (`.p12`, `.pfx`, `.jks`, `.keystore`, and `.kdbx`). Add regression tests for blocked artifacts and for explicitly named documentation templates.
+**Merged in PR #57 on 2026-10-14 (merge commit 063d9f7d49017093048f9f61f4fd723f852d9307).** Extend path-based protection to Terraform working directories and saved plan files, plus common private certificate, Java keystore, and password-vault file extensions (`.p12`, `.pfx`, `.jks`, `.keystore`, and `.kdbx`). Add regression tests for blocked artifacts and for explicitly named documentation templates.
 
 Scope: defense-in-depth based on filenames and paths. It does not inspect binary formats or prove that templates are secret-free; human review and proper secret/certificate management remain required.
+
+
+## 30. Milestone 26 — Cloud CLI and deployment-tool credential artifact protection
+
+**Implementation in PR: milestone 26.** Extend the path-based safety gate to block common local cloud-authentication and deployment-tool artifacts: Azure CLI token/profile directories (.azure/), Google Cloud credential caches (.config/gcloud/), Docker registry auth (.docker/config.json), Pulumi credentials (.pulumi/credentials.json), and Terraform CLI credential files (.terraformrc / terraform.rc). Add regression tests for each family and explicitly named template exemptions.
+
+Scope: filename/path-based defense in depth only. It does not parse these formats, inspect credential validity, or prove that template files contain no secrets. Keep human review and the content scanner in place.
+
+Definition of done: backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL pass on the final PR head; merge only after all required checks pass.
