@@ -362,6 +362,12 @@ Scope: pattern-based detection of proposed content only; token formats can chang
 
 ## 28. Milestone 24 — Sensitive infrastructure artifact path protection
 
-**Implementation in PR: milestone 24.** Block proposed changes to Terraform state and variable files, Kubernetes kubeconfig files, and common service-account JSON credential files. Explicitly named `.example`, `.sample`, and `.template` files remain eligible so teams can document configuration without committing live artifacts. Regression tests cover blocked paths and allowed templates.
+**Merged in PR #56 on 2026-10-14 (merge commit `90afe788d43d2678b5b115028991147ee795ccdc`).** Block proposed changes to Terraform state and variable files, Kubernetes kubeconfig files, and common service-account JSON credential files. Explicitly named `.example`, `.sample`, and `.template` files remain eligible so teams can document configuration without committing live artifacts. Regression tests cover blocked paths and allowed templates.
 
 Scope: path-based defense-in-depth; file naming varies, and content scanning still applies. This does not prove that an example file contains no live credential or replace human review.
+
+## 29. Milestone 25 — Broader infrastructure artifact path protection
+
+**Implementation in PR: milestone 25.** Extend path-based protection to Terraform working directories and saved plan files, plus common private certificate, Java keystore, and password-vault file extensions (`.p12`, `.pfx`, `.jks`, `.keystore`, and `.kdbx`). Add regression tests for blocked artifacts and for explicitly named documentation templates.
+
+Scope: defense-in-depth based on filenames and paths. It does not inspect binary formats or prove that templates are secret-free; human review and proper secret/certificate management remain required.
