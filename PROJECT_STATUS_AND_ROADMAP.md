@@ -355,6 +355,13 @@ Scope: proposal-content heuristic only; it does not validate whether credentials
 
 ## 27. Milestone 23 — Additional platform API-token detection
 
-**Implementation in PR: milestone 23.** Detect high-confidence Supabase secret-key (`sb_secret_`), Resend API-key (`re_`), and Replicate token (`r8_`) formats. Tests generate synthetic token-shaped values from harmless fragments and verify that Supabase publishable-key examples and short placeholders remain allowed.
+**Merged in PR #54 on 2026-10-13 (merge commit `88a5d1decc1fdb575f88f901d881f99a6f09b423`).** Detect high-confidence Supabase secret-key (`sb_secret_`), Resend API-key (`re_`), and Replicate token (`r8_`) formats. Tests generate synthetic token-shaped values from harmless fragments and verify that Supabase publishable-key examples and short placeholders remain allowed.
 
 Scope: pattern-based detection of proposed content only; token formats can change, and the check does not validate token activity or scan repository history/dependencies.
+
+
+## 28. Milestone 24 — Sensitive infrastructure artifact path protection
+
+**Implementation in PR: milestone 24.** Block proposed changes to Terraform state and variable files, Kubernetes kubeconfig files, and common service-account JSON credential files. Explicitly named `.example`, `.sample`, and `.template` files remain eligible so teams can document configuration without committing live artifacts. Regression tests cover blocked paths and allowed templates.
+
+Scope: path-based defense-in-depth; file naming varies, and content scanning still applies. This does not prove that an example file contains no live credential or replace human review.
