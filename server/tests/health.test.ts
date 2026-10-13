@@ -447,6 +447,38 @@ test("POST /api/github/commit-proposal leaves the branch untouched when a blob c
 const originalFetchForTest = globalThis.fetch.bind(globalThis);
 
 
+test("POST /api/sandbox/snapshot rejects traversal repository identifiers", async () => {
+  const previous = process.env.SANDBOX_ENABLED;
+  process.env.SANDBOX_ENABLED = "true";
+  try {
+    const response = await fetch(baseUrl + "/api/sandbox/snapshot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ repository: "../project" }),
+    });
+    assert.equal(response.status, 400);
+  } finally {
+    if (previous === undefined) delete process.env.SANDBOX_ENABLED;
+    else process.env.SANDBOX_ENABLED = previous;
+  }
+});
+
+test("POST /api/sandbox/snapshot stays disabled unless explicitly enabled", async () => {
+  const previous = process.env.SANDBOX_ENABLED;
+  delete process.env.SANDBOX_ENABLED;
+  try {
+    const response = await fetch(baseUrl + "/api/sandbox/snapshot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ repository: "example/project" }),
+    });
+    assert.equal(response.status, 503);
+  } finally {
+    if (previous === undefined) delete process.env.SANDBOX_ENABLED;
+    else process.env.SANDBOX_ENABLED = previous;
+  }
+});
+
 test("POST /api/sandbox/run stays disabled unless explicitly enabled", async () => {
   const previous = process.env.SANDBOX_ENABLED;
   delete process.env.SANDBOX_ENABLED;
