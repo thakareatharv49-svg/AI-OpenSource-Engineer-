@@ -29,7 +29,7 @@ const unsafePathPatterns = [
   /(?:^|\/)\.bundle\/config$/i,
   /(?:^|\/)\.cargo\/credentials(?:\.toml)?$/i,
   /(?:^|\/)\.pypoetry\/auth\.toml$/i,
-  /(?:^|\/)\.composer\/auth\.json$/i,
+  /(?:^|\/)\.composer\/auth\.json$/i,\n  /(?:^|\/)\.vault-token$/i,\n  /(?:^|\/)\.config\/sops\/age\/keys\.txt$/i,\n  /(?:^|\/)\.age\/keys\.txt$/i,
   /(?:^|\/)\.yarnrc(?:\.yml)?$/i,
   /(?:^|\/)\.npm\/_auth(?:Token)?$/i,
   /(?:^|\/)\.config\/pip\/pip\.conf$/i,
