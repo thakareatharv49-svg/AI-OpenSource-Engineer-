@@ -118,7 +118,12 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
     /\.(?:p12|pfx|jks|keystore|kdbx)$/i.test(normalized) ||
     /(?:^|\/)kubeconfig$/i.test(normalized) ||
     /(?:^|\/)\.kube\/config$/i.test(normalized) ||
-    /(?:^|\/)(?:service[-_]?account|[^/]*[-_]service[-_]account)\.json$/i.test(normalized);
+    /(?:^|\/)(?:service[-_]?account|[^/]*[-_]service[-_]account)\.json$/i.test(normalized) ||
+    /(?:^|\/)\.gnupg\/private-keys-v1\.d(?:\/|$)/i.test(normalized) ||
+    /(?:^|\/)\.password-store(?:\/|$)/i.test(normalized) ||
+    /(?:^|\/)\.local\/share\/keyrings(?:\/|$)/i.test(normalized) ||
+    /(?:^|\/)\.config\/(?:keepassxc|kwalletd|bitwarden)(?:\/|$)/i.test(normalized) ||
+    /(?:^|\/)\.bitwarden(?:\/|$)/i.test(normalized);
 }
 
 function isSafeRelativePath(path: string): boolean {
