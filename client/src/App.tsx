@@ -7,6 +7,7 @@ import AuthStatus from "./components/AuthStatus";
 function App() {
   return (
     <BrowserRouter>
+      <AuthStatus />
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/contribution" element={<Contribution />} />
