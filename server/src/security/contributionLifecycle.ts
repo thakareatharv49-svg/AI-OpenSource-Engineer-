@@ -1,6 +1,7 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
+import { redisCommand, sharedRedisConfigured } from "./sharedRedis.js";
 
 export const CONTRIBUTION_STATES = [
   "discovered", "analyzing", "planning", "proposal_ready", "review_pending",
@@ -35,15 +36,46 @@ const transitions: Record<ContributionState, ContributionState[]> = {
   failed: ["cancelled"],
   cancelled: [],
 };
+const REDIS_STORE_KEY = "aose:contributions:v1";
+const REDIS_MISSING = "__AOSE_STORE_MISSING__";
+const REDIS_CAS_SCRIPT = "local current = redis.call('GET', KEYS[1]); if ARGV[1] == '__AOSE_STORE_MISSING__' then if current then return 0 end else if current ~= ARGV[1] then return 0 end end; redis.call('SET', KEYS[1], ARGV[2]); return 1";
+
+function parseStore(raw: string): StoreData {
+  const parsed = JSON.parse(raw) as StoreData;
+  if (parsed.version !== 1 || !Array.isArray(parsed.records)) throw new Error("Invalid contribution state store format");
+  return parsed;
+}
+
 async function readStore(): Promise<StoreData> {
+  if (sharedRedisConfigured()) {
+    const raw = await redisCommand<string | null>(["GET", REDIS_STORE_KEY]);
+    return raw ? parseStore(raw) : { version: 1, records: [] };
+  }
   try {
-    const parsed = JSON.parse(await readFile(storePath(), "utf8")) as StoreData;
-    if (parsed.version !== 1 || !Array.isArray(parsed.records)) throw new Error("Invalid contribution state store format");
-    return parsed;
+    return parseStore(await readFile(storePath(), "utf8"));
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return { version: 1, records: [] };
     throw error;
   }
+}
+
+async function mutateSharedStore<T>(mutate: (data: StoreData) => { changed: boolean; value: T }): Promise<T> {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const raw = await redisCommand<string | null>(["GET", REDIS_STORE_KEY]);
+    const data: StoreData = raw ? parseStore(raw) : { version: 1, records: [] };
+    const result = mutate(data);
+    if (!result.changed) return result.value;
+    // Keep the single-value document comfortably bounded for Redis REST requests.
+    data.records = data.records.slice(-50);
+    for (const record of data.records) {
+      record.events = record.events.slice(-20);
+      if (record.lastError) record.lastError = record.lastError.slice(0, 300);
+    }
+    const replacement = JSON.stringify(data);
+    const swapped = await redisCommand<number>(["EVAL", REDIS_CAS_SCRIPT, "1", REDIS_STORE_KEY, raw ?? REDIS_MISSING, replacement]);
+    if (Number(swapped) === 1) return result.value;
+  }
+  throw Object.assign(new Error("Contribution state changed concurrently; refresh and retry."), { statusCode: 409 });
 }
 async function writeStore(data: StoreData): Promise<void> {
   const path = storePath();
@@ -74,14 +106,13 @@ function addEvent(record: ContributionRecord, next: ContributionState, message: 
   record.events = record.events.slice(-MAX_EVENTS);
 }
 export async function createContribution(input: { user: string; idempotencyKey: string; issueUrl: string; repository: string }): Promise<{ record: ContributionRecord; reused: boolean }> {
-  return serialized(async () => {
-    const data = await readStore();
+  const mutate = (data: StoreData): { changed: boolean; value: { record: ContributionRecord; reused: boolean } } => {
     const existing = data.records.find(r => r.user.toLowerCase() === input.user.toLowerCase() && r.idempotencyKey === input.idempotencyKey);
     if (existing) {
       if (existing.issueUrl !== input.issueUrl || existing.repository.toLowerCase() !== input.repository.toLowerCase()) {
         throw Object.assign(new Error("Idempotency key was already used for a different contribution."), { statusCode: 409 });
       }
-      return { record: existing, reused: true };
+      return { changed: false, value: { record: existing, reused: true } };
     }
     const now = new Date().toISOString();
     const record: ContributionRecord = {
@@ -92,8 +123,14 @@ export async function createContribution(input: { user: string; idempotencyKey: 
     };
     data.records.push(record);
     data.records = data.records.slice(-MAX_RECORDS);
-    await writeStore(data);
-    return { record, reused: false };
+    return { changed: true, value: { record, reused: false } };
+  };
+  if (sharedRedisConfigured()) return mutateSharedStore(mutate);
+  return serialized(async () => {
+    const data = await readStore();
+    const result = mutate(data);
+    if (result.changed) await writeStore(data);
+    return result.value;
   });
 }
 export async function listContributions(user: string): Promise<ContributionRecord[]> {
@@ -105,18 +142,27 @@ export async function getContribution(user: string, id: string): Promise<Contrib
   return data.records.find(r => r.id === id && r.user.toLowerCase() === user.toLowerCase()) ?? null;
 }
 export async function transitionContribution(input: { user: string; id: string; to: ContributionState; expectedVersion: number; message?: string }): Promise<ContributionRecord> {
-  return serialized(async () => {
-    const data = await readStore();
+  const mutate = (data: StoreData): { changed: boolean; value: ContributionRecord } => {
     const record = data.records.find(r => r.id === input.id && r.user.toLowerCase() === input.user.toLowerCase());
     if (!record) throw Object.assign(new Error("Contribution workflow not found."), { statusCode: 404 });
     if (record.version !== input.expectedVersion) throw Object.assign(new Error("Contribution changed since it was loaded. Refresh before retrying."), { statusCode: 409, currentVersion: record.version });
     if (!CONTRIBUTION_STATES.includes(input.to)) throw Object.assign(new Error("Unknown contribution state."), { statusCode: 400 });
     if (!transitions[record.state].includes(input.to)) throw Object.assign(new Error(`Invalid lifecycle transition: ${record.state} → ${input.to}`), { statusCode: 409, currentState: record.state });
     addEvent(record, input.to, input.message?.trim() || `State changed to ${input.to}`, input.to === "retryable");
+    return { changed: true, value: record };
+  };
+  if (sharedRedisConfigured()) return mutateSharedStore(mutate);
+  return serialized(async () => {
+    const data = await readStore();
+    const result = mutate(data);
     await writeStore(data);
-    return record;
+    return result.value;
   });
 }
 export async function clearContributionStoreForTests(): Promise<void> {
+  if (sharedRedisConfigured()) {
+    await redisCommand(["DEL", REDIS_STORE_KEY]);
+    return;
+  }
   await serialized(async () => writeStore({ version: 1, records: [] }));
 }

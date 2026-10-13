@@ -186,11 +186,25 @@ Limits that remain explicit:
 - Selector fixtures and safety gates cannot prove AI-generated patches are correct or accepted upstream. Labeled real-task evaluation and live GitHub OAuth/model/Docker verification remain separate checks.
 - Local/single-process telemetry is diagnostic only; it is not a durable production analytics system.
 
-### Later milestone: production readiness
-- Add operational metrics, structured logs, tracing, error reporting, backup/retention policy, and incident guidance.
-- Establish release/deployment automation and environment separation.
-- Run security review, dependency review, and adversarial tests.
-- Document limitations and a safe deployment checklist.
+### Milestone 6: Production readiness and shared security controls
+
+**Implementation status: shared Redis session/rate-limit/audit adapters and production configuration gates implemented on the milestone branch; awaiting CI and review. Public deployment remains blocked by the local contribution lifecycle store.**
+
+- Added an HTTPS-only Upstash Redis REST adapter with short timeouts and atomic Lua-backed quota increments.
+- Contribution lifecycle state can use a shared Redis document with Lua compare-and-set writes, retry on transient conflicts, optimistic version checks, and bounded retention (50 records and 20 events per record in shared mode). The local JSON store remains the default for local development.
+- OAuth state is one-time and TTL-bound in Redis when configured; opaque GitHub sessions are shared across processes and expire after eight hours. OAuth tokens remain server-side.
+- AI endpoints enforce configurable burst limits and a per-user daily quota. Shared-store failures fail closed with 503; local development uses a bounded in-memory fallback.
+- Security audit and AI request events can be retained in a Redis list capped at 5,000 records with a 30-day TTL; payloads exclude prompts, source code, and credentials.
+- Production config validation requires OAuth credentials, HTTPS URLs and frontend origins, shared Redis configuration, and disabled sandbox execution.
+- Added unit tests for configuration gates, Redis quota scripts, audit retention, HTTPS-only endpoints, and shared-session reads.
+
+**Deployment gate remains active:** the shared Redis paths are covered by mocked REST tests, but no live Redis service, live OAuth credentials, or Docker runtime was available for end-to-end validation. The server continues to refuse non-loopback binds until the shared backend and production controls are verified in a real environment; do not bypass this check.
+
+### Remaining production-readiness work
+- Verify the shared lifecycle backend against a real Redis service, including concurrent writers, restart recovery, and idempotency under contention.
+- Add deployment/release automation, backup/restore drills, tracing/error reporting, and incident runbooks.
+- Run live Redis/OAuth/fork/commit tests and adversarial security review.
+- Run the documented Docker smoke test separately; keep sandbox disabled in production.
 
 ## 7. Definition of done
 
@@ -215,7 +229,7 @@ A milestone is not done just because files were changed. It should have:
 
 ## 9. Current next action
 
-Milestone 5 implementation is merged. Next, begin the production-readiness milestone with a security-focused deployment gate: durable shared sessions and distributed rate limiting, persistent audit/quality metrics, explicit quotas, deployment configuration validation, and an adversarial review. Keep the server loopback-only until the shared infrastructure and deployment security checks are implemented.
+Milestone 6 is in progress: shared Redis sessions, distributed quotas, persistent operational events, and production config validation are implemented on the current PR branch. Continue by migrating contribution lifecycle state to a shared durable store with atomic concurrency controls; keep the server loopback-only until that migration and live security verification are complete.
 
 Separate environment-dependent verification gaps remain:
 - Run the documented local Docker smoke test with Docker Desktop and `SANDBOX_ENABLED=true`, then disable the flag.

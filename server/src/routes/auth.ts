@@ -5,6 +5,8 @@ import {
   consumeOAuthState,
   createGithubSession,
   createOAuthState,
+  persistGithubSession,
+  persistOAuthState,
   getGithubSession,
   requireTrustedOrigin,
   setGithubSessionCookie,
@@ -29,13 +31,17 @@ function getCallbackUrl(): string {
   return `${apiOrigin.replace(/\/$/, "")}/api/auth/github/callback`;
 }
 
-router.get("/github", (_req, res) => {
+router.get("/github", async (_req, res) => {
   const clientId = process.env.GITHUB_OAUTH_CLIENT_ID;
   if (!clientId) {
     res.status(503).json({ error: "GitHub OAuth is not configured. Set GITHUB_OAUTH_CLIENT_ID and GITHUB_OAUTH_CLIENT_SECRET." });
     return;
   }
   const state = createOAuthState();
+  try { await persistOAuthState(state); } catch {
+    res.status(503).json({ error: "Authentication store is unavailable." });
+    return;
+  }
   setOAuthStateCookie(res, state);
   const url = new URL(GITHUB_AUTHORIZE_URL);
   url.searchParams.set("client_id", clientId);
@@ -53,7 +59,13 @@ router.get("/github/callback", async (req, res) => {
     res.redirect(302, `${getClientOrigin()}/?auth=not_configured`);
     return;
   }
-  if (req.query.error || !consumeOAuthState(req, req.query.state)) {
+  let validState = false;
+  try { validState = !req.query.error && await consumeOAuthState(req, req.query.state); } catch {
+    clearOAuthStateCookie(res);
+    res.redirect(302, `${getClientOrigin()}/?auth=unavailable`);
+    return;
+  }
+  if (!validState) {
     clearOAuthStateCookie(res);
     res.redirect(302, `${getClientOrigin()}/?auth=failed`);
     return;
@@ -89,6 +101,7 @@ router.get("/github/callback", async (req, res) => {
       avatarUrl: typeof user.avatar_url === "string" ? user.avatar_url : null,
       accessToken: tokenData.access_token,
     });
+    await persistGithubSession(session);
     setGithubSessionCookie(res, session);
     clearOAuthStateCookie(res);
     res.redirect(302, `${getClientOrigin()}/?auth=success`);
@@ -98,8 +111,12 @@ router.get("/github/callback", async (req, res) => {
   }
 });
 
-router.get("/me", (req, res) => {
-  const session = getGithubSession(req);
+router.get("/me", async (req, res) => {
+  let session;
+  try { session = await getGithubSession(req); } catch {
+    res.status(503).json({ error: "Authentication store is unavailable.", code: "AUTH_STORE_UNAVAILABLE" });
+    return;
+  }
   if (!session) {
     res.status(200).json({ authenticated: false, user: null });
     return;
@@ -111,9 +128,13 @@ router.get("/me", (req, res) => {
   });
 });
 
-router.post("/logout", requireTrustedOrigin, (req, res) => {
-  clearGithubSession(req, res);
-  res.status(200).json({ success: true });
+router.post("/logout", requireTrustedOrigin, async (req, res) => {
+  try {
+    await clearGithubSession(req, res);
+    res.status(200).json({ success: true });
+  } catch {
+    res.status(503).json({ error: "Authentication store is unavailable.", code: "AUTH_STORE_UNAVAILABLE" });
+  }
 });
 
 export default router;
