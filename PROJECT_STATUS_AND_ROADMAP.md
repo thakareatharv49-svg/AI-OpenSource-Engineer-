@@ -188,7 +188,7 @@ Limits that remain explicit:
 
 ### Milestone 6: Production readiness and shared security controls
 
-**Implementation status: shared Redis session/rate-limit/audit adapters and production configuration gates implemented on the milestone branch; awaiting CI and review. Public deployment remains blocked by the local contribution lifecycle store.**
+**Implementation status: implementation merged in PR #20. Backend typecheck and all 77 backend tests passed; frontend build/lint and post-merge CI passed. Real Redis/OAuth/Docker verification remains pending. Public deployment remains blocked by the deliberate bind guard until live verification and security review.**
 
 - Added an HTTPS-only Upstash Redis REST adapter with short timeouts and atomic Lua-backed quota increments.
 - Contribution lifecycle state can use a shared Redis document with Lua compare-and-set writes, retry on transient conflicts, optimistic version checks, and bounded retention (50 records and 20 events per record in shared mode). The local JSON store remains the default for local development.
@@ -196,7 +196,8 @@ Limits that remain explicit:
 - AI endpoints enforce configurable burst limits and a per-user daily quota. Shared-store failures fail closed with 503; local development uses a bounded in-memory fallback.
 - Security audit and AI request events can be retained in a Redis list capped at 5,000 records with a 30-day TTL; payloads exclude prompts, source code, and credentials.
 - Production config validation requires OAuth credentials, HTTPS URLs and frontend origins, shared Redis configuration, and disabled sandbox execution.
-- Added unit tests for configuration gates, Redis quota scripts, audit retention, HTTPS-only endpoints, and shared-session reads.
+- Added unit tests for configuration gates, Redis quota scripts, audit retention, HTTPS-only endpoints, shared-session reads, shared lifecycle compare-and-set writes, and transient conflict retries.
+- Added an operations runbook with deployment preflight, backup/restore expectations, incident response, and release checks.
 
 **Deployment gate remains active:** the shared Redis paths are covered by mocked REST tests, but no live Redis service, live OAuth credentials, or Docker runtime was available for end-to-end validation. The server continues to refuse non-loopback binds until the shared backend and production controls are verified in a real environment; do not bypass this check.
 
@@ -229,7 +230,7 @@ A milestone is not done just because files were changed. It should have:
 
 ## 9. Current next action
 
-Milestone 6 is in progress: shared Redis sessions, distributed quotas, persistent operational events, and production config validation are implemented on the current PR branch. Continue by migrating contribution lifecycle state to a shared durable store with atomic concurrency controls; keep the server loopback-only until that migration and live security verification are complete.
+Milestone 6 implementation is merged. Finish the environment-dependent verification before calling production readiness complete: exercise the Redis-backed session, quota, audit, and lifecycle paths against a real Redis service; verify real OAuth; run backup/restore and adversarial security checks; and keep the server loopback-only until those checks are recorded.
 
 Separate environment-dependent verification gaps remain:
 - Run the documented local Docker smoke test with Docker Desktop and `SANDBOX_ENABLED=true`, then disable the flag.
