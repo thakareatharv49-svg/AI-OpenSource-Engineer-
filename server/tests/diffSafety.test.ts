@@ -50,6 +50,23 @@ test("blocks unsafe paths, duplicate paths, and empty changes", () => {
   assert.equal(inspectProposedChanges([{ file: "src/a.ts", after: "  " }]).safeToCommit, false);
 });
 
+test("blocks cross-platform dangerous path names", () => {
+  for (const file of [
+    "src/file:stream.ts",
+    "src/trailing-dot.",
+    "src/trailing-space ",
+    "src/CON",
+    "src/nul.txt",
+    "src/com1.ts",
+    "src/lpt9.log",
+    "src/subdir./file.ts",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "export {};\n" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) => finding.severity === "block"), file);
+  }
+});
+
 test("enforces file-count and total-content limits", () => {
   assert.equal(inspectProposedChanges(Array.from({ length: 31 }, (_, i) => ({
     file: `src/file-${i}.ts`,

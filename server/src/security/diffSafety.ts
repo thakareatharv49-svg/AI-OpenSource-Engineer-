@@ -16,16 +16,16 @@ const MAX_TOTAL_BYTES = 500_000;
 const MAX_FILE_BYTES = 200_000;
 
 const unsafePathPatterns = [
-  /(?:^|\/)\.git(?:\/|$)/i,
-  /(?:^|\/)\.gitmodules$/i,
-  /(?:^|\/)\.env(?:\.|$)/i,
-  /(?:^|\/)\.npmrc$/i,
-  /(?:^|\/)\.pypirc$/i,
-  /(?:^|\/)\.netrc$/i,
-  /(?:^|\/)\.ssh(?:\/|$)/i,
-  /(?:^|\/)\.aws(?:\/|$)/i,
-  /(?:^|\/)(?:secrets?|credentials?)(?:\/|$)/i,
-  /(?:^|\/)(?:id_rsa|id_ed25519|id_ecdsa|private_key|credentials\.json)$/i,
+  /(?:^|\\/)\.git(?:\\/|$)/i,
+  /(?:^|\\/)\.gitmodules$/i,
+  /(?:^|\\/)\.env(?:\.|$)/i,
+  /(?:^|\\/)\.npmrc$/i,
+  /(?:^|\\/)\.pypirc$/i,
+  /(?:^|\\/)\.netrc$/i,
+  /(?:^|\\/)\.ssh(?:\\/|$)/i,
+  /(?:^|\\/)\.aws(?:\\/|$)/i,
+  /(?:^|\\/)(?:secrets?|credentials?)(?:\\/|$)/i,
+  /(?:^|\\/)(?:id_rsa|id_ed25519|id_ecdsa|private_key|credentials\.json)$/i,
 ];
 
 const secretPatterns: Array<{ pattern: RegExp; reason: string }> = [
@@ -47,13 +47,21 @@ const reviewPatterns: Array<{ pattern: RegExp; reason: string }> = [
 
 function isSafeRelativePath(path: string): boolean {
   const segments = path.split("/");
+  const windowsReservedName = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
   return (
     path.length > 0 &&
     path.length <= 240 &&
     !path.startsWith("/") &&
     !path.includes("\\") &&
-    !/[?#\u0000-\u001f]/.test(path) &&
-    segments.every((segment) => segment.length > 0 && segment !== "." && segment !== "..")
+    !path.includes(":") &&
+    !/[?#\u0000-\u001f\u007f]/.test(path) &&
+    segments.every((segment) =>
+      segment.length > 0 &&
+      segment !== "." &&
+      segment !== ".." &&
+      !/[. ]$/.test(segment) &&
+      !windowsReservedName.test(segment)
+    )
   );
 }
 
