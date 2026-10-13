@@ -62,7 +62,7 @@ async function readStore(): Promise<StoreData> {
 async function mutateSharedStore<T>(mutate: (data: StoreData) => { changed: boolean; value: T }): Promise<T> {
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const raw = await redisCommand<string | null>(["GET", REDIS_STORE_KEY]);
-    const data = raw ? parseStore(raw) : { version: 1, records: [] };
+    const data: StoreData = raw ? parseStore(raw) : { version: 1, records: [] };
     const result = mutate(data);
     if (!result.changed) return result.value;
     // Keep the single-value document comfortably bounded for Redis REST requests.
