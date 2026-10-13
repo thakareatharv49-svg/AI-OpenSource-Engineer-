@@ -36,7 +36,7 @@ cd server
 Copy-Item .env.example .env
 ```
 
-Create a GitHub OAuth App in GitHub Developer Settings. Set its callback URL to `http://localhost:5000/api/auth/github/callback`, then add its client ID and client secret to `server/.env` as `GITHUB_OAUTH_CLIENT_ID` and `GITHUB_OAUTH_CLIENT_SECRET`. Add whichever AI provider key(s) you use. Never commit real secrets. Users sign in through the **Sign in with GitHub** control.
+Create a GitHub OAuth App in GitHub Developer Settings. Set its callback URL to `http://localhost:5000/api/auth/github/callback`, then add its client ID and client secret to `server/.env` as `GITHUB_OAUTH_CLIENT_ID` and `GITHUB_OAUTH_CLIENT_SECRET`. Add whichever AI provider key(s) you use. Never commit real secrets. Users sign in through the **Sign in with GitHub** control; the top bar shows the connected account and **Sign out** clears the server-side session.
 
 Start the backend:
 
