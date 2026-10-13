@@ -183,6 +183,59 @@ const [forkedRepository, setForkedRepository] = useState("");
   const [sandboxResult, setSandboxResult] = useState<SandboxResult | null>(null);
   const [sandboxError, setSandboxError] = useState("");
   const sandboxRunId = useRef<string | null>(null);
+  const uiSnapshotRestored = useRef(false);
+
+  // The snapshot stays in this browser only; OAuth tokens are never persisted here.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("ai-ose-contribution-snapshot-v1");
+      if (raw && raw.length <= 900_000) {
+        const saved = JSON.parse(raw) as Record<string, unknown>;
+        if (saved.version === 1) {
+          if (typeof saved.started === "boolean") setStarted(saved.started);
+          if (typeof saved.stage === "number" && Number.isInteger(saved.stage) && saved.stage >= 0 && saved.stage <= 5) setStage(saved.stage);
+          if (typeof saved.approved === "boolean") setApproved(saved.approved);
+          if (typeof saved.changesRequested === "boolean") setChangesRequested(saved.changesRequested);
+          if (saved.selectedIssue && typeof saved.selectedIssue === "object") setSelectedIssue(saved.selectedIssue as GitHubIssue);
+          if (Array.isArray(saved.issues)) setIssues(saved.issues as GitHubIssue[]);
+          if (saved.aiSelection && typeof saved.aiSelection === "object") setAISelection(saved.aiSelection as AISelection);
+          if (saved.repositoryAnalysis && typeof saved.repositoryAnalysis === "object") setRepositoryAnalysis(saved.repositoryAnalysis as RepositoryAnalysis);
+          if (Array.isArray(saved.repositoryFiles)) setRepositoryFiles(saved.repositoryFiles as RepositoryFile[]);
+          if (saved.solutionPlan && typeof saved.solutionPlan === "object") setSolutionPlan(saved.solutionPlan as SolutionPlan);
+          if (saved.codeProposal && typeof saved.codeProposal === "object") setCodeProposal(saved.codeProposal as Record<string, unknown>);
+          if (saved.codeReview && typeof saved.codeReview === "object") setCodeReview(saved.codeReview as CodeReview);
+          if (typeof saved.forkedRepository === "string") setForkedRepository(saved.forkedRepository);
+          if (typeof saved.branchName === "string") setBranchName(saved.branchName);
+          if (typeof saved.baseBranch === "string") setBaseBranch(saved.baseBranch);
+          if (typeof saved.commitSuccess === "boolean") setCommitSuccess(saved.commitSuccess);
+          if (typeof saved.workflowId === "string") setWorkflowId(saved.workflowId);
+          if (typeof saved.workflowVersion === "number") setWorkflowVersion(saved.workflowVersion);
+          if (typeof saved.workflowState === "string") setWorkflowState(saved.workflowState);
+        }
+      }
+    } catch (error) {
+      console.warn("Saved contribution UI state could not be restored:", error);
+    } finally {
+      uiSnapshotRestored.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!uiSnapshotRestored.current) return;
+    try {
+      const snapshot = {
+        version: 1, started, stage, approved, changesRequested, selectedIssue, issues, aiSelection,
+        repositoryAnalysis, repositoryFiles, solutionPlan, codeProposal, codeReview, forkedRepository,
+        branchName, baseBranch, commitSuccess, workflowId, workflowVersion, workflowState,
+      };
+      const serialized = JSON.stringify(snapshot);
+      if (serialized.length <= 900_000) localStorage.setItem("ai-ose-contribution-snapshot-v1", serialized);
+    } catch (error) {
+      console.warn("Contribution UI state could not be saved locally:", error);
+    }
+  }, [started, stage, approved, changesRequested, selectedIssue, issues, aiSelection, repositoryAnalysis,
+      repositoryFiles, solutionPlan, codeProposal, codeReview, forkedRepository, branchName, baseBranch,
+      commitSuccess, workflowId, workflowVersion, workflowState]);
 
   useEffect(() => {
     if (!started || stage !== 0) return;

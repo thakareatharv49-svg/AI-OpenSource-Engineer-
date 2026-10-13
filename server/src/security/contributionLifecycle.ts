@@ -25,7 +25,7 @@ const transitions: Record<ContributionState, ContributionState[]> = {
   planning: ["proposal_ready", "retryable", "failed", "cancelled"],
   proposal_ready: ["review_pending", "awaiting_approval", "retryable", "failed", "cancelled"],
   review_pending: ["awaiting_approval", "proposal_ready", "retryable", "failed", "cancelled"],
-  awaiting_approval: ["fork_pending", "cancelled"],
+  awaiting_approval: ["proposal_ready", "fork_pending", "cancelled"],
   fork_pending: ["fork_ready", "retryable", "failed", "cancelled"],
   fork_ready: ["branch_ready", "retryable", "failed", "cancelled"],
   branch_ready: ["commit_preparing", "retryable", "failed", "cancelled"],
