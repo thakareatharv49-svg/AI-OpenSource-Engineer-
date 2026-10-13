@@ -10,7 +10,12 @@ An AI-assisted open-source contribution workflow that discovers issues, analyzes
 - Review the proposal with an AI reviewer
 - After human approval, fork the upstream repository, create a branch, and commit the proposed source files as one atomic Git commit (all proposed files land together or the branch remains unchanged)
 - Create a pull request against the original repository only when the user clicks **Create Pull Request**
+- Persist contribution workflow state and event history across server restarts, with owner-scoped access, idempotent creation, optimistic concurrency, explicit retryable failures, and bounded history
 - Retry failed fork, branch, and proposal-commit operations without starting an unbounded request loop
+
+## Contribution lifecycle API
+
+The authenticated local backend exposes `GET /api/lifecycle`, `POST /api/lifecycle`, `GET /api/lifecycle/:id`, and `PATCH /api/lifecycle/:id` to persist a user-scoped contribution state machine. Set `CONTRIBUTION_STATE_PATH` to choose the JSON state file location; by default it is `.data/contributions.json` relative to the server process working directory. Keep this store on a private local disk: it is designed for the current single-process, loopback-only deployment, not multiple server instances. State transitions require an `expectedVersion`; repeated creates with the same user and idempotency key return the existing workflow instead of duplicating it.
 
 ## Stack
 
