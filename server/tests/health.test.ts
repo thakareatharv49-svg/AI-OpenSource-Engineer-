@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { after, before, test } from "node:test";
 import { request as httpRequest, type Server } from "node:http";
 import { app } from "../src/index.js";
@@ -533,5 +534,112 @@ test("POST /api/sandbox/run stays disabled unless explicitly enabled", async () 
   } finally {
     if (previous === undefined) delete process.env.SANDBOX_ENABLED;
     else process.env.SANDBOX_ENABLED = previous;
+  }
+});
+
+function githubJson(payload: unknown, status = 200): Response {
+  return new Response(JSON.stringify(payload), { status, headers: { "Content-Type": "application/json" } });
+}
+
+test("branch retry safely reuses a branch only when it still points at the requested base", async () => {
+  const session = createGithubSession({ login: "retry-test-user", avatarUrl: null, accessToken: "mock-token" });
+  const originalFetch = globalThis.fetch;
+  const calls: string[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    const method = init?.method ?? "GET";
+    calls.push(method + " " + url);
+    if (url === "https://api.github.com/user") return githubJson({ login: "retry-test-user" });
+    if (url === "https://api.github.com/repos/retry-test-user/project-fork") {
+      return githubJson({ full_name: "retry-test-user/project-fork", fork: true, parent: { full_name: "upstream/project" } });
+    }
+    if (url.endsWith("/git/ref/heads/main")) return githubJson({ object: { sha: "base-sha-123" } });
+    if (url.endsWith("/git/refs") && method === "POST") return githubJson({ message: "Reference already exists" }, 422);
+    if (url.endsWith("/git/ref/heads/ai-fix-issue")) return githubJson({ ref: "refs/heads/ai-fix-issue", object: { sha: "base-sha-123" } });
+    throw new Error("Unexpected mocked GitHub request: " + method + " " + url);
+  }) as typeof fetch;
+  try {
+    const response = await fetch(baseUrl + "/api/github/branch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Cookie: "aose_session=" + session.id },
+      body: JSON.stringify({ owner: "retry-test-user", repo: "project-fork", branchName: "ai-fix-issue", baseBranch: "main" }),
+    });
+    assert.equal(response.status, 200);
+    const body = await response.json() as { reused?: boolean; branch?: { sha?: string } };
+    assert.equal(body.reused, true);
+    assert.equal(body.branch?.sha, "base-sha-123");
+    assert.equal(calls.filter(call => call.includes("/git/refs") && call.startsWith("POST")).length, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("branch retry refuses to reuse a branch that moved after the original request", async () => {
+  const session = createGithubSession({ login: "retry-conflict-user", avatarUrl: null, accessToken: "mock-token" });
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    const method = init?.method ?? "GET";
+    if (url === "https://api.github.com/user") return githubJson({ login: "retry-conflict-user" });
+    if (url === "https://api.github.com/repos/retry-conflict-user/project-fork") {
+      return githubJson({ full_name: "retry-conflict-user/project-fork", fork: true, parent: { full_name: "upstream/project" } });
+    }
+    if (url.endsWith("/git/ref/heads/main")) return githubJson({ object: { sha: "base-sha-123" } });
+    if (url.endsWith("/git/refs") && method === "POST") return githubJson({ message: "Reference already exists" }, 422);
+    if (url.endsWith("/git/ref/heads/ai-fix-issue")) return githubJson({ ref: "refs/heads/ai-fix-issue", object: { sha: "newer-sha-456" } });
+    throw new Error("Unexpected mocked GitHub request: " + method + " " + url);
+  }) as typeof fetch;
+  try {
+    const response = await fetch(baseUrl + "/api/github/branch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Cookie: "aose_session=" + session.id },
+      body: JSON.stringify({ owner: "retry-conflict-user", repo: "project-fork", branchName: "ai-fix-issue", baseBranch: "main" }),
+    });
+    assert.equal(response.status, 409);
+    const body = await response.json() as { retryable?: boolean; error?: string };
+    assert.equal(body.retryable, false);
+    assert.match(body.error ?? "", /different commit/i);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("atomic commit retry recognizes the proposal trailer and does not create a duplicate commit", async () => {
+  const session = createGithubSession({ login: "commit-retry-user", avatarUrl: null, accessToken: "mock-token" });
+  const commitMessage = "Fix docs";
+  const changes = [{ filePath: "README.md", content: "# Proposal\n" }];
+  const key = createHash("sha256").update(JSON.stringify({
+    message: commitMessage.trim(),
+    changes: changes.map(change => ({ filePath: change.filePath.trim(), content: change.content })).sort((a, b) => a.filePath.localeCompare(b.filePath)),
+  })).digest("hex").slice(0, 24);
+  const originalFetch = globalThis.fetch;
+  const calls: string[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    const method = init?.method ?? "GET";
+    calls.push(method + " " + url);
+    if (url === "https://api.github.com/user") return githubJson({ login: "commit-retry-user" });
+    if (url === "https://api.github.com/repos/commit-retry-user/project-fork") {
+      return githubJson({ full_name: "commit-retry-user/project-fork", fork: true, parent: { full_name: "upstream/project" } });
+    }
+    if (url.endsWith("/git/ref/heads/ai-fix-issue")) return githubJson({ object: { sha: "already-committed-sha" } });
+    if (url.endsWith("/git/commits/already-committed-sha")) {
+      return githubJson({ message: "Fix docs\n\n[ai-ose-proposal:" + key + "]", tree: { sha: "existing-tree" } });
+    }
+    throw new Error("Retry should not write another Git object: " + method + " " + url);
+  }) as typeof fetch;
+  try {
+    const response = await fetch(baseUrl + "/api/github/commit-proposal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Cookie: "aose_session=" + session.id },
+      body: JSON.stringify({ owner: "commit-retry-user", repo: "project-fork", branchName: "ai-fix-issue", commitMessage, changes }),
+    });
+    assert.equal(response.status, 200);
+    const body = await response.json() as { alreadyCommitted?: boolean; commit?: { sha?: string } };
+    assert.equal(body.alreadyCommitted, true);
+    assert.equal(body.commit?.sha, "already-committed-sha");
+    assert.equal(calls.some(call => call.includes("/git/blobs") || call.includes("/git/trees") || call.includes("/git/refs/heads/")), false);
+  } finally {
+    globalThis.fetch = originalFetch;
   }
 });

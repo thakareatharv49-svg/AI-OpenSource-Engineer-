@@ -147,7 +147,7 @@ Implemented on the milestone branch:
 
 ### Milestone 4: Recovery and contribution lifecycle
 
-**Implementation status: lifecycle API, Contribution UI state tracking, browser refresh restoration, explicit cancellation, and idempotent branch/proposal retries are implemented on the Milestone 4 branch. Latest verified CI for commit `a36afd2cacae1894834248dbcea693a0addc07ff` passed; the newest GitHub retry-safety commit still needs its own CI result. Live restart/GitHub fault-injection verification and cancellation/cleanup UX remain.**
+**Implementation status: lifecycle API, Contribution UI state tracking, browser refresh restoration, explicit cancellation, and idempotent branch/proposal retries are implemented. Automated tests now cover state restoration from a separate Node process, branch retry reuse/conflict handling, and duplicate-commit detection after a lost response. A real OAuth/Docker issue-to-commit run remains environment-dependent verification.**
 
 Implemented in this slice:
 - Atomic-write JSON state store with private directory/file permissions, bounded retention (500 workflows), and bounded event history (100 events per workflow).
@@ -160,9 +160,7 @@ Implemented in this slice:
 - The JSON store is deliberately single-process/local-only. Do not use it as a shared production store or expose this server publicly; shared durable storage and distributed locking are later deployment requirements.
 
 Remaining before Milestone 4 is complete:
-- Add automated mocked-GitHub tests for uncertain branch-create and atomic-commit responses, including idempotent retry behavior.
-- Verify restart persistence and the authenticated issue-to-commit recovery path locally; CI cannot substitute for a real GitHub OAuth/Docker run.
-- Verify server restart persistence and GitHub failure cases in a configured local run.
+- Verify the authenticated issue-to-commit recovery path locally with configured GitHub OAuth and the Docker sandbox; CI uses mocked GitHub responses and cannot substitute for live credentials.
 - Preserve the non-force branch update; never hide concurrency conflicts by overwriting a newer branch head.
 
 ### Milestone 5: Code quality and scalable execution
