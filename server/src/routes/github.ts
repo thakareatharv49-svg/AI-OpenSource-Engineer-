@@ -91,9 +91,7 @@ router.get("/repository/:owner/:repo", async (req, res) => {
     const token = res.locals.githubSession?.accessToken as string | undefined;
 
     if (!token) {
-      return res.status(500).json({
-        error: "GITHUB_TOKEN is not configured",
-      });
+      return res.status(401).json({ error: "Sign in with GitHub to continue.", code: "AUTH_REQUIRED" });
     }
 
     const response = await fetch(
@@ -162,9 +160,7 @@ router.post("/branch", async (req, res) => {
     const token = res.locals.githubSession?.accessToken as string | undefined;
 
     if (!token) {
-      return res.status(500).json({
-        error: "GITHUB_TOKEN is not configured",
-      });
+      return res.status(401).json({ error: "Sign in with GitHub to continue.", code: "AUTH_REQUIRED" });
     }
 
     const forkCheck = await verifyAuthenticatedFork(token, owner, repo);
@@ -332,9 +328,7 @@ router.put("/file", async (req, res) => {
 
     const token = res.locals.githubSession?.accessToken as string | undefined;
     if (!token) {
-      return res.status(500).json({
-        error: "GITHUB_TOKEN is not configured",
-      });
+      return res.status(401).json({ error: "Sign in with GitHub to continue.", code: "AUTH_REQUIRED" });
     }
 
     const forkCheck = await verifyAuthenticatedFork(token, owner, repo);
@@ -619,9 +613,7 @@ router.post("/pull-request", async (req, res) => {
 
     const token = res.locals.githubSession?.accessToken as string | undefined;
     if (!token) {
-      return res.status(500).json({
-        error: "GITHUB_TOKEN is not configured",
-      });
+      return res.status(401).json({ error: "Sign in with GitHub to continue.", code: "AUTH_REQUIRED" });
     }
 
     const authenticatedUserResponse = await fetch("https://api.github.com/user", {
@@ -723,9 +715,7 @@ router.post("/fork", async (req, res) => {
     const token = res.locals.githubSession?.accessToken as string | undefined;
 
     if (!token) {
-      return res.status(500).json({
-        error: "GITHUB_TOKEN is not configured",
-      });
+      return res.status(401).json({ error: "Sign in with GitHub to continue.", code: "AUTH_REQUIRED" });
     }
 
     const response = await fetch(
