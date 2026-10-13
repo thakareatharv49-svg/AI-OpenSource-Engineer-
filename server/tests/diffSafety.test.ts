@@ -83,6 +83,32 @@ test("allows explicitly named infrastructure and keystore templates", () => {
   assert.deepEqual(report.findings, []);
 });
 
+test("blocks additional local developer and deployment credential artifacts", () => {
+  for (const file of [
+    ".envrc",
+    ".direnv/allow",
+    ".doppler/.config",
+    "infra/.wrangler/state/v3/account.json",
+    ".firebase/hosting.YnVpbGQ.cache",
+    ".netlify/state.json",
+    ".vercel/.env.production.local",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) => finding.severity === "block"), file);
+  }
+});
+
+test("allows explicitly named templates for additional deployment artifacts", () => {
+  const report = inspectProposedChanges([
+    { file: ".envrc.example", after: "export API_KEY=your-token-here\n" },
+    { file: ".doppler/.config.template", after: "token: placeholder\n" },
+    { file: ".vercel/.env.production.sample", after: "API_KEY=example\n" },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
+
 test("blocks sensitive file paths", () => {
   for (const file of [".env", "config/.env.production", ".npmrc", ".ssh/id_ed25519", "secrets/cloud.json", ".git/config", ".gitmodules"]) {
     const report = inspectProposedChanges([{ file, after: "placeholder content" }]);
