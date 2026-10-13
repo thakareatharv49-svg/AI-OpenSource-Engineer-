@@ -191,3 +191,28 @@ test("allows short AWS credential placeholders in documentation", () => {
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks Azure shared-access-signature credentials", () => {
+  const signature = "A".repeat(36);
+  const report = inspectProposedChanges([{
+    file: "src/storage.ts",
+    after: "https://example.blob.core.windows.net/data?sv=2024-01-01&se=2030-01-01&sp=rw&sig=" + signature,
+  }]);
+  assert.equal(report.safeToCommit, false);
+  assert.ok(report.findings.some((finding) =>
+    finding.reason === "Azure shared-access-signature credential detected"
+  ));
+});
+
+test("allows ordinary Azure URL and short signature placeholders", () => {
+  const report = inspectProposedChanges([{
+    file: "docs/storage.md",
+    after: [
+      "https://example.blob.core.windows.net/data",
+      "https://example.blob.core.windows.net/data?sig=placeholder&se=2030-01-01&sp=r",
+    ].join("\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
