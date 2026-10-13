@@ -309,8 +309,26 @@ Definition of done: pass backend typecheck/tests, frontend build/lint, productio
 
 ## 20. Milestone 16 — Azure shared-access-signature detection
 
-**Implementation in progress on branch `security/gcp-service-account-key-detection`.** Extend proposal-content scanning to detect high-confidence Azure Storage shared-access-signature URLs with a sufficiently long `sig` value alongside SAS parameters. Add regression tests for positive signatures and ordinary/placeholder URLs.
+**Merged in PR #50 on 2026-10-13 (merge commit `a9b7591bb19b821cb4cc279cc2b5d32be29ff705`).** Extend proposal-content scanning to detect high-confidence Azure Storage shared-access-signature URLs with a sufficiently long `sig` value alongside SAS parameters. Add regression tests for positive signatures and ordinary/placeholder URLs.
 
 Scope: heuristic detection of proposed text only; it does not validate whether a signature is live, scan repository history, or replace cloud-side least privilege and key rotation.
 
 Definition of done: pass backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL; merge only after all required checks pass.
+
+
+## 21. Milestone 17 — Database connection-string credential detection
+
+**Implemented on branch `security/database-connection-string-detection`; final CI pending.** Detect embedded username/password credentials in common PostgreSQL, MySQL/MariaDB, MongoDB, and Redis connection strings. Regression tests cover each family and common documentation/environment-variable placeholders.
+
+Scope: pattern-based detection of proposed content only. It does not connect to databases, validate credential activity, scan repository history/dependencies, or replace secret managers and least-privilege access.
+
+Definition of done: pass backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL; merge only after all required checks pass.
+
+
+## 22. Milestone 18 — JWT-like bearer token detection
+
+**Implemented on branch `security/database-connection-string-detection`; final CI pending.** Detect JWT-shaped bearer tokens with three sufficiently long base64url-like segments. Add regression coverage for a representative token. This is format-based heuristic detection and may flag non-secret signed JWT examples; review findings before treating them as live credentials.
+
+## 23. Milestone 19 — Credentials embedded in HTTP URLs
+
+**Implemented on branch `security/database-connection-string-detection`; final CI pending.** Detect HTTP(S) URLs that embed a username and sufficiently long password before the host. Add tests for credentialed URLs and ordinary documentation placeholders. This scans proposed text only and does not validate credentials or scan repository history/dependencies.
