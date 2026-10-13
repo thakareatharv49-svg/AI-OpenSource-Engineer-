@@ -186,6 +186,7 @@ const [forkedRepository, setForkedRepository] = useState("");
   const uiSnapshotRestored = useRef(false);
 
   // The snapshot stays in this browser only; OAuth tokens are never persisted here.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     try {
       const raw = localStorage.getItem("ai-ose-contribution-snapshot-v1");
@@ -219,6 +220,7 @@ const [forkedRepository, setForkedRepository] = useState("");
       uiSnapshotRestored.current = true;
     }
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!uiSnapshotRestored.current) return;
