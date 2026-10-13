@@ -559,7 +559,7 @@ test("branch retry safely reuses a branch only when it still points at the reque
     throw new Error("Unexpected mocked GitHub request: " + method + " " + url);
   }) as typeof fetch;
   try {
-    const response = await fetch(baseUrl + "/api/github/branch", {
+    const response = await originalFetch(baseUrl + "/api/github/branch", {
       method: "POST",
       headers: { "Content-Type": "application/json", Cookie: "aose_session=" + session.id },
       body: JSON.stringify({ owner: "retry-test-user", repo: "project-fork", branchName: "ai-fix-issue", baseBranch: "main" }),
@@ -590,7 +590,7 @@ test("branch retry refuses to reuse a branch that moved after the original reque
     throw new Error("Unexpected mocked GitHub request: " + method + " " + url);
   }) as typeof fetch;
   try {
-    const response = await fetch(baseUrl + "/api/github/branch", {
+    const response = await originalFetch(baseUrl + "/api/github/branch", {
       method: "POST",
       headers: { "Content-Type": "application/json", Cookie: "aose_session=" + session.id },
       body: JSON.stringify({ owner: "retry-conflict-user", repo: "project-fork", branchName: "ai-fix-issue", baseBranch: "main" }),
@@ -629,7 +629,7 @@ test("atomic commit retry recognizes the proposal trailer and does not create a 
     throw new Error("Retry should not write another Git object: " + method + " " + url);
   }) as typeof fetch;
   try {
-    const response = await fetch(baseUrl + "/api/github/commit-proposal", {
+    const response = await originalFetch(baseUrl + "/api/github/commit-proposal", {
       method: "POST",
       headers: { "Content-Type": "application/json", Cookie: "aose_session=" + session.id },
       body: JSON.stringify({ owner: "commit-retry-user", repo: "project-fork", branchName: "ai-fix-issue", commitMessage, changes }),
