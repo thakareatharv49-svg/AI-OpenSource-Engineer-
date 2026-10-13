@@ -402,8 +402,17 @@ Definition of done: backend typecheck/tests, frontend build/lint, and CodeQL pas
 
 ## 33. Milestone 29 — Package-manager and build-tool authentication store protection
 
-**Implementation in progress on branch `feat/milestone-29-package-manager-auth-stores`.** Extend the proposal path-safety gate to block common package-manager and build-tool credential stores: Yarn auth configuration, npm's local auth token files, pip/uv/PDM credential configuration, container registry auth, Terraform CLI credentials, Gradle properties, and Maven settings. Add deterministic blocked-path tests and explicit documentation-template exemptions.
+**Merged in PR #61 on 2026-10-13 (merge commit `7e9686a8dd8958e792f23e902322327b1b52f942`).** Extend the proposal path-safety gate to block common package-manager and build-tool credential stores: Yarn auth configuration, npm's local auth token files, pip/uv/PDM credential configuration, container registry auth, Terraform CLI credentials, Gradle properties, and Maven settings. Add deterministic blocked-path tests and explicit documentation-template exemptions.
 
 Scope: filename/path-based defense in depth only. These rules do not parse credential contents or prove that templates are secret-free; preserve content scanning and human approval.
 
 Definition of done: review the final diff; backend typecheck/tests, frontend build/lint, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
+
+
+## 34. Milestone 30 — Local secret-manager and Kubernetes cache artifact protection
+
+**Implementation in progress on branch `feat/milestone-30-local-secret-store-protection`.** Extend proposal path safety to block common local secret-manager and encryption key artifacts: HashiCorp Vault token files, SOPS age private-key files, age key files, Minikube local credentials, Kubernetes discovery caches, and 1Password CLI configuration locations. Add regression tests for blocked paths and explicit documentation-template exemptions.
+
+Scope: filename/path-based defense in depth only. These checks do not parse file formats or establish whether credentials are live. Broad local-state directories may contain non-secret data; keep exceptions narrow and review findings manually.
+
+Definition of done: inspect the final diff; backend typecheck/tests, frontend build/lint, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
