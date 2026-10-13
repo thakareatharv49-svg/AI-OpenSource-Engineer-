@@ -77,11 +77,6 @@ async function fetchSandboxRepositorySnapshot(repository: string, token: string)
 }
 
 
-router.use((req, res, next) => {
-  if (process.env.SANDBOX_ENABLED !== "true") { next(); return; }
-  requireGithubSession(req, res, next);
-});
-
 let sandboxBusy = false;
 let activeRun: { runId: string; controller: AbortController } | null = null;
 
@@ -146,6 +141,7 @@ router.post("/run", async (req, res) => {
   ) {
     return res.status(400).json({ error: "Provide runtime, check, and a list of workspace files." });
   }
+  if (!res.locals.githubSession) return res.status(401).json({ error: "Sign in with GitHub to continue.", code: "AUTH_REQUIRED" });
 
   sandboxBusy = true;
   const controller = new AbortController();
@@ -169,6 +165,7 @@ router.post("/cancel", (req, res) => {
   if (process.env.SANDBOX_ENABLED !== "true") return res.status(503).json({ error: "Isolated checks are disabled." });
   const runId = req.body && typeof req.body.runId === "string" ? req.body.runId : "";
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(runId)) return res.status(400).json({ error: "Provide a valid sandbox runId." });
+  if (!res.locals.githubSession) return res.status(401).json({ error: "Sign in with GitHub to continue.", code: "AUTH_REQUIRED" });
   if (!activeRun || activeRun.runId !== runId) return res.status(404).json({ error: "No active sandbox run matches this runId." });
   activeRun.controller.abort();
   return res.status(202).json({ status: "cancellation_requested" });
