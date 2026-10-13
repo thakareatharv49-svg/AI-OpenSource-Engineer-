@@ -129,12 +129,21 @@ Safety and scope limits:
 **Only remaining Milestone 2 verification step:** run the documented local Docker smoke test with Docker Desktop running and `SANDBOX_ENABLED=true`, confirm a real `status: passed` response, then disable the flag. Do not mark the runtime verified until that result is observed.
 
 ### Milestone 3: Authentication and deployment security
-- Implement real application-user authentication and authorization if multi-user/public deployment is required.
-- Keep customer access separate from privileged operator/configuration access.
-- Use secure session/token handling, CSRF protections where applicable, HTTPS, secret storage, and strict deployment CORS/host settings.
-- Replace the in-memory AI rate limiter with shared rate limiting for multi-instance deployments.
-- Add quotas, abuse controls, audit logs, and per-user GitHub credential handling where appropriate.
-- Do not expose the API publicly until these controls are implemented and tested.
+
+**Implementation status: local authentication foundation implemented; production deployment remains deliberately blocked until shared infrastructure is added.**
+
+Implemented on the milestone branch:
+- Added GitHub OAuth authorization-code login and callback with a cryptographically random state, a short-lived state cookie, and callback state verification.
+- Added `GET /api/auth/me` and `POST /api/auth/logout`; logout requires an allowed browser Origin.
+- Sessions use an opaque, HttpOnly, SameSite=Lax cookie. GitHub access tokens remain server-side and are never sent back in API responses. Sessions expire after eight hours.
+- GitHub fork, branch, atomic commit, and pull-request operations now use the authenticated user's OAuth token and verify the user's identity/fork ownership rather than using one shared `GITHUB_TOKEN`.
+- AI routes require a signed-in GitHub user and use that user's token for repository reads. Sandbox repository snapshots use the same per-user token; enabled sandbox execution requires a session.
+- Credentialed CORS remains restricted to configured origins. The default bind remains loopback and rejects foreign Host headers.
+- AI request limits are keyed by authenticated user when available. Sensitive write requests emit structured audit records with user, route, status, and duration; request bodies and credentials are not logged.
+- Added tests for anonymous session state, OAuth-not-configured behavior, anonymous AI denial, and authenticated mocked atomic commits.
+- Added GitHub OAuth environment variables and local setup instructions.
+
+**Deployment safety gate:** the session store and AI rate limiter are currently process-local. Startup now refuses non-loopback binds, because exposing an in-memory session store or per-process quota to the public internet or multiple instances would be unsafe. Sessions are lost on restart, and the OAuth flow has not been verified with real credentials in this session. Before a public deployment, implement and test a shared durable session store and distributed rate limiter, enforce HTTPS at the edge, configure production OAuth callback/origin values and secure cookies, add durable audit retention and explicit per-user quotas, and run a live OAuth/fork/commit/PR flow. Do not bypass the loopback guard or claim production readiness.
 
 ### Milestone 4: Recovery and contribution lifecycle
 - Track workflow state durably so refreshes/restarts do not lose the contribution progress.
