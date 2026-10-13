@@ -300,8 +300,17 @@ Definition of done: add regression coverage for repeated detections and input-or
 
 ## 19. Milestone 15 — AWS secret and session credential assignment detection
 
-**Implementation in progress on branch `security/aws-credential-detection`.** Extend proposal-content scanning to recognize long AWS `aws_secret_access_key` and `aws_session_token` assignments, not only access-key IDs. Add regression coverage for positive assignment samples and short/environment-variable documentation placeholders. Detection is case-insensitive for the assignment key and retains explicit placeholder exclusions.
+**Merged in PR #49 on 2026-10-13 (merge commit `dc86e115bb7c039c63f1ca781a0b0fddc0f25a57`).** Extend proposal-content scanning to recognize long AWS `aws_secret_access_key` and `aws_session_token` assignments, not only access-key IDs. Add regression coverage for positive assignment samples and short/environment-variable documentation placeholders. Detection is case-insensitive for the assignment key and retains explicit placeholder exclusions.
 
 Scope: static heuristic detection of proposed content only. It is not a complete secret scanner, does not scan repository history or dependencies, and cannot replace review or secret-management controls.
 
 Definition of done: pass backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL on the final PR head; review the diff and merge only after all required checks pass.
+
+
+## 20. Milestone 16 — Azure shared-access-signature detection
+
+**Implementation in progress on branch `security/gcp-service-account-key-detection`.** Extend proposal-content scanning to detect high-confidence Azure Storage shared-access-signature URLs with a sufficiently long `sig` value alongside SAS parameters. Add regression tests for positive signatures and ordinary/placeholder URLs.
+
+Scope: heuristic detection of proposed text only; it does not validate whether a signature is live, scan repository history, or replace cloud-side least privilege and key rotation.
+
+Definition of done: pass backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL; merge only after all required checks pass.
