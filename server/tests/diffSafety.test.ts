@@ -126,3 +126,18 @@ test("does not block short documentation placeholders for newer token formats", 
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+test("does not block short cloud-credential documentation placeholders", () => {
+  const report = inspectProposedChanges([{
+    file: "docs/cloud-auth.md",
+    after: [
+      "Google OAuth secret: GOCSPX-example",
+      "Twilio key: SK-not-a-real-key",
+      "Shopify token: shpat_placeholder",
+      "DigitalOcean token: dop_v1_example",
+      "Azure connection string: DefaultEndpointsProtocol=https;AccountName=example;AccountKey=short",
+    ].join("\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
