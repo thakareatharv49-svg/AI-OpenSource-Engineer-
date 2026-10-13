@@ -105,22 +105,28 @@ Milestone 2 foundation and lifecycle tests are merged. CI passed for PR #1 run 3
 - Only after a real run, record what was observed and any remaining integration issue.
 
 ### Milestone 2: Isolated test execution
-First slice merged to `main` on 2026-10-13 (PR #1, merge commit `0d8292056f1c0f238fef06c2e76ece827c888584`); CI passed on head `13edeae889dd73ff806f3c2e84c57c54fb308f82` (run 38439279745):
-- Added an opt-in `POST /api/sandbox/run` endpoint; `SANDBOX_ENABLED` must be set to `true`.
-- Added a Docker runner that writes bounded, validated text files into a disposable temporary workspace and runs only fixed Node/Python check selections, never an arbitrary command supplied by the request.
-- Docker execution uses `--network=none`, read-only container root, dropped capabilities, `no-new-privileges`, non-root UID, PID/memory/CPU/file-descriptor limits, a timeout, bounded logs, and temporary-workspace cleanup. Timeout handling also requests container termination.
-- Added unit tests for isolation flags, path traversal, duplicate paths, file size bounds, Python test-file validation, and the endpoint's disabled-by-default behavior.
-- Added mocked Docker-process tests for output capture, non-zero exit handling, timeout-triggered `docker kill`, and temporary-workspace cleanup. The process runner is injectable for deterministic tests.
-- Added `docs/isolated-sandbox.md` and a `SANDBOX_ENABLED=false` example setting.
-- PR #1 and follow-up PR #2 are merged. CI passed on PR #1 head `13edeae889dd73ff806f3c2e84c57c54fb308f82` (run 38439279745) and PR #2 head `3bc67af8a9c23c9a90041a52cd03d0319fd32e3e` (run 38439471176).
-- The runner does not install dependencies, fetch full repositories, or yet provide UI cancellation. This is foundational isolation, not proof of full project tests or a hardened hostile-code sandbox.
 
-Remaining in Milestone 2:
-- Add a robust repository snapshot / dependency preparation strategy that keeps dependency downloads separate from untrusted execution.
-- Improve cancellation, container cleanup after daemon failures, and resource/disk limits.
-- Add integration tests with a mocked Docker process and document a local Docker smoke test.
-- Integrate the runner with the proposal-review flow only after its input/output and security boundaries are validated.
-- Verify a real local Docker run; CI currently tests validation and generated Docker arguments, not the actual container runtime.
+**Implementation status: complete; live Docker runtime validation remains pending.**
+
+Merged implementation slices:
+- PR #1 introduced the opt-in `POST /api/sandbox/run` endpoint and Docker-backed Node/Python fixed-check runner; `SANDBOX_ENABLED=true` is required.
+- PR #2 strengthened mocked lifecycle coverage.
+- PR #3 added bounded stdout/stderr regression coverage (32,000 characters per stream).
+- PR #5 added caller-generated UUID run IDs, `POST /api/sandbox/cancel`, abort-signal support, and best-effort Docker termination.
+- PR #6 integrated isolated checks into the contribution proposal-review UI, including runtime/check selection, result output, and cancellation.
+- PR #8 hardened workspace writes: host input is mounted read-only at `/input`, copied to a per-run 128 MiB tmpfs at `/workspace`, with a 64 MiB `/tmp`. The runner also disables networking, uses a read-only root, drops capabilities, sets no-new-privileges, runs non-root, and applies PID, memory, CPU, file-descriptor, timeout, and output limits.
+- PR #11 added the opt-in GitHub repository snapshot endpoint. It prioritizes manifests/tests, filters generated and secret-like files, and caps snapshots at 80 files, 200 KB per file, and 800 KB total. It reports when GitHub truncates a tree and overlays proposed changes before checks run.
+- Added automated tests for path safety, duplicate paths, size limits, snapshot selection, output truncation, timeout, cancellation, temporary-workspace cleanup, and disabled-by-default endpoints.
+- Added `docs/isolated-sandbox.md` with a local PowerShell Docker smoke-test procedure.
+- CI passed on the latest Milestone 2 implementation head `1b560d194e3b46298de4b68b024e9ab518c4b289` (run 38442364587), and the implementation was merged as `115f8f54e0ef4ef72db739cdfe1a40fbb9603548`.
+
+Safety and scope limits:
+- The snapshot is bounded, not a complete clone; large repositories or truncated GitHub trees may omit files.
+- Dependency installation is intentionally disabled. Network access remains off during execution, and untrusted package lifecycle scripts are not run in a network-enabled preparation step. Checks that require third-party dependencies may fail until a separately isolated and reviewed dependency-preparation mechanism is designed.
+- The Docker runner tests in CI use a mocked process; they do not prove Docker works on the user's machine or that host-level isolation is configured correctly.
+- The contribution UI requires the backend sandbox flag to be enabled. Keep this local-only; do not expose the unauthenticated sandbox endpoints publicly.
+
+**Only remaining Milestone 2 verification step:** run the documented local Docker smoke test with Docker Desktop running and `SANDBOX_ENABLED=true`, confirm a real `status: passed` response, then disable the flag. Do not mark the runtime verified until that result is observed.
 
 ### Milestone 3: Authentication and deployment security
 - Implement real application-user authentication and authorization if multi-user/public deployment is required.
@@ -176,4 +182,4 @@ A milestone is not done just because files were changed. It should have:
 
 ## 9. Current next action
 
-Continue Milestone 2: implement a safe full-repository snapshot and dependency-preparation strategy, then integrate isolated checks into proposal review only after those boundaries are tested. Run a real local Docker smoke test. Current automated tests mock the Docker process and do not prove Docker is installed or the container isolation works on the user's machine. Milestone 1 still has a separate live authenticated end-to-end verification gap because this session cannot inspect the user's local `.env` or operate the running app with their credentials.
+Run the local Docker smoke test documented in `docs/isolated-sandbox.md` to complete Milestone 2 runtime verification. Dependency installation remains intentionally disabled until a separate preparation mechanism can keep package acquisition and any lifecycle/build scripts outside the untrusted execution boundary. Milestone 1 still has a separate live authenticated end-to-end verification gap because this session cannot inspect the user's local `.env` or operate the running app with their credentials.
