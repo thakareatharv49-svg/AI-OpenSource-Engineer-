@@ -249,13 +249,20 @@ Separate environment-dependent verification gaps remain:
 
 Definition of done for this milestone: backend tests and typecheck, frontend build/lint, production dependency audit, and any configured security workflow must pass on the final PR head. Do not merge while checks are pending or failing. The change is static validation only; it does not replace human review or live end-to-end verification.
 
-## 12. Next after Milestone 8
+## 12. Next after Milestone 9
 
-Continue closing the explicit live-verification gaps: run the documented Docker smoke test locally, verify OAuth and the full issue-to-commit workflow with real credentials, test Redis-backed shared state under concurrency/restart, and complete backup/restore and adversarial security checks. Keep the backend loopback-only until the production deployment gate is actually satisfied.
+Milestone 9 is merged. Continue improving proposal safety while keeping the broader live-verification gaps visible: real Docker smoke test, real OAuth and issue-to-commit flow, Redis concurrency/restart, backup/restore, and adversarial security review. Keep the backend loopback-only until the production deployment gate is actually satisfied.
 
 
 ## 13. Milestone 9 — Unicode-normalized duplicate-path detection
 
-**Implementation in progress on branch `security/normalize-duplicate-proposal-paths`.** Proposal duplicate detection now normalizes file paths to Unicode NFC before case-insensitive comparison. This prevents a single proposal from naming the same apparent file twice using canonically equivalent composed and decomposed Unicode sequences, which can behave inconsistently across developer filesystems and Git tooling. A regression test covers a composed accented filename versus its decomposed equivalent.
+**Merged in PR #41 on 2026-10-13 (merge commit `1ae033c05adc7ddeecb6751636e70a501ea548c7`).** Proposal duplicate detection normalizes file paths to Unicode NFC before case-insensitive comparison. This prevents a single proposal from naming the same apparent file twice using canonically equivalent composed and decomposed Unicode sequences, which can behave inconsistently across developer filesystems and Git tooling. A regression test covers a composed accented filename versus its decomposed equivalent.
 
 Definition of done: verify the reviewed diff, pass backend tests/typecheck, frontend build/lint, dependency audit, and CodeQL on the latest PR head. Merge only after all required checks pass. This check detects collisions inside one proposal; it does not assert that every existing upstream repository path is normalized.
+
+
+## 14. Milestone 10 — Unicode-obfuscated secret detection
+
+**Implementation in progress on branch `security/normalize-obfuscated-secrets`.** Secret scanning now checks a detection-only copy of proposed content normalized with Unicode NFKC and stripped of invisible Unicode format characters. This is intended to catch recognizable credentials disguised with zero-width format characters or compatibility-form characters without rewriting the source that would be committed. Regression tests cover an inserted zero-width character and a full-width token prefix.
+
+Definition of done: inspect the final diff; pass backend tests/typecheck, frontend build/lint, production dependency audit, and CodeQL; merge only after all required checks pass. This is a defense-in-depth heuristic, not a guarantee that all secrets can be detected.
