@@ -165,7 +165,7 @@ Remaining before Milestone 4 is complete:
 
 ### Milestone 5: Code quality and scalable execution
 
-**Implementation status: core implementation merged in PR #17; deterministic proposal quality gates and structured quality telemetry are included in the Milestone 5 follow-up. CI verification is required before the follow-up is merged.**
+**Implementation status: completed and merged in PRs #17 and #18. Both PR CI runs passed; post-merge verification is tracked separately.**
 
 Repository understanding and scalability:
 - Issue-aware file ranking selects relevant implementation files, tests, and language/build manifests instead of a broad path-only top ten.
@@ -215,4 +215,10 @@ A milestone is not done just because files were changed. It should have:
 
 ## 9. Current next action
 
-Finish remaining Milestone 4 work by wiring lifecycle state into the Contribution UI, adding safe resume behavior for fork/branch/commit operations, and testing restart/failure recovery. The local Docker smoke test for Milestone 2 and the live authenticated end-to-end verification for Milestone 1 remain separate verification gaps. Dependency installation remains intentionally disabled until a separately isolated preparation mechanism is designed.
+Milestone 5 implementation is merged. Next, begin the production-readiness milestone with a security-focused deployment gate: durable shared sessions and distributed rate limiting, persistent audit/quality metrics, explicit quotas, deployment configuration validation, and an adversarial review. Keep the server loopback-only until the shared infrastructure and deployment security checks are implemented.
+
+Separate environment-dependent verification gaps remain:
+- Run the documented local Docker smoke test with Docker Desktop and `SANDBOX_ENABLED=true`, then disable the flag.
+- Verify the full authenticated issue-to-commit workflow with real GitHub OAuth and configured AI provider credentials.
+- Measure real task outcomes using a labeled issue set; diagnostic token/latency logs are not a durable cost or acceptance-rate dashboard.
+- Dependency installation remains disabled until a separately isolated and reviewed preparation mechanism is designed.
