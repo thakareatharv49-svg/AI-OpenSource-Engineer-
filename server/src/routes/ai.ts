@@ -448,6 +448,7 @@ Return ONLY valid JSON:
 }
 `);
 
+    const qualityGate = validateGeneratedProposal(result);
     const qualityEvent = { event: "ai.proposal.quality", at: new Date().toISOString(), validStructure: qualityGate.validStructure, readyForHumanReview: qualityGate.readyForHumanReview, safeToCommit: qualityGate.safeToCommit, fileCount: qualityGate.fileCount, findingCount: qualityGate.safetyReport.findings.length };
     console.log(JSON.stringify(qualityEvent));
     void persistOperationalEvent(qualityEvent).catch(() => undefined);
