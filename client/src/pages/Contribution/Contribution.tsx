@@ -40,6 +40,16 @@ type RepositoryFile = {
   content: string;
 };
 
+type SandboxResult = {
+  status: "passed" | "failed" | "timed_out" | "cancelled" | "unavailable";
+  exitCode: number | null;
+  durationMs: number;
+  stdout: string;
+  stderr: string;
+  outputTruncated: boolean;
+  summary: string;
+};
+
 type RepositoryAnalysis = {
   summary?: string;
   repositoryOverview?: string;
@@ -130,6 +140,13 @@ const [forkedRepository, setForkedRepository] = useState("");
 
   const [reviewingCode, setReviewingCode] = useState(false);
   const [reviewError, setReviewError] = useState("");
+
+  const [sandboxRuntime, setSandboxRuntime] = useState<"node" | "python">("node");
+  const [sandboxCheck, setSandboxCheck] = useState<"test" | "lint" | "build" | "typecheck">("test");
+  const [sandboxRunning, setSandboxRunning] = useState(false);
+  const [sandboxResult, setSandboxResult] = useState<SandboxResult | null>(null);
+  const [sandboxError, setSandboxError] = useState("");
+  const sandboxRunId = useRef<string | null>(null);
 
   useEffect(() => {
     if (!started || stage !== 0) return;
@@ -439,6 +456,69 @@ const [forkedRepository, setForkedRepository] = useState("");
       );
     } finally {
       setReviewingCode(false);
+    }
+  };
+
+  const handleRunSandboxCheck = async () => {
+    if (!codeProposal) return;
+    const changes = Array.isArray(codeProposal.changes) ? codeProposal.changes : [];
+    const snapshot = new Map<string, string>();
+    for (const file of repositoryFiles) {
+      if (file && typeof file.path === "string" && typeof file.content === "string") {
+        snapshot.set(file.path, file.content);
+      }
+    }
+    for (const change of changes) {
+      if (!change || typeof change !== "object") continue;
+      const item = change as Record<string, unknown>;
+      if (typeof item.file !== "string" || typeof item.after !== "string") continue;
+      const content = item.after;
+      const lines = content.split("\n");
+      if (lines[0]?.trim().startsWith("```")) lines.shift();
+      if (lines.length && lines[lines.length - 1].trim() === "```") lines.pop();
+      snapshot.set(item.file.trim(), lines.join("\n"));
+    }
+    const files = Array.from(snapshot, ([path, content]) => ({ path, content }));
+    if (files.length === 0) {
+      setSandboxError("No repository snapshot or proposed files are available to test.");
+      return;
+    }
+    const runId = crypto.randomUUID();
+    sandboxRunId.current = runId;
+    setSandboxRunning(true);
+    setSandboxError("");
+    setSandboxResult(null);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/sandbox/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ runId, runtime: sandboxRuntime, check: sandboxCheck, timeoutMs: 60000, files }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Isolated check could not start.");
+      setSandboxResult(data as SandboxResult);
+    } catch (error) {
+      setSandboxError(error instanceof Error ? error.message : "Isolated check failed.");
+    } finally {
+      if (sandboxRunId.current === runId) sandboxRunId.current = null;
+      setSandboxRunning(false);
+    }
+  };
+
+  const handleCancelSandboxCheck = async () => {
+    const runId = sandboxRunId.current;
+    if (!runId) return;
+    setSandboxError("");
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/sandbox/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ runId }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Cancellation request failed.");
+    } catch (error) {
+      setSandboxError(error instanceof Error ? error.message : "Cancellation request failed.");
     }
   };
 
@@ -1274,6 +1354,41 @@ useEffect(() => {
                   </button>
 
                   {reviewError && <p>{reviewError}</p>}
+
+                  <section aria-labelledby="sandbox-check-heading">
+                    <h3 id="sandbox-check-heading">Isolated Test Check</h3>
+                    <p>Run a fixed check against the current repository snapshot plus your proposed changes. Docker must be running and SANDBOX_ENABLED=true on the backend. Checks run without network access; dependencies are not installed automatically.</p>
+                    <label>
+                      Runtime{" "}
+                      <select value={sandboxRuntime} onChange={(event) => setSandboxRuntime(event.target.value as "node" | "python")} disabled={sandboxRunning}>
+                        <option value="node">Node.js</option>
+                        <option value="python">Python</option>
+                      </select>
+                    </label>{" "}
+                    <label>
+                      Check{" "}
+                      <select value={sandboxCheck} onChange={(event) => setSandboxCheck(event.target.value as "test" | "lint" | "build" | "typecheck")} disabled={sandboxRunning}>
+                        <option value="test">Tests</option>
+                        <option value="lint">Lint / syntax</option>
+                        <option value="build">Build / syntax</option>
+                        <option value="typecheck">Typecheck / syntax</option>
+                      </select>
+                    </label>{" "}
+                    <button className="contribution-start-button" onClick={() => void handleRunSandboxCheck()} disabled={sandboxRunning}>
+                      {sandboxRunning ? "Running Isolated Check..." : "Run Isolated Check"}
+                    </button>{" "}
+                    {sandboxRunning && <button className="contribution-start-button" onClick={() => void handleCancelSandboxCheck()}>Cancel Check</button>}
+                    {sandboxError && <p role="alert">{sandboxError}</p>}
+                    {sandboxResult && (
+                      <div role="status" aria-live="polite">
+                        <h4>Result: {sandboxResult.status}</h4>
+                        <p>{sandboxResult.summary} Duration: {sandboxResult.durationMs} ms.</p>
+                        {sandboxResult.outputTruncated && <p>Output was truncated to the configured limit.</p>}
+                        {sandboxResult.stdout && <details><summary>Standard output</summary><pre>{sandboxResult.stdout}</pre></details>}
+                        {sandboxResult.stderr && <details><summary>Standard error</summary><pre>{sandboxResult.stderr}</pre></details>}
+                      </div>
+                    )}
+                  </section>
 
                   {codeReview && (
                     <div className="code-review-results">
