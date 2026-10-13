@@ -1,0 +1,57 @@
+name: Feature request
+description: Propose a capability or improvement for AI Open Source Engineer.
+title: "feature: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the user problem first. Do not include secrets, access tokens, or private repository data.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What is difficult, unreliable, or missing today?
+      placeholder: As a contributor, I need...
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe observable behavior that would solve the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: List concrete, testable conditions for considering this complete.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Issue discovery and ranking
+        - Repository analysis and planning
+        - AI patch generation
+        - Testing and quality gates
+        - Security and permissions
+        - Human review and publication
+        - UI and developer experience
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and constraints
+      description: Mention workarounds, compatibility needs, cost constraints, or offline/local requirements.
+    validations:
+      required: false

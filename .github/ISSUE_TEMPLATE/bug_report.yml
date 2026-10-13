@@ -1,0 +1,64 @@
+name: Bug report
+description: Report a reproducible defect in AI Open Source Engineer.
+title: "bug: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before submitting, search existing issues and remove any secrets, tokens, or private repository data from examples and logs.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the actual behavior and why it is incorrect.
+      placeholder: A concise description of the defect.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Give the smallest reliable sequence that reproduces the problem.
+      placeholder: |
+        1. Configure ...
+        2. Run ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: What should happen instead?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs and evidence
+      description: Include relevant redacted logs, screenshots, and exact command output. Never include credentials or tokens.
+      render: text
+    validations:
+      required: false
+  - type: dropdown
+    id: verification
+    attributes:
+      label: Verification environment
+      description: Identify the kind of evidence you have.
+      options:
+        - Local reproduction
+        - Automated test
+        - Mocked or simulated integration
+        - Live external integration
+        - Not yet verified
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include OS, Node version, relevant app version, and provider/runtime where applicable.
+      placeholder: OS, Node version, commit SHA, runtime/provider
+    validations:
+      required: false
