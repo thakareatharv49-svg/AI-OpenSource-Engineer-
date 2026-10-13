@@ -8,9 +8,9 @@ An AI-assisted open-source contribution workflow that discovers issues, analyzes
 - Use AI to select an issue and analyze repository source files
 - Generate an implementation plan and proposed file contents
 - Review the proposal with an AI reviewer
-- After human approval, fork the upstream repository, create a branch, and commit the proposed source files
+- After human approval, fork the upstream repository, create a branch, and commit the proposed source files as one atomic Git commit (all proposed files land together or the branch remains unchanged)
 - Create a pull request against the original repository only when the user clicks **Create Pull Request**
-- Retry failed branch and file-commit operations without starting an unbounded request loop
+- Retry failed fork, branch, and proposal-commit operations without starting an unbounded request loop
 
 ## Stack
 
@@ -89,7 +89,7 @@ GitHub Actions runs these frontend and backend checks on pushes and pull request
 
 - The API binds to loopback by default and rejects foreign `Host` headers in loopback mode to reduce DNS-rebinding risk. Do not set `HOST` to a public interface unless you have added real user authentication, HTTPS, and deployment-grade abuse controls.
 - Browser CORS is an additional boundary, not authentication. The API uses a local-process limit of 20 AI requests per client IP per 10 minutes to reduce accidental or abusive provider spend; this is not a shared or deployment-grade rate limiter.
-- Branch creation and file commits are restricted to repositories owned by the authenticated GitHub account and verified as forks. Pull-request creation only accepts a head branch owned by the authenticated account.
+- Branch creation and proposal commits are restricted to repositories owned by the authenticated GitHub account and verified as forks. Multi-file proposals are validated together, then written through the Git Data API as one commit with a non-force branch-ref update, so a preparation failure cannot leave half the proposal committed. Pull-request creation only accepts a head branch owned by the authenticated account.
 - Commits reject common credential/private-key paths such as `.env`, `.npmrc`, `.pypirc`, `.ssh`, `.aws`, secret/credential directories, and common private-key filenames. This is defense in depth, not a guarantee that arbitrary file contents contain no secrets.
 - AI prompts explicitly treat issue text, repository files, source comments, and review feedback as untrusted data. Prompt-injection defenses are best-effort; inspect every proposed diff.
 - Review generated file contents before approval. AI output can be wrong even when the reviewer says it is approved.
