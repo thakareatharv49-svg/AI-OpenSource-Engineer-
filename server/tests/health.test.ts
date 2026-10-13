@@ -1,469 +1,1605 @@
-import assert from "node:assert/strict";
-import { after, before, test } from "node:test";
-import { request as httpRequest, type Server } from "node:http";
-import { app } from "../src/index.js";
+import { useEffect, useRef, useState } from "react";
+import "./Contribution.css";
+import ContributionProgress from "../../components/contribution/ContributionProgress";
+import { API_BASE_URL } from "../../lib/api";
 
-let server: Server;
-let baseUrl: string;
+type GitHubIssue = {
+  id: number;
+  title: string;
+  url: string;
+  repository: string;
+  user: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
-before(async () => {
-  await new Promise<void>((resolve, reject) => {
-    server = app.listen(0, "127.0.0.1", () => {
-      const address = server.address();
-      if (!address || typeof address === "string") {
-        reject(new Error("Test server did not bind to a TCP port"));
-        return;
+type AISelection = {
+  selectedIssueId: number;
+  reason: string;
+  difficulty: "Easy" | "Medium" | "Hard";
+  confidence: number;
+};
+
+type SolutionPlan = {
+  [key: string]: unknown;
+};
+
+type CodeReview = {
+  overallStatus: "Approved" | "Changes Requested" | "Needs More Information";
+  summary: string;
+  bugs: string[];
+  securityIssues: string[];
+  codeQualityIssues: string[];
+  missingTests: string[];
+  suggestions: string[];
+  confidence: number;
+};
+
+type RepositoryFile = {
+  path: string;
+  content: string;
+};
+
+type SandboxResult = {
+  status: "passed" | "failed" | "timed_out" | "cancelled" | "unavailable";
+  exitCode: number | null;
+  durationMs: number;
+  stdout: string;
+  stderr: string;
+  outputTruncated: boolean;
+  summary: string;
+};
+
+type RepositoryAnalysis = {
+  summary?: string;
+  repositoryOverview?: string;
+  relevantFiles?: string[];
+  rootCause?: string;
+  recommendedApproach?: string;
+  risks?: string[];
+  [key: string]: unknown;
+};
+
+function getRepositoryName(issueUrl: string) {
+  const repositoryUrl = issueUrl.split("/issues/")[0];
+
+  return repositoryUrl
+    .replace(/^https?:\/\/github\.com\//, "")
+    .replace(/\/$/, "");
+}
+
+function Contribution() {
+  // Prevent failed automatic stages from launching an unbounded request loop.
+  // Each stage can still be retried explicitly from its visible action button.
+  const autoRunAttempts = useRef(new Set<string>());
+  const [started, setStarted] = useState(false);
+  useEffect(() => {
+    if (!started) autoRunAttempts.current.clear();
+  }, [started]);
+  const [stage, setStage] = useState(0);
+  const [approved, setApproved] = useState(false);
+  const [changesRequested, setChangesRequested] = useState(false);
+
+  const [creatingPR, setCreatingPR] = useState(false);
+  const [prError, setPrError] = useState("");
+
+  const [pullRequest, setPullRequest] = useState<{
+    htmlUrl: string;
+    number: number;
+  } | null>(null);
+
+  const [branchName, setBranchName] = useState("");
+  const [forkingRepository, setForkingRepository] = useState(false);
+const [forkError, setForkError] = useState("");
+const [forkedRepository, setForkedRepository] = useState("");
+  const [baseBranch, setBaseBranch] = useState("main");
+  const [creatingBranch, setCreatingBranch] = useState(false);
+  const [branchError, setBranchError] = useState("");
+
+  const [committingFile, setCommittingFile] = useState(false);
+  const [commitError, setCommitError] = useState("");
+  const [commitSuccess, setCommitSuccess] = useState(false);
+
+  const [issues, setIssues] = useState<GitHubIssue[]>([]);
+  const [loadingIssues, setLoadingIssues] = useState(false);
+  const [issueError, setIssueError] = useState("");
+  const [issueFetchAttempt, setIssueFetchAttempt] = useState(0);
+
+  const [selectedIssue, setSelectedIssue] =
+    useState<GitHubIssue | null>(null);
+
+  const [aiSelection, setAISelection] =
+    useState<AISelection | null>(null);
+
+  const [selectingIssue, setSelectingIssue] = useState(false);
+  const [aiError, setAiError] = useState("");
+
+  const [repositoryAnalysis, setRepositoryAnalysis] =
+    useState<RepositoryAnalysis | null>(null);
+  const [repositoryFiles, setRepositoryFiles] = useState<RepositoryFile[]>([]);
+
+  const [analyzingRepository, setAnalyzingRepository] =
+    useState(false);
+
+  const [repositoryError, setRepositoryError] = useState("");
+
+  const [solutionPlan, setSolutionPlan] =
+    useState<SolutionPlan | null>(null);
+
+  const [buildingSolution, setBuildingSolution] = useState(false);
+  const [solutionError, setSolutionError] = useState("");
+
+  const [codeProposal, setCodeProposal] =
+    useState<Record<string, unknown> | null>(null);
+
+  const [generatingCode, setGeneratingCode] = useState(false);
+  const [codeError, setCodeError] = useState("");
+
+  const [codeReview, setCodeReview] =
+    useState<CodeReview | null>(null);
+
+  const [reviewingCode, setReviewingCode] = useState(false);
+  const [reviewError, setReviewError] = useState("");
+
+  const [sandboxRuntime, setSandboxRuntime] = useState<"node" | "python">("node");
+  const [sandboxCheck, setSandboxCheck] = useState<"test" | "lint" | "build" | "typecheck">("test");
+  const [sandboxRunning, setSandboxRunning] = useState(false);
+  const [sandboxResult, setSandboxResult] = useState<SandboxResult | null>(null);
+  const [sandboxError, setSandboxError] = useState("");
+  const sandboxRunId = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!started || stage !== 0) return;
+
+    const fetchIssues = async () => {
+      setLoadingIssues(true);
+      setIssueError("");
+
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/api/github/issues`
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch GitHub issues");
+        }
+
+        const data = await response.json();
+        setIssues(data.issues);
+      } catch (error) {
+        console.error("Failed to fetch issues:", error);
+        setIssueError("Unable to fetch GitHub issues.");
+      } finally {
+        setLoadingIssues(false);
       }
-      baseUrl = "http://127.0.0.1:" + address.port;
-      resolve();
-    });
-    server.once("error", reject);
-  });
-});
+    };
 
-after(async () => {
-  await new Promise<void>((resolve, reject) => {
-    server.close((error) => (error ? reject(error) : resolve()));
-  });
-});
+    fetchIssues();
+  }, [started, stage, issueFetchAttempt]);
+    
+    
 
-test("GET / returns the service banner", async () => {
-  const response = await fetch(baseUrl + "/");
-  assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), {
-    message: "AI Open Source Engineer server is running",
-  });
-});
+  const handleAISelection = async () => {
+    if (issues.length === 0) return;
 
-test("GET /api/health returns an OK health status", async () => {
-  const response = await fetch(baseUrl + "/api/health");
-  assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { status: "ok" });
-});
+    setSelectingIssue(true);
+    setAiError("");
 
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/ai/select-issue`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            issues,
+          }),
+        }
+      );
 
-test("POST /api/github/fork rejects missing repository input", async () => {
-  const response = await fetch(baseUrl + "/api/github/fork", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ owner: "", repo: "" }),
-  });
-  assert.equal(response.status, 400);
-  assert.match((await response.json()).error, /owner and repository/i);
-});
+      const data = await response.json();
 
-test("POST /api/github/fork rejects dot-segment repository identifiers", async () => {
-  const response = await fetch(baseUrl + "/api/github/fork", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ owner: "..", repo: "project" }),
-  });
-  assert.equal(response.status, 400);
-  assert.match((await response.json()).error, /invalid GitHub repository/i);
-});
+      if (!response.ok) {
+        throw new Error(data.error || "AI selection failed");
+      }
 
-test("POST /api/github/branch rejects incomplete branch input", async () => {
-  const response = await fetch(baseUrl + "/api/github/branch", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ owner: "example", repo: "project" }),
-  });
-  assert.equal(response.status, 400);
-  assert.match((await response.json()).error, /branch name.*base branch/i);
-});
+      const selection: AISelection = data.result;
 
-test("PUT /api/github/file rejects incomplete file changes", async () => {
-  const response = await fetch(baseUrl + "/api/github/file", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ owner: "example", repo: "project" }),
-  });
-  assert.equal(response.status, 400);
-  assert.match((await response.json()).error, /file path.*content/i);
-});
+      const issue = issues.find(
+        (item) => item.id === selection.selectedIssueId
+      );
 
-test("POST /api/github/pull-request rejects missing head repository", async () => {
-  const response = await fetch(baseUrl + "/api/github/pull-request", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      owner: "upstream",
-      repo: "project",
-      title: "Fix issue",
-      headBranch: "my-account:fix-issue",
-      baseBranch: "main",
-    }),
-  });
-  assert.equal(response.status, 400);
-  assert.match((await response.json()).error, /head branch/i);
-});
+      if (!issue) {
+        throw new Error("AI selected an issue that was not found");
+      }
 
-test("POST /api/github/pull-request rejects incomplete pull request input", async () => {
-  const response = await fetch(baseUrl + "/api/github/pull-request", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ owner: "example", repo: "project" }),
-  });
-  assert.equal(response.status, 400);
-  assert.match((await response.json()).error, /title.*head branch.*base branch/i);
-});
+      setAISelection(selection);
+      setSelectedIssue(issue);
+    } catch (error) {
+      console.error("AI selection error:", error);
 
+      setAiError(
+        error instanceof Error
+          ? error.message
+          : "Failed to select an issue using AI."
+      );
+    } finally {
+      setSelectingIssue(false);
+    }
+  };
 
-test("POST /api/github/branch rejects malformed Git refs before contacting GitHub", async () => {
-  const response = await fetch(baseUrl + "/api/github/branch", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      owner: "example",
-      repo: "project",
-      branchName: "../unsafe",
-      baseBranch: "main",
-    }),
-  });
-  assert.equal(response.status, 400);
-  assert.match((await response.json()).error, /valid Git refs/i);
-});
+  const handleRepositoryAnalysis = async () => {
+    if (!selectedIssue) return;
 
-test("PUT /api/github/file rejects traversal paths before contacting GitHub", async () => {
-  const response = await fetch(baseUrl + "/api/github/file", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      owner: "example",
-      repo: "project",
-      branchName: "ai-contribution-test",
-      filePath: "../README.md",
-      content: "# unsafe",
-      commitMessage: "test",
-    }),
-  });
-  assert.equal(response.status, 400);
-  assert.match((await response.json()).error, /safe repository-relative path/i);
-});
+    setAnalyzingRepository(true);
+    setRepositoryError("");
 
-test("GET /api/github/repository rejects invalid owner or repository path segments", async () => {
-  const response = await fetch(baseUrl + "/api/github/repository/invalid%20owner/project");
-  assert.equal(response.status, 400);
-  assert.match((await response.json()).error, /invalid GitHub repository/i);
-});
+    try {
+      const repository = getRepositoryName(selectedIssue.url);
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/ai/analyze-repository`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            repository,
+            issue: selectedIssue,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || "Repository analysis failed"
+        );
+      }
+
+      setRepositoryAnalysis(data.result);
+      setRepositoryFiles(Array.isArray(data.files) ? data.files : []);
+      setStage(1);
+    } catch (error) {
+      console.error("Repository analysis error:", error);
+
+      setRepositoryError(
+        error instanceof Error
+          ? error.message
+          : "Failed to analyze repository."
+      );
+    } finally {
+      setAnalyzingRepository(false);
+    }
+  };
+  
 
 
-test("PUT /api/github/file rejects oversized commit messages", async () => {
-  const response = await fetch(baseUrl + "/api/github/file", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      owner: "example",
-      repo: "project",
-      branchName: "ai-contribution-test",
-      filePath: "README.md",
-      content: "# safe",
-      commitMessage: "x".repeat(201),
-    }),
-  });
-  assert.equal(response.status, 400);
-});
+  const handleBuildSolution = async () => {
+    if (!selectedIssue || !repositoryAnalysis) return;
 
-test("PUT /api/github/file blocks secret-bearing content before GitHub access", async () => {
-  const response = await fetch(baseUrl + "/api/github/file", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      owner: "example",
-      repo: "project",
-      branchName: "ai-contribution-test",
-      filePath: "src/config.ts",
-      content: 'const token = "ghp_123456789012345678901234567890123456";',
-      commitMessage: "test",
-    }),
-  });
-  assert.equal(response.status, 422);
-  assert.match((await response.json()).error, /safety gate/i);
-});
+    setBuildingSolution(true);
+    setSolutionError("");
 
-test("PUT /api/github/file requires manual review for workflow changes", async () => {
-  const response = await fetch(baseUrl + "/api/github/file", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      owner: "example",
-      repo: "project",
-      branchName: "ai-contribution-test",
-      filePath: ".github/workflows/ci.yml",
-      content: "name: custom workflow\n",
-      commitMessage: "test",
-    }),
-  });
-  assert.equal(response.status, 422);
-});
+    try {
+      const repository = getRepositoryName(selectedIssue.url);
 
-test("PUT /api/github/file rejects credential paths before contacting GitHub", async () => {
-  const response = await fetch(baseUrl + "/api/github/file", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      owner: "example",
-      repo: "project",
-      branchName: "ai-contribution-test",
-      filePath: ".npmrc",
-      content: "//registry.npmjs.org/:_authToken=secret",
-      commitMessage: "test",
-    }),
-  });
-  assert.equal(response.status, 400);
-  assert.match((await response.json()).error, /safe repository-relative path/i);
-});
+      const response = await fetch(
+        `${API_BASE_URL}/api/ai/build-solution`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            repository,
+            issue: selectedIssue,
+            repositoryAnalysis,
+          }),
+        }
+      );
 
-test("AI endpoints throttle excessive requests before calling providers", async () => {
-  let lastStatus = 0;
-  for (let i = 0; i < 21; i += 1) {
-    const response = await fetch(baseUrl + "/api/ai/select-issue", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ issues: [] }),
-    });
-    lastStatus = response.status;
-    if (i < 20) assert.equal(response.status, 400);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Building solution failed");
+      }
+
+      setSolutionPlan(data.result);
+      setStage(2);
+    } catch (error) {
+      console.error("Build solution error:", error);
+
+      setSolutionError(
+        error instanceof Error
+          ? error.message
+          : "Failed to build the solution."
+      );
+    } finally {
+      setBuildingSolution(false);
+    }
+  };
+
+  const handleGenerateCode = async () => {
+    if (!selectedIssue || !repositoryAnalysis || !solutionPlan) {
+      return;
+    }
+
+    setGeneratingCode(true);
+    setCodeError("");
+
+    try {
+      const repository = getRepositoryName(selectedIssue.url);
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/ai/generate-code`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            repository,
+            issue: selectedIssue,
+            repositoryAnalysis,
+            solutionPlan,
+            files: repositoryFiles,
+            reviewFeedback: changesRequested && codeReview
+              ? {
+                  summary: codeReview.summary,
+                  bugs: codeReview.bugs,
+                  securityIssues: codeReview.securityIssues,
+                  codeQualityIssues: codeReview.codeQualityIssues,
+                  missingTests: codeReview.missingTests,
+                  suggestions: codeReview.suggestions,
+                }
+              : null,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Code generation failed");
+      }
+
+      setCodeProposal(data.result);
+      setCodeReview(null);
+      setChangesRequested(false);
+      autoRunAttempts.current.delete("review-code");
+      setStage(3);
+    } catch (error) {
+      console.error("Code generation error:", error);
+
+      setCodeError(
+        error instanceof Error
+          ? error.message
+          : "Failed to generate code proposal."
+      );
+    } finally {
+      setGeneratingCode(false);
+    }
+  };
+  const handleReviewCode = async () => {
+    if (!selectedIssue || !codeProposal) return;
+
+    setReviewingCode(true);
+    setReviewError("");
+
+    try {
+      const repository = getRepositoryName(selectedIssue.url);
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/ai/review-code`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            repository,
+            issue: selectedIssue,
+            codeProposal,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Code review failed");
+      }
+
+      const review = data.result as Partial<CodeReview> | undefined;
+      const allowedStatuses = [
+        "Approved",
+        "Changes Requested",
+        "Needs More Information",
+      ] as const;
+      const overallStatus: CodeReview["overallStatus"] =
+        allowedStatuses.includes(String(review?.overallStatus) as typeof allowedStatuses[number])
+          ? (review?.overallStatus as CodeReview["overallStatus"])
+          : "Needs More Information";
+      const stringList = (value: unknown): string[] =>
+        Array.isArray(value)
+          ? value.filter((item): item is string => typeof item === "string")
+          : [];
+
+      setCodeReview({
+        overallStatus,
+        summary:
+          typeof review?.summary === "string"
+            ? review.summary
+            : "The AI response did not include a review summary.",
+        bugs: stringList(review?.bugs),
+        securityIssues: stringList(review?.securityIssues),
+        codeQualityIssues: stringList(review?.codeQualityIssues),
+        missingTests: stringList(review?.missingTests),
+        suggestions: stringList(review?.suggestions),
+        confidence:
+          typeof review?.confidence === "number" && Number.isFinite(review.confidence)
+            ? Math.min(100, Math.max(0, Math.round(review.confidence)))
+            : 0,
+      });
+    } catch (error) {
+      console.error("Code review error:", error);
+
+      setReviewError(
+        error instanceof Error
+          ? error.message
+          : "Failed to review code."
+      );
+    } finally {
+      setReviewingCode(false);
+    }
+  };
+
+  const handleRunSandboxCheck = async () => {
+    if (!codeProposal) return;
+    const changes = Array.isArray(codeProposal.changes) ? codeProposal.changes : [];
+    const snapshot = new Map<string, string>();
+    for (const file of repositoryFiles) {
+      if (file && typeof file.path === "string" && typeof file.content === "string") {
+        snapshot.set(file.path, file.content);
+      }
+    }
+    for (const change of changes) {
+      if (!change || typeof change !== "object") continue;
+      const item = change as Record<string, unknown>;
+      if (typeof item.file !== "string" || typeof item.after !== "string") continue;
+      const content = item.after;
+      const lines = content.split("\n");
+      if (lines[0]?.trim().startsWith("```")) lines.shift();
+      if (lines.length && lines[lines.length - 1].trim() === "```") lines.pop();
+      snapshot.set(item.file.trim(), lines.join("\n"));
+    }
+    const files = Array.from(snapshot, ([path, content]) => ({ path, content }));
+    if (files.length === 0) {
+      setSandboxError("No repository snapshot or proposed files are available to test.");
+      return;
+    }
+    const runId = crypto.randomUUID();
+    sandboxRunId.current = runId;
+    setSandboxRunning(true);
+    setSandboxError("");
+    setSandboxResult(null);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/sandbox/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ runId, runtime: sandboxRuntime, check: sandboxCheck, timeoutMs: 60000, files }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Isolated check could not start.");
+      setSandboxResult(data as SandboxResult);
+    } catch (error) {
+      setSandboxError(error instanceof Error ? error.message : "Isolated check failed.");
+    } finally {
+      if (sandboxRunId.current === runId) sandboxRunId.current = null;
+      setSandboxRunning(false);
+    }
+  };
+
+  const handleCancelSandboxCheck = async () => {
+    const runId = sandboxRunId.current;
+    if (!runId) return;
+    setSandboxError("");
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/sandbox/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ runId }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Cancellation request failed.");
+    } catch (error) {
+      setSandboxError(error instanceof Error ? error.message : "Cancellation request failed.");
+    }
+  };
+
+  const handleForkRepository = async () => {
+  if (!selectedIssue) {
+    setForkError("No issue selected.");
+    return;
   }
-  assert.equal(lastStatus, 429);
-});
 
+  setForkingRepository(true);
+  setForkError("");
 
+  try {
+    const repository = getRepositoryName(selectedIssue.url);
+    const [owner, repo] = repository.split("/");
 
-test("loopback API rejects foreign Host headers", async () => {
-  const address = server.address();
-  assert.ok(address && typeof address !== "string");
-  const response = await new Promise<{ statusCode: number; body: string }>((resolve, reject) => {
-    const request = httpRequest(
+    const response = await fetch(
+      `${API_BASE_URL}/api/github/fork`,
       {
-        hostname: "127.0.0.1",
-        port: address.port,
-        path: "/",
-        method: "GET",
-        headers: { Host: "attacker.example" },
-      },
-      (incoming) => {
-        let body = "";
-        incoming.setEncoding("utf8");
-        incoming.on("data", (chunk: string) => { body += chunk; });
-        incoming.on("end", () => resolve({ statusCode: incoming.statusCode ?? 0, body }));
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          owner,
+          repo,
+        }),
       }
     );
-    request.on("error", reject);
-    request.end();
-  });
-  assert.equal(response.statusCode, 421);
-  assert.deepEqual(JSON.parse(response.body), { error: "Invalid Host header" });
-});
 
+    const data = await response.json();
 
-test("POST /api/github/safety-check allows a clean concrete proposal", async () => {
-  const response = await fetch(baseUrl + "/api/github/safety-check", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      changes: [{ filePath: "src/math.ts", content: "export const add = (a: number, b: number) => a + b;\n" }],
-    }),
-  });
-  assert.equal(response.status, 200);
-  const data = await response.json();
-  assert.equal(data.safetyReport.safeToCommit, true);
-  assert.deepEqual(data.safetyReport.findings, []);
-});
-
-test("POST /api/github/safety-check blocks secret-bearing proposals", async () => {
-  const response = await fetch(baseUrl + "/api/github/safety-check", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      changes: [{ filePath: "src/config.ts", content: 'const token = "ghp_123456789012345678901234567890123456";' }],
-    }),
-  });
-  assert.equal(response.status, 422);
-  const data = await response.json();
-  assert.equal(data.safetyReport.safeToCommit, false);
-  assert.ok(data.safetyReport.findings.some((finding: { severity: string }) => finding.severity === "block"));
-});
-
-test("POST /api/github/safety-check requires manual review for workflow changes", async () => {
-  const response = await fetch(baseUrl + "/api/github/safety-check", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      changes: [{ filePath: ".github/workflows/ci.yml", content: "name: custom workflow\n" }],
-    }),
-  });
-  assert.equal(response.status, 422);
-  const data = await response.json();
-  assert.ok(data.safetyReport.findings.some((finding: { severity: string }) => finding.severity === "review"));
-});
-
-
-// Integration-style tests mock only GitHub's API. The app's local HTTP request
-// still traverses Express, middleware, routing, validation, and response handling.
-async function withMockedGitHubApi<T>(
-  handler: (url: URL, init: RequestInit) => Response | Promise<Response>,
-  run: () => Promise<T>
-): Promise<T> {
-  const originalFetch = globalThis.fetch;
-  const previousToken = process.env.GITHUB_TOKEN;
-  process.env.GITHUB_TOKEN = "test-token";
-  globalThis.fetch = (async (input: RequestInfo | URL, init: RequestInit = {}) => {
-    const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
-    if (url.hostname !== "api.github.com") {
-      return originalFetch(input, init);
+    if (!response.ok) {
+      throw new Error(
+        data.error || "Failed to fork repository."
+      );
     }
-    return handler(url, init);
-  }) as typeof fetch;
 
-  try {
-    return await run();
+    setForkedRepository(data.repository.fullName);
+  } catch (error) {
+    setForkError(
+      error instanceof Error
+        ? error.message
+        : "Failed to fork repository."
+    );
   } finally {
-    globalThis.fetch = originalFetch;
-    if (previousToken === undefined) delete process.env.GITHUB_TOKEN;
-    else process.env.GITHUB_TOKEN = previousToken;
+    setForkingRepository(false);
   }
+};
+
+  const handleCreateBranch = async () => {
+    if (!selectedIssue) return;
+
+    setCreatingBranch(true);
+    setBranchError("");
+
+    try {
+      const repository = forkedRepository;
+      if (!repository) {
+  setBranchError("Please fork the repository first.");
+  return;
 }
+      const [owner, repo] = repository.split("/");
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
+      if (!owner || !repo) {
+        throw new Error("Invalid GitHub repository.");
+      }
 
-test("POST /api/github/commit-proposal writes every proposed file in one branch update", async () => {
-  const calls: Array<{ method: string; path: string; body?: Record<string, unknown> }> = [];
-  let blobCount = 0;
+      const repositoryResponse = await fetch(
+        `${API_BASE_URL}/api/github/repository/${owner}/${repo}`
+      );
 
-  await withMockedGitHubApi(async (url, init) => {
-    const method = init.method ?? "GET";
-    const body = typeof init.body === "string" ? JSON.parse(init.body) as Record<string, unknown> : undefined;
-    calls.push({ method, path: url.pathname, body });
+      const repositoryData = await repositoryResponse.json();
 
-    if (url.pathname === "/user") return jsonResponse({ login: "contributor" });
-    if (url.pathname === "/repos/contributor/demo-fork") {
-      return jsonResponse({
-        full_name: "contributor/demo-fork",
-        fork: true,
-        parent: { full_name: "upstream/demo" },
+      if (!repositoryResponse.ok) {
+        throw new Error(
+          repositoryData.error ||
+            "Failed to fetch repository information."
+        );
+      }
+
+      const baseBranch = repositoryData.repository.defaultBranch;
+      setBaseBranch(baseBranch);
+      const newBranchName = `ai-contribution-${Date.now()}`;
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/github/branch`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            owner,
+            repo,
+            branchName: newBranchName,
+            baseBranch,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || "Branch creation failed."
+        );
+      }
+
+      setBranchName(newBranchName);
+
+      console.log("Branch created successfully:", data);
+    } catch (error) {
+      console.error("Branch creation error:", error);
+
+      setBranchError(
+        error instanceof Error
+          ? error.message
+          : "Failed to create GitHub branch."
+      );
+    } finally {
+      setCreatingBranch(false);
+    }
+  };
+  const handleCommitFile = async () => {
+    if (!branchName || !forkedRepository || !codeProposal) {
+      setCommitError("A fork, branch, and reviewed code proposal are required.");
+      return;
+    }
+
+    const changes = codeProposal.changes;
+    if (!Array.isArray(changes) || changes.length === 0) {
+      setCommitError("The proposal contains no concrete file changes. Request a new code proposal before committing.");
+      return;
+    }
+
+    const normalizedChanges: Array<{ filePath: string; content: string }> = [];
+    for (const change of changes) {
+      if (!change || typeof change !== "object") {
+        setCommitError("The proposal contains an invalid file change.");
+        return;
+      }
+
+      const item = change as Record<string, unknown>;
+      const filePath = typeof item.file === "string" ? item.file.trim() : "";
+      let content = typeof item.after === "string" ? item.after : "";
+      const contentLines = content.split("\n");
+      if (contentLines[0]?.trim().startsWith("```")) {
+        contentLines.shift();
+      }
+      if (contentLines[contentLines.length - 1]?.trim() === "```") {
+        contentLines.pop();
+      }
+      content = contentLines.join("\n");
+      const segments = filePath.split("/");
+      const unsafePath =
+        !filePath ||
+        filePath.startsWith("/") ||
+        filePath.includes("\\") ||
+        segments.some((segment) => !segment || segment === "." || segment === "..") ||
+        filePath.startsWith(".git/") ||
+        /(^|\/)\.env(?:\.|$)/i.test(filePath);
+
+      if (unsafePath) {
+        setCommitError("The proposal contains an unsafe or invalid file path: " + filePath);
+        return;
+      }
+      if (!content.trim() || /(^|\n)\s*(?:\.\.\.|TODO:\s*implement|implementation goes here|insert code here)\s*(?:\n|$)/i.test(content)) {
+        setCommitError("The proposal for " + filePath + " is empty or contains an obvious placeholder.");
+        return;
+      }
+      normalizedChanges.push({ filePath, content });
+    }
+
+    setCommittingFile(true);
+    setCommitError("");
+    setCommitSuccess(false);
+
+    try {
+      const parts = forkedRepository.split("/");
+      const [owner, repo] = parts;
+      if (!owner || !repo) {
+        throw new Error("The fork repository name is invalid.");
+      }
+
+      // The server validates the entire proposal and writes one Git commit.
+      // This prevents a failed multi-file proposal from leaving partial commits.
+      const response = await fetch(`${API_BASE_URL}/api/github/commit-proposal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          owner,
+          repo,
+          branchName,
+          commitMessage: "AI contribution: " + (selectedIssue?.title ?? "implement proposed fix"),
+          changes: normalizedChanges,
+        }),
       });
-    }
-    if (url.pathname.endsWith("/git/ref/heads/ai-contribution-test")) {
-      return jsonResponse({ object: { sha: "parent-commit" } });
-    }
-    if (url.pathname.endsWith("/git/commits/parent-commit")) {
-      return jsonResponse({ tree: { sha: "parent-tree" } });
-    }
-    if (url.pathname.endsWith("/git/blobs") && method === "POST") {
-      blobCount += 1;
-      return jsonResponse({ sha: "blob-" + blobCount });
-    }
-    if (url.pathname.endsWith("/git/trees") && method === "POST") {
-      const tree = body?.tree as Array<{ path: string }>;
-      assert.deepEqual(tree.map((entry) => entry.path), ["src/one.ts", "src/two.ts"]);
-      return jsonResponse({ sha: "proposal-tree" });
-    }
-    if (url.pathname.endsWith("/git/commits") && method === "POST") {
-      assert.deepEqual(body?.parents, ["parent-commit"]);
-      assert.equal(body?.tree, "proposal-tree");
-      return jsonResponse({ sha: "proposal-commit", html_url: "https://github.com/contributor/demo-fork/commit/proposal-commit" });
-    }
-    if (url.pathname.endsWith("/git/refs/heads/ai-contribution-test") && method === "PATCH") {
-      assert.deepEqual(body, { sha: "proposal-commit", force: false });
-      return jsonResponse({ ref: "refs/heads/ai-contribution-test" });
-    }
-    return jsonResponse({ message: "Unexpected mocked GitHub request: " + method + " " + url.pathname }, 500);
-  }, async () => {
-    const response = await originalFetchForTest(baseUrl + "/api/github/commit-proposal", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        owner: "contributor",
-        repo: "demo-fork",
-        branchName: "ai-contribution-test",
-        commitMessage: "Add two source files",
-        changes: [
-          { filePath: "src/one.ts", content: "export const one = 1;\n" },
-          { filePath: "src/two.ts", content: "export const two = 2;\n" },
-        ],
-      }),
-    });
-    assert.equal(response.status, 201);
-    const data = await response.json();
-    assert.equal(data.filesCommitted, 2);
-    assert.equal(data.commit.sha, "proposal-commit");
-    assert.equal(calls.filter((call) => call.method === "PATCH").length, 1);
-    assert.equal(calls.filter((call) => call.method === "PUT").length, 0);
-  });
-});
+      const data = await response.json();
+      if (!response.ok) {
+        const fileContext = typeof data.failedFile === "string" ? ` (file: ${data.failedFile})` : "";
+        const recovery = data.branchUnchanged === true
+          ? " The branch was not updated; you can safely retry after resolving the error."
+          : "";
+        throw new Error((data.error || "Failed to commit the proposal.") + fileContext + recovery);
+      }
 
-test("POST /api/github/commit-proposal leaves the branch untouched when a blob cannot be prepared", async () => {
-  let blobCount = 0;
-  let refUpdates = 0;
-  const originalFetch = globalThis.fetch;
-
-  await withMockedGitHubApi(async (url, init) => {
-    const method = init.method ?? "GET";
-    if (url.pathname === "/user") return jsonResponse({ login: "contributor" });
-    if (url.pathname === "/repos/contributor/demo-fork") {
-      return jsonResponse({ full_name: "contributor/demo-fork", fork: true, parent: { full_name: "upstream/demo" } });
+      setCommitSuccess(true);
+    } catch (error) {
+      setCommitError(
+        error instanceof Error ? error.message : "Failed to commit proposed changes."
+      );
+    } finally {
+      setCommittingFile(false);
     }
-    if (url.pathname.endsWith("/git/ref/heads/ai-contribution-test")) {
-      return jsonResponse({ object: { sha: "parent-commit" } });
-    }
-    if (url.pathname.endsWith("/git/commits/parent-commit")) return jsonResponse({ tree: { sha: "parent-tree" } });
-    if (url.pathname.endsWith("/git/blobs") && method === "POST") {
-      blobCount += 1;
-      return blobCount === 1 ? jsonResponse({ sha: "blob-1" }) : jsonResponse({ message: "simulated GitHub failure" }, 503);
-    }
-    if (method === "PATCH") refUpdates += 1;
-    return jsonResponse({ message: "Unexpected mocked GitHub request" }, 500);
-  }, async () => {
-    const response = await originalFetchForTest(baseUrl + "/api/github/commit-proposal", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        owner: "contributor",
-        repo: "demo-fork",
-        branchName: "ai-contribution-test",
-        commitMessage: "Add two source files",
-        changes: [
-          { filePath: "src/one.ts", content: "export const one = 1;\n" },
-          { filePath: "src/two.ts", content: "export const two = 2;\n" },
-        ],
-      }),
-    });
-    assert.equal(response.status, 503);
-    const data = await response.json();
-    assert.equal(data.branchUnchanged, true);
-    assert.equal(data.failedFile, "src/two.ts");
-    assert.equal(refUpdates, 0);
-  });
-});
+  };
 
-// Preserve the real fetch for local test-server requests even while GitHub API
-// calls are mocked inside the route.
-const originalFetchForTest = globalThis.fetch.bind(globalThis);
-
-
-test("POST /api/sandbox/run stays disabled unless explicitly enabled", async () => {
-  const previous = process.env.SANDBOX_ENABLED;
-  delete process.env.SANDBOX_ENABLED;
-  try {
-    const response = await fetch(baseUrl + "/api/sandbox/run", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        runtime: "node",
-        check: "test",
-        files: [{ path: "package.json", content: '{"scripts":{"test":"node --test"}}' }],
-      }),
-    });
-    assert.equal(response.status, 503);
-    assert.match((await response.json()).error, /disabled/i);
-  } finally {
-    if (previous === undefined) delete process.env.SANDBOX_ENABLED;
-    else process.env.SANDBOX_ENABLED = previous;
+  const handleCreatePullRequest = async () => {
+  if (!selectedIssue || !forkedRepository) {
+    setPrError("The selected issue and fork are required before creating a pull request.");
+    return;
   }
-});
+
+  if (!branchName || !commitSuccess || !approved) {
+    setPrError("Approve the contribution and commit the proposal before creating a pull request.");
+    return;
+  }
+
+  setCreatingPR(true);
+  setPrError("");
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/github/pull-request`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          owner: getRepositoryName(selectedIssue?.url ?? "").split("/")[0],
+          repo: getRepositoryName(selectedIssue?.url ?? "").split("/")[1],
+          headBranch: forkedRepository.split("/")[0] + ":" + branchName,
+          headRepository: forkedRepository.split("/")[1],
+          baseBranch,
+          title: "AI Contribution: " + (selectedIssue?.title ?? "Proposed fix"),
+          body: [
+            "This pull request was prepared by AI Open Source Engineer.",
+            "",
+            "Closes #" + (selectedIssue?.url.split("/").pop() ?? ""),
+            "",
+            "Please review the proposed changes and run the repository test suite before merging.",
+          ].join("\n"),
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.error || "Failed to create pull request."
+      );
+    }
+
+    setPullRequest({
+      htmlUrl: data.pullRequest.htmlUrl,
+      number: data.pullRequest.number,
+    });
+  } catch (error) {
+    setPrError(
+      error instanceof Error
+        ? error.message
+        : "Failed to create pull request."
+    );
+  } finally {
+    setCreatingPR(false);
+  }
+};
+
+useEffect(() => {
+    if (
+      started &&
+      stage === 0 &&
+      issues.length > 0 &&
+      !selectedIssue &&
+      !selectingIssue &&
+      !autoRunAttempts.current.has("select-issue")
+    ) {
+      autoRunAttempts.current.add("select-issue");
+      void handleAISelection();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    started,
+    stage,
+    issues,
+    selectedIssue,
+    selectingIssue,
+  ]);
+
+useEffect(() => {
+    if (
+      started &&
+      stage === 0 &&
+      selectedIssue &&
+      aiSelection
+    ) {
+      void Promise.resolve().then(() => handleRepositoryAnalysis());
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [started, stage, selectedIssue, aiSelection]);
+
+useEffect(() => {
+  if (
+    started &&
+    stage === 1 &&
+    repositoryAnalysis &&
+    !buildingSolution &&
+    !autoRunAttempts.current.has("build-solution")
+  ) {
+    autoRunAttempts.current.add("build-solution");
+    void handleBuildSolution();
+  }
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, [started, stage, repositoryAnalysis, buildingSolution]);
+
+useEffect(() => {
+  if (
+    started &&
+    stage === 2 &&
+    solutionPlan &&
+    !generatingCode &&
+    !autoRunAttempts.current.has("generate-code")
+  ) {
+    autoRunAttempts.current.add("generate-code");
+    void handleGenerateCode();
+  }
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, [started, stage, solutionPlan, generatingCode]);
+
+useEffect(() => {
+  if (
+    started &&
+    stage === 3 &&
+    codeProposal &&
+    !codeReview &&
+    !reviewingCode &&
+    !autoRunAttempts.current.has("review-code")
+  ) {
+    autoRunAttempts.current.add("review-code");
+    void handleReviewCode();
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [
+  started,
+  stage,
+  codeProposal,
+  codeReview,
+  reviewingCode,
+]);
+
+  const stages = [
+    {
+      title: "Finding an Issue...",
+      description:
+        "AI is searching GitHub for an open-source issue that can be solved automatically.",
+      step: "01",
+      name: "Finding Issue",
+      detail: "Searching GitHub for suitable open-source issues...",
+    },
+    {
+      title: "Analyzing Repository...",
+      description:
+        "AI found the best issue and is now understanding the repository.",
+      step: "02",
+      name: "Analyzing Repository",
+      detail:
+        "Understanding the project structure and relevant files...",
+    },
+    {
+      title: "Building Solution...",
+      description:
+        "AI is planning and implementing the solution for the selected issue.",
+      step: "03",
+      name: "Build Solution",
+      detail: "Writing and modifying the required code...",
+    },
+    {
+      title: "Reviewing Code Proposal...",
+      description:
+        "AI generated a proposed solution. Review the changes before final verification.",
+      step: "04",
+      name: "Review Code Proposal",
+      detail:
+        "Inspect the generated code proposal before final approval...",
+    },
+    {
+      title: "Ready for Review",
+      description:
+        "The AI has completed the contribution and prepared it for your final verification.",
+      step: "05",
+      name: "Your Review",
+      detail:
+        "Review the changes before creating the pull request.",
+    },
+  ];
+  useEffect(() => {
+    if (
+      approved &&
+      forkedRepository &&
+      !branchName &&
+      !creatingBranch &&
+      !branchError &&
+      !autoRunAttempts.current.has("create-branch")
+    ) {
+      autoRunAttempts.current.add("create-branch");
+      void handleCreateBranch();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    approved,
+    forkedRepository,
+    branchName,
+    creatingBranch,
+    branchError,
+  ]);
+
+  useEffect(() => {
+    if (
+      approved &&
+      branchName &&
+      !commitSuccess &&
+      !committingFile &&
+      !commitError &&
+      !autoRunAttempts.current.has("commit-proposal")
+    ) {
+      autoRunAttempts.current.add("commit-proposal");
+      void handleCommitFile();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    approved,
+    branchName,
+    commitSuccess,
+    committingFile,
+    commitError,
+  ]);
+
+
+  return (
+    <main className="contribution-page">
+      <div className="contribution-container">
+        <span className="contribution-label">
+          AI OPEN SOURCE ENGINEER
+        </span>
+
+        {!started ? (
+          <>
+            <h1>Start Your Contribution</h1>
+
+            <p>
+              Let AI find an open-source opportunity, understand the
+              repository, build the solution, test the changes, and
+              prepare everything for your final review.
+            </p>
+
+            <div className="contribution-workflow">
+              {stages.map((item) => (
+                <div className="workflow-step" key={item.step}>
+                  <span className="workflow-number">
+                    {item.step}
+                  </span>
+
+                  <div>
+                    <h3>{item.name}</h3>
+                    <p>{item.detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              className="contribution-start-button"
+              onClick={() => setStarted(true)}
+            >
+              Start AI Contribution
+            </button>
+          </>
+        ) : (approved && commitSuccess) ? (
+          <>
+            <h1>Contribution Approved 🎉</h1>
+
+            <p>
+              Your contribution has been verified and is ready to be
+              submitted as a pull request.
+            </p>
+
+            <div className="workflow-step">
+              <span className="workflow-number">✓</span>
+
+              <div>
+                <h3>Ready to Create Pull Request</h3>
+
+                <p>
+                  The AI completed the workflow and you approved the
+                  changes.
+                </p>
+                <button
+  className="contribution-start-button"
+  onClick={handleCreatePullRequest}
+  disabled={creatingPR || !branchName}
+>
+  {creatingPR
+    ? "Creating Pull Request..."
+    : "Create Pull Request"}
+</button>
+
+{prError && <p>{prError}</p>}
+
+{pullRequest && (
+  <p>
+    Pull request created successfully! ✅{" "}
+    <a
+      href={pullRequest.htmlUrl}
+      target="_blank"
+      rel="noreferrer"
+    >
+      View Pull Request #{pullRequest.number} →
+    </a>
+  </p>
+)}
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <h1>{stages[stage].title}</h1>
+
+            <p>{stages[stage].description}</p>
+
+            <ContributionProgress currentStage={stage} />
+
+            {stage === 0 && (
+              <div className="issue-results">
+                {loadingIssues && (
+                  <p>Finding real GitHub issues...</p>
+                )}
+
+                {issueError && (
+                  <div role="alert">
+                    <p>{issueError}</p>
+                    <button
+                      className="contribution-start-button"
+                      onClick={() => setIssueFetchAttempt((attempt) => attempt + 1)}
+                      disabled={loadingIssues}
+                    >
+                      Retry Issue Search
+                    </button>
+                  </div>
+                )}
+
+                {!loadingIssues &&
+                  !issueError &&
+                  issues.length > 0 &&
+                  !selectedIssue && (
+                    <>
+                      <h2>Issues Found</h2>
+
+                      <p>
+                        GitHub found {issues.length} suitable open
+                        issues.
+                      </p>
+
+                      <button
+                        className="contribution-start-button"
+                        onClick={handleAISelection}
+                        disabled={selectingIssue}
+                      >
+                        {selectingIssue
+                          ? "AI Is Choosing..."
+                          : "Let AI Choose the Best Issue"}
+                      </button>
+
+                      {aiError && <p>{aiError}</p>}
+                    </>
+                  )}
+
+                {selectedIssue && aiSelection && (
+                  <div className="workflow-step">
+                    <div>
+                      <h2>AI Selected This Issue</h2>
+
+                      <h3>{selectedIssue.title}</h3>
+
+                      <p>
+                        Reported by @{selectedIssue.user}
+                      </p>
+
+                      <p>
+                        <strong>Difficulty:</strong>{" "}
+                        {aiSelection.difficulty}
+                      </p>
+
+                      <p>
+                        <strong>Confidence:</strong>{" "}
+                        {Math.round(
+                          aiSelection.confidence * 100
+                        )}
+                        %
+                      </p>
+
+                      <p>
+                        <strong>AI Reason:</strong>{" "}
+                        {aiSelection.reason}
+                      </p>
+
+                      <a
+                        href={selectedIssue.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        View Selected Issue →
+                      </a>
+
+                      <br />
+                      <br />
+
+                      <button
+                        className="contribution-start-button"
+                        onClick={handleRepositoryAnalysis}
+                        disabled={analyzingRepository}
+                      >
+                        {analyzingRepository
+                          ? "Analyzing Repository..."
+                          : "Analyze Repository"}
+                      </button>
+
+                      {repositoryError && (
+                        <p>{repositoryError}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {stage === 1 && (
+              <div className="workflow-step">
+                <span className="workflow-number">
+                  {stages[stage].step}
+                </span>
+
+                <div>
+                  <h2>Repository Analysis</h2>
+
+                  {repositoryAnalysis ? (
+                    <div>
+                      {Object.entries(repositoryAnalysis).map(
+                        ([key, value]) => (
+                          <div key={key}>
+                            <h3>
+                              {key
+                                .replace(/([A-Z])/g, " $1")
+                                .replace(/^./, (char) =>
+                                  char.toUpperCase()
+                                )}
+                            </h3>
+
+                            {Array.isArray(value) ? (
+                              <ul>
+                                {value.map((item, index) => (
+                                  <li key={index}>
+                                    {typeof item === "object" &&
+                                    item !== null
+                                      ? JSON.stringify(
+                                          item,
+                                          null,
+                                          2
+                                        )
+                                      : String(item)}
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p>{String(value)}</p>
+                            )}
+                          </div>
+                        )
+                      )}
+                    </div>
+                  ) : (
+                    <p>
+                      Repository analysis is not available yet.
+                    </p>
+                  )}
+
+                  <br />
+
+                  <button
+                    className="contribution-start-button"
+                    onClick={handleBuildSolution}
+                    disabled={buildingSolution}
+                  >
+                    {buildingSolution
+                      ? "Building Solution..."
+                      : "Build Solution"}
+                  </button>
+
+                  {solutionError && <p>{solutionError}</p>}
+                </div>
+              </div>
+            )}
+
+            {stage === 2 && solutionPlan && (
+              <div className="workflow-step">
+                <span className="workflow-number">
+                  {stages[stage].step}
+                </span>
+
+                <div>
+                  <h2>Solution Plan</h2>
+
+                  {Object.entries(solutionPlan).map(
+                    ([key, value]) => (
+                      <div key={key}>
+                        <h3>
+                          {key
+                            .replace(/([A-Z])/g, " $1")
+                            .replace(/^./, (char) =>
+                              char.toUpperCase()
+                            )}
+                        </h3>
+
+                        {Array.isArray(value) ? (
+                          <ul>
+                            {value.map((item, index) => (
+                              <li key={index}>
+                                {typeof item === "object" &&
+                                item !== null
+                                  ? JSON.stringify(
+                                      item,
+                                      null,
+                                      2
+                                    )
+                                  : String(item)}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p>{String(value)}</p>
+                        )}
+                      </div>
+                    )
+                  )}
+
+                  <br />
+
+                  <button
+                    className="contribution-start-button"
+                    onClick={handleGenerateCode}
+                    disabled={generatingCode}
+                  >
+                    {generatingCode
+                      ? "Generating Code..."
+                      : changesRequested
+                        ? "Regenerate Proposal Using Review Feedback"
+                        : "Generate Code"}
+                  </button>
+
+                  {codeError && <p>{codeError}</p>}
+                </div>
+              </div>
+            )}
+
+            {stage === 3 && codeProposal && (
+              <div className="workflow-step">
+                <span className="workflow-number">
+                  {stages[stage].step}
+                </span>
+
+                <div>
+                  <h2>Code Proposal</h2>
+
+                  {Object.entries(codeProposal).map(
+                    ([key, value]) => (
+                      <div key={key}>
+                        <h3>
+                          {key
+                            .replace(/([A-Z])/g, " $1")
+                            .replace(/^./, (char) =>
+                              char.toUpperCase()
+                            )}
+                        </h3>
+
+                        {Array.isArray(value) ? (
+                          <ul>
+                            {value.map((item, index) => (
+                              <li key={index}>
+                                {typeof item === "object" &&
+                                item !== null
+                                  ? JSON.stringify(
+                                      item,
+                                      null,
+                                      2
+                                    )
+                                  : String(item)}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p>
+                            {typeof value === "object" &&
+                            value !== null
+                              ? JSON.stringify(value, null, 2)
+                              : String(value)}
+                          </p>
+                        )}
+                      </div>
+                    )
+                  )}
+
+                  <br />
+
+                  <button
+                    className="contribution-start-button"
+                    onClick={handleReviewCode}
+                    disabled={reviewingCode}
+                  >
+                    {reviewingCode
+                      ? "Reviewing Code..."
+                      : "Run AI Code Review"}
+                  </button>
+
+                  {reviewError && <p>{reviewError}</p>}
+
+                  <section aria-labelledby="sandbox-check-heading">
+                    <h3 id="sandbox-check-heading">Isolated Test Check</h3>
+                    <p>Run a fixed check against the current repository snapshot plus your proposed changes. Docker must be running and SANDBOX_ENABLED=true on the backend. Checks run without network access; dependencies are not installed automatically.</p>
+                    <label>
+                      Runtime{" "}
+                      <select value={sandboxRuntime} onChange={(event) => setSandboxRuntime(event.target.value as "node" | "python")} disabled={sandboxRunning}>
+                        <option value="node">Node.js</option>
+                        <option value="python">Python</option>
+                      </select>
+                    </label>{" "}
+                    <label>
+                      Check{" "}
+                      <select value={sandboxCheck} onChange={(event) => setSandboxCheck(event.target.value as "test" | "lint" | "build" | "typecheck")} disabled={sandboxRunning}>
+                        <option value="test">Tests</option>
+                        <option value="lint">Lint / syntax</option>
+                        <option value="build">Build / syntax</option>
+                        <option value="typecheck">Typecheck / syntax</option>
+                      </select>
+                    </label>{" "}
+                    <button className="contribution-start-button" onClick={() => void handleRunSandboxCheck()} disabled={sandboxRunning}>
+                      {sandboxRunning ? "Running Isolated Check..." : "Run Isolated Check"}
+                    </button>{" "}
+                    {sandboxRunning && <button className="contribution-start-button" onClick={() => void handleCancelSandboxCheck()}>Cancel Check</button>}
+                    {sandboxError && <p role="alert">{sandboxError}</p>}
+                    {sandboxResult && (
+                      <div role="status" aria-live="polite">
+                        <h4>Result: {sandboxResult.status}</h4>
+                        <p>{sandboxResult.summary} Duration: {sandboxResult.durationMs} ms.</p>
+                        {sandboxResult.outputTruncated && <p>Output was truncated to the configured limit.</p>}
+                        {sandboxResult.stdout && <details><summary>Standard output</summary><pre>{sandboxResult.stdout}</pre></details>}
+                        {sandboxResult.stderr && <details><summary>Standard error</summary><pre>{sandboxResult.stderr}</pre></details>}
+                      </div>
+                    )}
+                  </section>
+
+                  {codeReview && (
+                    <div className="code-review-results">
+                      {changesRequested && (
+  <p className="changes-requested-message">
+    Changes requested. Regenerate the proposal using the review feedback before approval.
+  </p>
+)}
+
+<h2>AI Code Review Results</h2>
+
+                      <h3>Status</h3>
+                      <p>{codeReview.overallStatus}</p>
+
+                      <h3>Summary</h3>
+                      <p>{codeReview.summary}</p>
+
+                      <h3>Potential Bugs</h3>
+                      <ul>
+                        {codeReview.bugs.map((item, index) => (
+                          <li key={index}>{item}</li>
+                        ))}
+                      </ul>
+
+                      <h3>Security Issues</h3>
+                      <ul>
+                        {codeReview.securityIssues.map((item, index) => (
+                          <li key={index}>{item}</li>
+                        ))}
+                      </ul>
+
+                      <h3>Code Quality Issues</h3>
+                      <ul>
+                        {codeReview.codeQualityIssues.map((item, index) => (
+                          <li key={index}>{item}</li>
+                        ))}
+                      </ul>
+
+                      <h3>Missing Tests</h3>
+                      <ul>
+                        {codeReview.missingTests.map((item, index) => (
+                          <li key={index}>{item}</li>
+                        ))}
+                      </ul>
+
+                      <h3>Suggestions</h3>
+                      <ul>
+                        {codeReview.suggestions.map((item, index) => (
+                          <li key={index}>{item}</li>
+                        ))}
+                      </ul>
+
+                      <h3>Confidence</h3>
+                      <p>{codeReview.confidence}%</p>
+                    </div>
+                  )}
+                  <button
+                    className="contribution-start-button"
+                    onClick={() => setStage(4)}
+                    disabled={!codeReview || reviewingCode}
+                  >
+                    Continue to Final Review
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {stage > 3 && (
+              <div className="workflow-step">
+                <span className="workflow-number">
+                  {stages[stage].step}
+                </span>
+
+                <div>
+                  <h3>{stages[stage].name}</h3>
+                  <p>{stages[stage].detail}</p>
+                </div>
+              </div>
+            )}
+
+                        {stage === 4 && (
+              <div className="review-actions">
+                <h2>Final Review</h2>
+                <p>
+                  Review the AI-generated contribution carefully before approving it.
+                </p>
+
+                {codeReview && (
+                  <div className="code-review-results">
+                    <h3>AI Review Status</h3>
+                    <p>{codeReview.overallStatus}</p>
+                    <h3>Summary</h3>
+                    <p>{codeReview.summary}</p>
+                  </div>
+                )}
+
+                {!approved && (
+                  <div className="contribution-action-buttons">
+                    <button
+                      className="contribution-start-button"
+                      onClick={() => {
+                        setApproved(true);
+                        void handleForkRepository();
+                      }}
+                      disabled={
+                        forkingRepository ||
+                        !codeReview ||
+                        codeReview.overallStatus !== "Approved"
+                      }
+                      title={
+                        codeReview?.overallStatus !== "Approved"
+                          ? "The AI review must approve the proposal before it can be committed."
+                          : undefined
+                      }
+                    >
+                      {forkingRepository
+                        ? "Forking Repository..."
+                        : "Approve Contribution"}
+                    </button>
+                    {codeReview?.overallStatus !== "Approved" && (
+                      <p role="status">
+                        Resolve the review findings and regenerate the proposal before approval.
+                      </p>
+                    )}
+
+                    <button
+                      className="contribution-start-button"
+                      onClick={() => {
+                        setChangesRequested(true);
+                        setApproved(false);
+                        setStage(3);
+                      }}
+                    >
+                      Request Changes
+                    </button>
+                  </div>
+                )}
+
+                {forkError && (
+                  <div role="alert">
+                    <p>{forkError}</p>
+                    <button
+                      className="contribution-start-button"
+                      onClick={() => void handleForkRepository()}
+                      disabled={forkingRepository}
+                    >
+                      {forkingRepository ? "Forking Repository..." : "Retry Fork"}
+                    </button>
+                  </div>
+                )}
+
+                {forkedRepository && (
+                  <p>
+                    Repository forked successfully! ✅
+                    <br />
+                    Fork: {forkedRepository}
+                  </p>
+                )}
+
+                {branchError && (
+                  <div role="alert">
+                    <p>{branchError}</p>
+                    <button
+                      className="contribution-start-button"
+                      onClick={() => {
+                        autoRunAttempts.current.delete("create-branch");
+                        setBranchError("");
+                      }}
+                      disabled={creatingBranch}
+                    >
+                      Retry Branch Creation
+                    </button>
+                  </div>
+                )}
+
+                {branchName && <p>Branch created: {branchName}</p>}
+
+                {commitError && (
+                  <div role="alert">
+                    <p>{commitError}</p>
+                    <button
+                      className="contribution-start-button"
+                      onClick={() => {
+                        autoRunAttempts.current.delete("commit-proposal");
+                        setCommitError("");
+                      }}
+                      disabled={committingFile}
+                    >
+                      Retry Proposal Commit
+                    </button>
+                  </div>
+                )}
+
+                {committingFile && <p>Committing AI proposal...</p>}
+
+                {commitSuccess && (
+                  <p>AI proposal committed successfully! ✅</p>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </main>
+  );
+}
+
+export default Contribution;
+
+
+
+
+
+
