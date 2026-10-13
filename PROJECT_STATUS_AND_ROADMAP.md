@@ -147,7 +147,7 @@ Implemented on the milestone branch:
 
 ### Milestone 4: Recovery and contribution lifecycle
 
-**Implementation status: durable lifecycle API and state-machine tests implemented on the Milestone 4 branch; frontend workflow wiring and live restart/GitHub fault-injection verification remain before this milestone can be called complete.**
+**Implementation status: lifecycle API, Contribution UI state tracking, browser refresh restoration, and idempotent branch/proposal retries are implemented on the Milestone 4 branch. Latest verified CI for commit `a36afd2cacae1894834248dbcea693a0addc07ff` passed; the newest GitHub retry-safety commit still needs its own CI result. Live restart/GitHub fault-injection verification and cancellation/cleanup UX remain.**
 
 Implemented in this slice:
 - Atomic-write JSON state store with private directory/file permissions, bounded retention (500 workflows), and bounded event history (100 events per workflow).
@@ -155,12 +155,13 @@ Implemented in this slice:
 - Explicit states for discovery, analysis, planning, proposal/review, human approval, fork, branch, commit, retryable/failed, and cancellation.
 - Legal-transition enforcement, optimistic concurrency via `expectedVersion`, user isolation, idempotency-key collision detection, retry counts, credential-pattern redaction, and event timestamps.
 - Tests for owner isolation, durable reads, idempotent create, key collisions, illegal transitions, stale versions, retry recovery, message redaction, and concurrent writes.
+- The Contribution UI updates lifecycle state at analysis, proposal, review, fork, branch, and commit checkpoints. A bounded browser-local snapshot restores editor context after refresh; it never stores the OAuth token.
+- Fork retries reuse an existing branch only if it is still at the requested base SHA. Atomic proposal commits carry a deterministic idempotency trailer so a retry after a lost response can recognize an already-committed proposal.
 - The JSON store is deliberately single-process/local-only. Do not use it as a shared production store or expose this server publicly; shared durable storage and distributed locking are later deployment requirements.
 
 Remaining before Milestone 4 is complete:
-- Connect the Contribution UI stages to lifecycle creation and state updates so refreshes can restore actual in-progress UI context.
-- Make fork/branch/commit operations resume safely after uncertain network outcomes; use GitHub read-before-retry checks and idempotent branch naming where possible.
-- Add cancellation/cleanup UX and explicit recovery for fork initialization, API rate limits, timeouts, and stale refs.
+- Add a visible cancel/cleanup action and explicit recovery for forks that are still initializing, GitHub rate limits, timeouts, and stale refs.
+- Add automated mocked-GitHub tests for uncertain branch-create and atomic-commit responses, including idempotent retry behavior.
 - Verify server restart persistence and GitHub failure cases in a configured local run.
 - Preserve the non-force branch update; never hide concurrency conflicts by overwriting a newer branch head.
 

@@ -15,7 +15,7 @@ An AI-assisted open-source contribution workflow that discovers issues, analyzes
 
 ## Contribution lifecycle API
 
-The authenticated local backend exposes `GET /api/lifecycle`, `POST /api/lifecycle`, `GET /api/lifecycle/:id`, and `PATCH /api/lifecycle/:id` to persist a user-scoped contribution state machine. Set `CONTRIBUTION_STATE_PATH` to choose the JSON state file location; by default it is `.data/contributions.json` relative to the server process working directory. Keep this store on a private local disk: it is designed for the current single-process, loopback-only deployment, not multiple server instances. State transitions require an `expectedVersion`; repeated creates with the same user and idempotency key return the existing workflow instead of duplicating it.
+The authenticated local backend exposes `GET /api/lifecycle`, `POST /api/lifecycle`, `GET /api/lifecycle/:id`, and `PATCH /api/lifecycle/:id` to persist a user-scoped contribution state machine. Set `CONTRIBUTION_STATE_PATH` to choose the JSON state file location; by default it is `.data/contributions.json` relative to the server process working directory. Keep this store on a private local disk: it is designed for the current single-process, loopback-only deployment, not multiple server instances. State transitions require an `expectedVersion`; repeated creates with the same user and idempotency key return the existing workflow instead of duplicating it. The Contribution UI checkpoints its workflow and restores a bounded local editor snapshot after refresh. The browser snapshot never stores the OAuth token; keep the browser profile private because it can contain issue analysis and proposed source text.
 
 ## Stack
 
