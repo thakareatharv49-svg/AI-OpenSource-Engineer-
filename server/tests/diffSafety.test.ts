@@ -444,3 +444,35 @@ test("allows explicitly named cloud credential templates", () => {
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks additional package-manager and build-tool authentication stores", () => {
+  for (const file of [
+    ".yarnrc.yml",
+    "frontend/.yarnrc",
+    ".npm/_auth",
+    ".npm/_authToken",
+    ".config/pip/pip.conf",
+    "home/.config/uv/credentials.toml",
+    ".pdm.toml",
+    ".config/containers/auth.json",
+    ".terraform.d/credentials.tfrc.json",
+    ".gradle/gradle.properties",
+    "home/.m2/settings.xml",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "synthetic placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) => finding.severity === "block"), file);
+  }
+});
+
+test("allows explicitly named templates for additional authentication artifacts", () => {
+  const report = inspectProposedChanges([
+    { file: ".yarnrc.yml.example", after: "npmAuthToken: ${NPM_TOKEN}\n" },
+    { file: ".config/pip/pip.conf.template", after: "[global]\nindex-url = https://example.invalid/simple\n" },
+    { file: ".gradle/gradle.properties.sample", after: "signingKey=replace-me\n" },
+    { file: ".m2/settings.xml.example", after: "<settings />\n" },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
