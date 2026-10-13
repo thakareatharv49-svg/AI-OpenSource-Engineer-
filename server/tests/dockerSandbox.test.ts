@@ -18,7 +18,7 @@ testCase("Docker sandbox disables network and drops privileges", () => {
   assert.ok(args.includes("--cpus=1"));
   assert.ok(args.includes("--user=65532:65532"));
   assert.ok(args.includes("/workspace:rw,nosuid,nodev,size=128m,mode=1777"));
-  assert.ok(args.includes("type=bind,src=C:/temp/workspace,dst=/input,readonly"));
+  assert.ok(args.some((arg) => arg.startsWith("type=bind,src=") && arg.endsWith(",dst=/input,readonly")));
   assert.ok(args.includes("cp -R /input/. /workspace/ && npm test"));
   assert.ok(args.includes("node:22-alpine"));
   assert.ok(args.includes("cp -R /input/. /workspace/ && npm test"));
