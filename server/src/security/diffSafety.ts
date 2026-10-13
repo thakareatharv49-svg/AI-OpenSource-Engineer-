@@ -57,7 +57,7 @@ function isSafeRelativePath(path: string): boolean {
     !path.includes(":") &&
     !/[?#\u0000-\u001f\u007f]/.test(path) &&
     // Invisible Unicode formatting characters can disguise paths in code review.
-    !/[\\p{Cc}\\p{Cf}]/u.test(path) &&
+    !/[\p{Cc}\p{Cf}]/u.test(path) &&
     segments.every((segment) =>
       segment.length > 0 &&
       segment !== "." &&
