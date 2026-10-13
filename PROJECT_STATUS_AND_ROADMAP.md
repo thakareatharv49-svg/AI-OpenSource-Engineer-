@@ -309,8 +309,17 @@ Definition of done: pass backend typecheck/tests, frontend build/lint, productio
 
 ## 20. Milestone 16 — Azure shared-access-signature detection
 
-**Implementation in progress on branch `security/gcp-service-account-key-detection`.** Extend proposal-content scanning to detect high-confidence Azure Storage shared-access-signature URLs with a sufficiently long `sig` value alongside SAS parameters. Add regression tests for positive signatures and ordinary/placeholder URLs.
+**Merged in PR #50 on 2026-10-13 (merge commit `a9b7591bb19b821cb4cc279cc2b5d32be29ff705`).** Extend proposal-content scanning to detect high-confidence Azure Storage shared-access-signature URLs with a sufficiently long `sig` value alongside SAS parameters. Add regression tests for positive signatures and ordinary/placeholder URLs.
 
 Scope: heuristic detection of proposed text only; it does not validate whether a signature is live, scan repository history, or replace cloud-side least privilege and key rotation.
+
+Definition of done: pass backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL; merge only after all required checks pass.
+
+
+## 21. Milestone 17 — Database connection-string credential detection
+
+**Implementation in progress on branch `security/database-connection-string-detection`.** Detect embedded username/password credentials in common PostgreSQL, MySQL/MariaDB, MongoDB, and Redis connection strings. Add tests for each family and common documentation/environment-variable placeholders.
+
+Scope: pattern-based detection of proposed content only. It does not connect to databases, validate credential activity, scan repository history/dependencies, or replace secret managers and least-privilege access.
 
 Definition of done: pass backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL; merge only after all required checks pass.
