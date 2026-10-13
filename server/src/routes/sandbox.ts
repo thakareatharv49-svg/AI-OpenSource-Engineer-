@@ -85,7 +85,8 @@ router.post("/snapshot", async (req, res) => {
     return res.status(503).json({ error: "Isolated checks are disabled." });
   }
   const repository = req.body && typeof req.body.repository === "string" ? req.body.repository : "";
-  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository) || repository.length > 200) {
+  const repositoryParts = repository.split("/");
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository) || repository.length > 200 || repositoryParts.some((part) => part === "." || part === "..")) {
     return res.status(400).json({ error: "Provide a valid owner/repository identifier." });
   }
   try {
