@@ -21,7 +21,7 @@ testCase("Docker sandbox disables network and drops privileges", () => {
   assert.ok(args.some((arg) => arg.startsWith("type=bind,src=") && arg.endsWith(",dst=/input,readonly")));
   assert.ok(args.includes("cp -R /input/. /workspace/ && npm test"));
   assert.ok(args.includes("node:22-alpine"));
-  assert.ok(args.includes("cp -R /input/. /workspace/ && npm test"));
+  assert.ok(args.includes("npm test"));
 });
 
 testCase("sandbox rejects path traversal without invoking Docker", async () => {
@@ -159,4 +159,30 @@ testCase("sandbox bounds captured stdout and stderr", async () => {
   assert.equal(result.stdout.length, 32_000);
   assert.equal(result.stderr.length, 32_000);
   assert.equal(result.outputTruncated, true);
+});
+
+
+testCase("sandbox cancellation requests container termination", async () => {
+  const controller = new AbortController();
+  const calls: string[][] = [];
+  const spawnProcess = ((command: string, args: string[]) => {
+    calls.push(args);
+    const child = new EventEmitter() as any;
+    if (args[0] === "kill") {
+      setImmediate(() => child.emit("close", 0));
+      return child;
+    }
+    child.stdout = new PassThrough();
+    child.stderr = new PassThrough();
+    child.kill = () => true;
+    setImmediate(() => controller.abort());
+    return child;
+  }) as typeof spawn;
+  const result = await runSandbox({
+    runtime: "node",
+    check: "test",
+    files: [{ path: "package.json", content: '{"scripts":{"test":"node --test"}}' }],
+  }, { spawnProcess, signal: controller.signal });
+  assert.equal(result.status, "cancelled");
+  assert.ok(calls.some((args) => args[0] === "kill"));
 });
