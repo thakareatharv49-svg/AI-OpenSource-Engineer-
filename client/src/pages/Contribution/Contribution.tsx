@@ -472,7 +472,7 @@ const [forkedRepository, setForkedRepository] = useState("");
       if (!change || typeof change !== "object") continue;
       const item = change as Record<string, unknown>;
       if (typeof item.file !== "string" || typeof item.after !== "string") continue;
-      let content = item.after;
+      const content = item.after;
       const lines = content.split("\n");
       if (lines[0]?.trim().startsWith("```")) lines.shift();
       if (lines.length && lines[lines.length - 1].trim() === "```") lines.pop();
