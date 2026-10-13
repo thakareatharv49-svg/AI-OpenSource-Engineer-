@@ -65,5 +65,5 @@ testCase("Python test checks require a test file but compile checks do not", asy
     check: "build",
     files: [{ path: "main.py", content: "print('hello')" }],
   });
-  assert.notEqual(compileResult.summary, "Python test execution requires at least one test file; compile checks may use any Python source.");
+  assert.doesNotMatch(compileResult.summary, /requires at least one test file/i);
 });
