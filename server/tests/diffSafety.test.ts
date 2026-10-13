@@ -50,6 +50,7 @@ test("blocks unsafe paths, duplicate paths, and empty changes", () => {
   assert.equal(inspectProposedChanges([{ file: "src/a.ts", after: "  " }]).safeToCommit, false);
 });
 
+
 test("blocks cross-platform dangerous path names", () => {
   for (const file of [
     "src/file:stream.ts",

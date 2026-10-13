@@ -16,16 +16,16 @@ const MAX_TOTAL_BYTES = 500_000;
 const MAX_FILE_BYTES = 200_000;
 
 const unsafePathPatterns = [
-  /(?:^|\\/)\.git(?:\\/|$)/i,
-  /(?:^|\\/)\.gitmodules$/i,
-  /(?:^|\\/)\.env(?:\.|$)/i,
-  /(?:^|\\/)\.npmrc$/i,
-  /(?:^|\\/)\.pypirc$/i,
-  /(?:^|\\/)\.netrc$/i,
-  /(?:^|\\/)\.ssh(?:\\/|$)/i,
-  /(?:^|\\/)\.aws(?:\\/|$)/i,
-  /(?:^|\\/)(?:secrets?|credentials?)(?:\\/|$)/i,
-  /(?:^|\\/)(?:id_rsa|id_ed25519|id_ecdsa|private_key|credentials\.json)$/i,
+  /(?:^|\/)\.git(?:\/|$)/i,
+  /(?:^|\/)\.gitmodules$/i,
+  /(?:^|\/)\.env(?:\.|$)/i,
+  /(?:^|\/)\.npmrc$/i,
+  /(?:^|\/)\.pypirc$/i,
+  /(?:^|\/)\.netrc$/i,
+  /(?:^|\/)\.ssh(?:\/|$)/i,
+  /(?:^|\/)\.aws(?:\/|$)/i,
+  /(?:^|\/)(?:secrets?|credentials?)(?:\/|$)/i,
+  /(?:^|\/)(?:id_rsa|id_ed25519|id_ecdsa|private_key|credentials\.json)$/i,
 ];
 
 const secretPatterns: Array<{ pattern: RegExp; reason: string }> = [
