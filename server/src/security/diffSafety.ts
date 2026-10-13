@@ -105,7 +105,8 @@ export function inspectProposedChanges(input: unknown): SafetyReport {
       continue;
     }
 
-    const normalizedPath = file.toLowerCase();
+    // Git clients and filesystems may treat canonically equivalent Unicode names as the same path.
+    const normalizedPath = file.normalize("NFC").toLowerCase();
     if (seenPaths.has(normalizedPath)) {
       findings.push({ severity: "block", file, reason: "The proposal contains duplicate paths; combine each file into one change" });
     }
