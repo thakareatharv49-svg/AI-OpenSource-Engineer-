@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import { request as httpRequest, type Server } from "node:http";
 import { app } from "../src/index.js";
+import { createGithubSession } from "../src/security/session.js";
 
 let server: Server;
 let baseUrl: string;
@@ -33,6 +34,26 @@ test("GET / returns the service banner", async () => {
   assert.deepEqual(await response.json(), {
     message: "AI Open Source Engineer server is running",
   });
+});
+
+
+test("GET /api/auth/me reports an unauthenticated session without exposing credentials", async () => {
+  const response = await fetch(baseUrl + "/api/auth/me");
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { authenticated: false, user: null });
+});
+
+test("GET /api/auth/github fails closed when OAuth is not configured", async () => {
+  const previousId = process.env.GITHUB_OAUTH_CLIENT_ID;
+  delete process.env.GITHUB_OAUTH_CLIENT_ID;
+  try {
+    const response = await fetch(baseUrl + "/api/auth/github", { redirect: "manual" });
+    assert.equal(response.status, 503);
+    assert.match((await response.json()).error, /OAuth is not configured/i);
+  } finally {
+    if (previousId === undefined) delete process.env.GITHUB_OAUTH_CLIENT_ID;
+    else process.env.GITHUB_OAUTH_CLIENT_ID = previousId;
+  }
 });
 
 test("GET /api/health returns an OK health status", async () => {
@@ -301,6 +322,8 @@ test("POST /api/github/safety-check requires manual review for workflow changes"
 
 // Integration-style tests mock only GitHub's API. The app's local HTTP request
 // still traverses Express, middleware, routing, validation, and response handling.
+let testSessionCookie = "";
+
 async function withMockedGitHubApi<T>(
   handler: (url: URL, init: RequestInit) => Response | Promise<Response>,
   run: () => Promise<T>
@@ -308,6 +331,8 @@ async function withMockedGitHubApi<T>(
   const originalFetch = globalThis.fetch;
   const previousToken = process.env.GITHUB_TOKEN;
   process.env.GITHUB_TOKEN = "test-token";
+  const testSession = createGithubSession({ login: "contributor", avatarUrl: null, accessToken: "test-token" });
+  testSessionCookie = `aose_session=${testSession.id}`;
   globalThis.fetch = (async (input: RequestInfo | URL, init: RequestInit = {}) => {
     const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
     if (url.hostname !== "api.github.com") {
@@ -377,7 +402,7 @@ test("POST /api/github/commit-proposal writes every proposed file in one branch 
   }, async () => {
     const response = await originalFetchForTest(baseUrl + "/api/github/commit-proposal", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Cookie: testSessionCookie },
       body: JSON.stringify({
         owner: "contributor",
         repo: "demo-fork",
