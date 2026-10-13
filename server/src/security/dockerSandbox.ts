@@ -20,7 +20,7 @@ export interface SandboxRequest {
 }
 
 export interface SandboxResult {
-  status: "passed" | "failed" | "timed_out" | "unavailable";
+  status: "passed" | "failed" | "timed_out" | "cancelled" | "unavailable";
   exitCode: number | null;
   durationMs: number;
   stdout: string;
@@ -131,7 +131,7 @@ export function buildSandboxDockerArgs(workspacePath: string, request: SandboxRe
 
 export async function runSandbox(
   request: SandboxRequest,
-  dependencies: { spawnProcess?: typeof spawn } = {},
+  dependencies: { spawnProcess?: typeof spawn; signal?: AbortSignal } = {},
 ): Promise<SandboxResult> {
   const spawnProcess = dependencies.spawnProcess ?? spawn;
   const invalid = validateRequest(request);
@@ -152,6 +152,7 @@ export async function runSandbox(
     Math.max(1_000, Number.isFinite(request.timeoutMs) ? Number(request.timeoutMs) : 30_000),
   );
   const startedAt = Date.now();
+  if (dependencies.signal?.aborted) return { status: "cancelled", exitCode: null, durationMs: 0, stdout: "", stderr: "", outputTruncated: false, summary: "Sandbox check was cancelled before it started." };
   let workspace = "";
   try {
     workspace = await mkdtemp(path.join(os.tmpdir(), "ai-oss-sandbox-"));
@@ -170,26 +171,35 @@ export async function runSandbox(
     const containerName = "ai-oss-sandbox-" + randomUUID();
     const args = buildSandboxDockerArgs(workspace, request);
     args.splice(1, 0, "--name", containerName);
-    const result = await new Promise<{ code: number | null; stdout: string; stderr: string; timedOut: boolean; truncated: boolean }>((resolve, reject) => {
+    const result = await new Promise<{ code: number | null; stdout: string; stderr: string; timedOut: boolean; cancelled: boolean; truncated: boolean }>((resolve, reject) => {
       let stdout = "";
       let stderr = "";
       let timedOut = false;
+      let cancelled = false;
       let truncated = false;
       let settled = false;
       const child = spawnProcess("docker", args, { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
-      const finish = (value: { code: number | null; stdout: string; stderr: string; timedOut: boolean; truncated: boolean }) => {
+      let timer: ReturnType<typeof setTimeout>;
+      const finish = (value: { code: number | null; stdout: string; stderr: string; timedOut: boolean; cancelled: boolean; truncated: boolean }) => {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
+        dependencies.signal?.removeEventListener("abort", onAbort);
         resolve(value);
       };
-      const timer = setTimeout(() => {
-        timedOut = true;
+      const terminate = (reason: "timed_out" | "cancelled") => {
+        if (settled || timedOut || cancelled) return;
+        timedOut = reason === "timed_out";
+        cancelled = reason === "cancelled";
         child.kill("SIGKILL");
         const killer = spawnProcess("docker", ["kill", containerName], { stdio: "ignore", windowsHide: true });
-        killer.on("error", () => finish({ code: null, stdout, stderr, timedOut, truncated }));
-        killer.on("close", () => finish({ code: null, stdout, stderr, timedOut, truncated }));
-      }, timeoutMs);
+        killer.on("error", () => finish({ code: null, stdout, stderr, timedOut, cancelled, truncated }));
+        killer.on("close", () => finish({ code: null, stdout, stderr, timedOut, cancelled, truncated }));
+      };
+      const onAbort = () => terminate("cancelled");
+      timer = setTimeout(() => terminate("timed_out"), timeoutMs);
+      dependencies.signal?.addEventListener("abort", onAbort, { once: true });
+      if (dependencies.signal?.aborted) onAbort();
       child.stdout?.on("data", (chunk: Buffer) => {
         if (stdout.length < MAX_OUTPUT_CHARS) stdout += chunk.toString("utf8").slice(0, MAX_OUTPUT_CHARS - stdout.length);
         if (stdout.length >= MAX_OUTPUT_CHARS) truncated = true;
@@ -205,11 +215,12 @@ export async function runSandbox(
         reject(error);
       });
       child.on("close", (code) => {
-        if (!timedOut) finish({ code, stdout, stderr, timedOut, truncated });
+        if (!timedOut && !cancelled) finish({ code, stdout, stderr, timedOut, cancelled, truncated });
       });
     });
 
     const durationMs = Date.now() - startedAt;
+    if (result.cancelled) return { status: "cancelled", exitCode: null, durationMs, stdout: result.stdout, stderr: result.stderr, outputTruncated: result.truncated, summary: "Sandbox check was cancelled and container termination was requested." };
     if (result.timedOut) {
       return { status: "timed_out", exitCode: null, durationMs, stdout: result.stdout, stderr: result.stderr, outputTruncated: result.truncated, summary: `Sandbox check exceeded the ${Math.round(timeoutMs / 1000)} second time limit.` };
     }
