@@ -167,10 +167,23 @@ export function inspectProposedChanges(input: unknown): SafetyReport {
     findings.push({ severity: "block", file: "(proposal)", reason: "Combined proposal content exceeds the 500 KB safety limit" });
   }
 
+  // De-duplicate identical findings and sort them so callers receive stable output
+  // regardless of file order or overlapping safety rules.
+  const uniqueFindings = [...new Map(
+    findings.map((finding) => [
+      `${finding.severity}\u0000${finding.file}\u0000${finding.reason}`,
+      finding,
+    ] as const)
+  ).values()].sort((a, b) =>
+    a.file.localeCompare(b.file) ||
+    a.severity.localeCompare(b.severity) ||
+    a.reason.localeCompare(b.reason)
+  );
+
   return {
-    safeToCommit: findings.length === 0,
+    safeToCommit: uniqueFindings.length === 0,
     filesChecked: input.length,
     totalBytes,
-    findings,
+    findings: uniqueFindings,
   };
 }

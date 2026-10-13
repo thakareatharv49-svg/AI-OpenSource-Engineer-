@@ -141,3 +141,27 @@ test("does not block short cloud-credential documentation placeholders", () => {
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("returns deterministic, de-duplicated findings independent of file order", () => {
+  const changes = [
+    { file: "src/z.ts", after: "const password = \"abcdefghijklmnopqrstuvwx\";\nconst password = \"abcdefghijklmnopqrstuvwx\";" },
+    { file: "src/a.ts", after: "const password = \"abcdefghijklmnopqrstuvwx\";" },
+  ];
+  const forward = inspectProposedChanges(changes);
+  const reverse = inspectProposedChanges([...changes].reverse());
+  assert.deepEqual(forward.findings, reverse.findings);
+  assert.equal(
+    forward.findings.filter((finding) =>
+      finding.file === "src/z.ts" && finding.reason === "Possible hard-coded credential detected"
+    ).length,
+    1,
+    "identical findings for the same file should appear once"
+  );
+  assert.deepEqual(
+    forward.findings.map((finding) => finding.file),
+    [...forward.findings.map((finding) => finding.file)].sort((a, b) => a.localeCompare(b)),
+    "findings should be sorted by file path"
+  );
+  assert.equal(forward.safeToCommit, false);
+});
