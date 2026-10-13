@@ -74,6 +74,17 @@ const reviewPatterns: Array<{ pattern: RegExp; reason: string }> = [
   { pattern: /\b(?:curl|wget)\b[^\n|]*\|\s*(?:sh|bash)\b/i, reason: "Piping downloaded content into a shell requires manual security review" },
 ];
 
+function isSensitiveDeploymentArtifact(path: string): boolean {
+  const normalized = path.replace(/\\/g, "/");
+  const exampleFile = /\.(?:example|sample|template)(?:\.json)?$/i.test(normalized);
+  if (exampleFile) return false;
+  return /(?:^|\/)[^/]+\.tfvars(?:\.json)?$/i.test(normalized) ||
+    /(?:^|\/)terraform\.tfstate(?:\..*)?$/i.test(normalized) ||
+    /(?:^|\/)kubeconfig$/i.test(normalized) ||
+    /(?:^|\/)\.kube\/config$/i.test(normalized) ||
+    /(?:^|\/)(?:service[-_]?account|[^/]*[-_]service[-_]account)\.json$/i.test(normalized);
+}
+
 function isSafeRelativePath(path: string): boolean {
   const segments = path.split("/");
   const windowsReservedName = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
@@ -148,6 +159,10 @@ export function inspectProposedChanges(input: unknown): SafetyReport {
     }
     if (bytes > MAX_FILE_BYTES) {
       findings.push({ severity: "block", file, reason: "File exceeds the 200 KB safety limit" });
+    }
+
+    if (isSensitiveDeploymentArtifact(file)) {
+      findings.push({ severity: "block", file, reason: "Sensitive infrastructure state or deployment credential artifact cannot be committed" });
     }
 
     if (unsafePathPatterns.some((pattern) => pattern.test(file))) {
