@@ -19,6 +19,12 @@ test("blocks private keys and common provider tokens", () => {
     "AKIA1234567890ABCDEF",
     "AIza1234567890123456789012345678901234",
     "sk-proj-123456789012345678901234",
+    "xoxb-123456789012-1234567890123",
+    "https://hooks.slack.com/services/T123456/B123456/123456789012345678901234",
+    "sk_live_12345678901234567890",
+    "npm_123456789012345678901234567890123456",
+    "pypi-123456789012345678901234567890123456",
+    "SG.123456789012345678.123456789012345678",
   ]) {
     const report = inspectProposedChanges([{ file: "src/config.ts", after: `const example = "${secret}";` }]);
     assert.equal(report.safeToCommit, false, secret);
