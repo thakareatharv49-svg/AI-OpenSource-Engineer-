@@ -284,8 +284,15 @@ Definition of done: inspect the complete diff; pass backend tests/typecheck, fro
 
 ## 17. Milestone 13 — Cloud-provider credential coverage
 
-**Implementation in progress on branch `security/expand-cloud-provider-secret-coverage`.** Add high-confidence proposal-content detection for Google OAuth client secrets, Twilio API keys, Shopify access tokens, DigitalOcean personal access tokens, and Azure Storage connection-string credentials. Add regression cases for each format and short placeholder examples. Avoid recording realistic contiguous credential samples in repository fixtures because repository secret-scanning protections may block them; construct deterministic fixtures from harmless fragments instead.
+**Merged in PR #47 on 2026-10-13 (merge commit `d1d4e2a6703b70c0cd6b976309d2880674e2a90a`).** Add high-confidence proposal-content detection for Google OAuth client secrets, Twilio API keys, Shopify access tokens, DigitalOcean personal access tokens, and Azure Storage connection-string credentials. Add regression cases for each format and short placeholder examples. Avoid recording realistic contiguous credential samples in repository fixtures because repository secret-scanning protections may block them; construct deterministic fixtures from harmless fragments instead.
 
 Scope: static, pattern-based defense in depth only. It cannot prove a proposal contains no secrets and does not scan repository history, external dependencies, or credentials outside proposed file content.
 
 Definition of done: inspect final diff; pass backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL on final PR head; merge only after all checks pass. Preserve explicit live OAuth, Redis, Docker, and authenticated end-to-end verification gaps.
+
+
+## 18. Milestone 14 — Deterministic and de-duplicated safety findings
+
+**Implementation in progress on branch `security/deterministic-safety-findings`.** Normalize safety-report output by removing duplicate findings with the same severity, file, and reason, then sort findings deterministically. This makes repeated evaluations and UI/API comparisons stable while preserving distinct findings and the existing blocking/review semantics.
+
+Definition of done: add regression coverage for repeated detections and input-order independence; pass backend tests/typecheck, frontend build/lint, production dependency audit, and CodeQL on the final PR head. This improves report consistency; it does not increase the scanner's ability to recognize unknown secrets or replace human review.
