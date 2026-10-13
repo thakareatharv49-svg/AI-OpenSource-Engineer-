@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import type { NextFunction, Request, Response } from "express";
+import { redisCommand, sharedRedisConfigured } from "./sharedRedis.js";
 
 export type GithubSession = {
   id: string;
@@ -43,12 +44,21 @@ export function createOAuthState(): string {
   return state;
 }
 
-export function consumeOAuthState(req: Request, suppliedState: unknown): boolean {
+export async function persistOAuthState(state: string): Promise<void> {
+  if (sharedRedisConfigured()) await redisCommand(["SET", `aose:oauth-state:${state}`, "1", "PX", String(OAUTH_STATE_TTL_MS), "NX"]);
+}
+
+export async function consumeOAuthState(req: Request, suppliedState: unknown): Promise<boolean> {
   const cookieState = cookieValue(req, STATE_COOKIE);
   const state = typeof suppliedState === "string" ? suppliedState : "";
+  if (!state || !cookieState || state !== cookieState) return false;
+  if (sharedRedisConfigured()) {
+    const result = await redisCommand<number>(["EVAL", "if redis.call('GET', KEYS[1]) then redis.call('DEL', KEYS[1]); return 1 else return 0 end", "1", `aose:oauth-state:${state}`]);
+    return Number(result) === 1;
+  }
   const expiresAt = oauthStates.get(state);
   oauthStates.delete(state);
-  return Boolean(state && cookieState && state === cookieState && expiresAt && expiresAt > Date.now());
+  return Boolean(expiresAt && expiresAt > Date.now());
 }
 
 export function setOAuthStateCookie(res: Response, state: string): void {
@@ -67,9 +77,29 @@ export function createGithubSession(input: Omit<GithubSession, "id" | "createdAt
   return session;
 }
 
-export function getGithubSession(req: Request): GithubSession | null {
+export async function persistGithubSession(session: GithubSession): Promise<void> {
+  if (sharedRedisConfigured()) await redisCommand(["SET", `aose:session:${session.id}`, JSON.stringify(session), "PX", String(Math.max(1, session.expiresAt - Date.now()))]);
+}
+
+export async function getGithubSession(req: Request): Promise<GithubSession | null> {
   const id = cookieValue(req, SESSION_COOKIE);
   if (!id) return null;
+  if (sharedRedisConfigured()) {
+    const value = await redisCommand<string | null>(["GET", `aose:session:${id}`]);
+    if (!value) return null;
+    try {
+      const session = JSON.parse(value) as GithubSession;
+      if (typeof session.id !== "string" || session.id !== id || typeof session.login !== "string" ||
+          typeof session.accessToken !== "string" || !Number.isFinite(session.expiresAt) || session.expiresAt <= Date.now()) {
+        await redisCommand(["DEL", `aose:session:${id}`]);
+        return null;
+      }
+      return session;
+    } catch {
+      await redisCommand(["DEL", `aose:session:${id}`]);
+      return null;
+    }
+  }
   const session = sessions.get(id);
   if (!session || session.expiresAt <= Date.now()) {
     if (session) sessions.delete(id);
@@ -82,25 +112,35 @@ export function setGithubSessionCookie(res: Response, session: GithubSession): v
   res.append("Set-Cookie", `${SESSION_COOKIE}=${encodeURIComponent(session.id)}; ${cookieOptions(SESSION_TTL_MS)}`);
 }
 
-export function clearGithubSession(req: Request, res: Response): void {
+export async function clearGithubSession(req: Request, res: Response): Promise<void> {
   const id = cookieValue(req, SESSION_COOKIE);
-  if (id) sessions.delete(id);
+  if (id) {
+    sessions.delete(id);
+    if (sharedRedisConfigured()) await redisCommand(["DEL", `aose:session:${id}`]);
+  }
   res.append("Set-Cookie", `${SESSION_COOKIE}=; ${cookieOptions(0)}`);
 }
 
 export function attachGithubSession(req: Request, res: Response, next: NextFunction): void {
-  res.locals.githubSession = getGithubSession(req);
-  next();
+  void getGithubSession(req).then((session) => {
+    res.locals.githubSession = session;
+    next();
+  }).catch(() => {
+    res.status(503).json({ error: "Authentication store is unavailable.", code: "AUTH_STORE_UNAVAILABLE" });
+  });
 }
 
 export function requireGithubSession(req: Request, res: Response, next: NextFunction): void {
-  const session = getGithubSession(req);
-  if (!session) {
-    res.status(401).json({ error: "Sign in with GitHub to continue.", code: "AUTH_REQUIRED" });
-    return;
-  }
-  res.locals.githubSession = session;
-  next();
+  void getGithubSession(req).then((session) => {
+    if (!session) {
+      res.status(401).json({ error: "Sign in with GitHub to continue.", code: "AUTH_REQUIRED" });
+      return;
+    }
+    res.locals.githubSession = session;
+    next();
+  }).catch(() => {
+    res.status(503).json({ error: "Authentication store is unavailable.", code: "AUTH_STORE_UNAVAILABLE" });
+  });
 }
 
 export function requireTrustedOrigin(req: Request, res: Response, next: NextFunction): void {

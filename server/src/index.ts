@@ -8,8 +8,13 @@ import sandboxRouter from "./routes/sandbox.js";
 import authRouter from "./routes/auth.js";
 import lifecycleRouter from "./routes/lifecycle.js";
 import { attachGithubSession, requireGithubSession, requireTrustedOrigin } from "./security/session.js";
+import { consumeDistributedQuota, persistOperationalEvent, sharedRedisConfigured } from "./security/sharedRedis.js";
+import { validateDeploymentConfiguration } from "./security/deploymentConfig.js";
 
 dotenv.config();
+
+const deploymentErrors = validateDeploymentConfiguration(process.env);
+if (deploymentErrors.length) throw new Error("Invalid production configuration:\n- " + deploymentErrors.join("\n- "));
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 5000);
@@ -27,7 +32,7 @@ const allowedOrigins = (
 const normalizedBindHost = (HOST.startsWith("[") && HOST.endsWith("]") ? HOST.slice(1, -1) : HOST).toLowerCase();
 const isLoopbackBind = ["127.0.0.1", "localhost", "::1"].includes(normalizedBindHost);
 if (!isLoopbackBind) {
-  throw new Error("Refusing non-loopback bind: OAuth sessions and AI rate limits currently use in-memory stores. Keep HOST on loopback until a shared durable session store and distributed rate limiter are configured.");
+  throw new Error("Refusing non-loopback bind: contribution lifecycle state is still local/single-process. Keep HOST on loopback until every stateful component has a shared durable backend and deployment checks pass.");
 }
 if (["127.0.0.1", "localhost", "::1"].includes(normalizedBindHost)) {
   app.use((req, res, next) => {
@@ -66,19 +71,42 @@ app.use((_req, res, next) => {
 });
 
 const aiRequestBuckets = new Map<string, { count: number; resetAt: number }>();
+const AI_RATE_LIMIT_WINDOW_MS = readBoundedInteger("AI_RATE_LIMIT_WINDOW_MS", 10 * 60 * 1000, 10_000, 24 * 60 * 60 * 1000);
+const AI_RATE_LIMIT_MAX = readBoundedInteger("AI_RATE_LIMIT_MAX", 20, 1, 1000);
+const AI_DAILY_QUOTA = readBoundedInteger("AI_DAILY_QUOTA", 200, AI_RATE_LIMIT_MAX, 100_000);
+function readBoundedInteger(name: string, fallback: number, min: number, max: number): number {
+  const raw = process.env[name];
+  if (raw === undefined || raw === "") return fallback;
+  if (!/^[0-9]+$/.test(raw)) throw new Error(`${name} must be an integer between ${min} and ${max}.`);
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value < min || value > max) throw new Error(`${name} must be an integer between ${min} and ${max}.`);
+  return value;
+}
+
+async function consumeQuota(key: string, limit: number, windowMs: number): Promise<{ allowed: boolean; count: number; resetMs: number }> {
+  if (sharedRedisConfigured()) {
+    const result = await consumeDistributedQuota(key, windowMs);
+    return { allowed: result.count <= limit, count: result.count, resetMs: result.resetMs };
+  }
+  const now = Date.now();
+  for (const [existingKey, bucket] of aiRequestBuckets) if (bucket.resetAt <= now) aiRequestBuckets.delete(existingKey);
+  let bucket = aiRequestBuckets.get(key);
+  if (!bucket || bucket.resetAt <= now) {
+    if (aiRequestBuckets.size >= 10_000) return { allowed: false, count: limit + 1, resetMs: 60_000 };
+    bucket = { count: 0, resetAt: now + windowMs };
+    aiRequestBuckets.set(key, bucket);
+  }
+  bucket.count += 1;
+  return { allowed: bucket.count <= limit, count: bucket.count, resetMs: Math.max(0, bucket.resetAt - now) };
+}
+
 function recordAiRequestMetrics(req: express.Request, res: express.Response, next: express.NextFunction) {
   const startedAt = Date.now();
   res.on("finish", () => {
     const session = res.locals.githubSession as { login?: string } | null;
-    console.log(JSON.stringify({
-      event: "ai.request",
-      at: new Date().toISOString(),
-      user: session?.login ?? "anonymous",
-      route: req.path,
-      method: req.method,
-      status: res.statusCode,
-      durationMs: Date.now() - startedAt,
-    }));
+    const event = { event: "ai.request", at: new Date().toISOString(), user: session?.login ?? "anonymous", route: req.path, method: req.method, status: res.statusCode, durationMs: Date.now() - startedAt };
+    console.log(JSON.stringify(event));
+    void persistOperationalEvent(event).catch(() => undefined);
   });
   next();
 }
@@ -88,43 +116,37 @@ function auditSensitiveRequest(req: express.Request, res: express.Response, next
   if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
     res.on("finish", () => {
       const session = res.locals.githubSession as { login?: string } | null;
-      console.log(JSON.stringify({ event: "security.audit", at: new Date().toISOString(), user: session?.login ?? "anonymous", method: req.method, path: req.path, status: res.statusCode, durationMs: Date.now() - startedAt }));
+      const event = { event: "security.audit", at: new Date().toISOString(), user: session?.login ?? "anonymous", method: req.method, path: req.path, status: res.statusCode, durationMs: Date.now() - startedAt };
+      console.log(JSON.stringify(event));
+      void persistOperationalEvent(event).catch(() => undefined);
     });
   }
   next();
 }
-const AI_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
-const AI_RATE_LIMIT_MAX = 20;
 
 app.use("/api/ai", attachGithubSession, recordAiRequestMetrics);
-app.use("/api/ai", (req, res, next) => {
-  const now = Date.now();
-  for (const [key, bucket] of aiRequestBuckets) {
-    if (bucket.resetAt <= now) aiRequestBuckets.delete(key);
-  }
-
+app.use("/api/ai", async (req, res, next) => {
   const session = res.locals.githubSession as { login?: string } | null;
-  const key = session?.login ? `user:${session.login.toLowerCase()}` : `ip:${req.ip || req.socket.remoteAddress || "unknown"}`;
-  let bucket = aiRequestBuckets.get(key);
-  if (!bucket || bucket.resetAt <= now) {
-    bucket = { count: 0, resetAt: now + AI_RATE_LIMIT_WINDOW_MS };
-    aiRequestBuckets.set(key, bucket);
+  const identity = session?.login ? `user:${session.login.toLowerCase()}` : `ip:${req.ip || req.socket.remoteAddress || "unknown"}`;
+  try {
+    const burst = await consumeQuota(`aose:quota:burst:${identity}`, AI_RATE_LIMIT_MAX, AI_RATE_LIMIT_WINDOW_MS);
+    const daily = burst.allowed && session?.login ? await consumeQuota(`aose:quota:daily:${session.login.toLowerCase()}`, AI_DAILY_QUOTA, 24 * 60 * 60 * 1000) : null;
+    const isDaily = burst.allowed && Boolean(daily && !daily.allowed);
+    const limited = !burst.allowed ? burst : daily && !daily.allowed ? daily : null;
+    const limit = isDaily ? AI_DAILY_QUOTA : AI_RATE_LIMIT_MAX;
+    const resetMs = limited?.resetMs ?? burst.resetMs;
+    res.setHeader("RateLimit-Policy", `${AI_RATE_LIMIT_MAX};w=${Math.ceil(AI_RATE_LIMIT_WINDOW_MS / 1000)}`);
+    res.setHeader("RateLimit-Limit", String(limit));
+    res.setHeader("RateLimit-Remaining", String(Math.max(0, limit - (limited?.count ?? burst.count))));
+    res.setHeader("RateLimit-Reset", String(Math.ceil(resetMs / 1000)));
+    if (limited) {
+      res.setHeader("Retry-After", String(Math.max(1, Math.ceil(resetMs / 1000))));
+      return res.status(429).json({ error: isDaily ? "Daily AI request quota reached. Please try again later." : "AI request limit reached. Please wait before trying again.", code: isDaily ? "AI_DAILY_QUOTA_EXCEEDED" : "AI_RATE_LIMITED" });
+    }
+    next();
+  } catch {
+    return res.status(503).json({ error: "Rate-limit store is unavailable; AI requests are paused to prevent quota bypass.", code: "RATE_LIMIT_STORE_UNAVAILABLE" });
   }
-
-  bucket.count += 1;
-  res.setHeader("RateLimit-Policy", `${AI_RATE_LIMIT_MAX};w=600`);
-  res.setHeader("RateLimit-Limit", String(AI_RATE_LIMIT_MAX));
-  res.setHeader("RateLimit-Remaining", String(Math.max(0, AI_RATE_LIMIT_MAX - bucket.count)));
-  res.setHeader("RateLimit-Reset", String(Math.ceil((bucket.resetAt - now) / 1000)));
-
-  if (bucket.count > AI_RATE_LIMIT_MAX) {
-    res.setHeader("Retry-After", String(Math.ceil((bucket.resetAt - now) / 1000)));
-    return res.status(429).json({
-      error: "AI request limit reached. Please wait before trying again.",
-    });
-  }
-
-  next();
 });
 
 app.use("/api/auth", authRouter);
