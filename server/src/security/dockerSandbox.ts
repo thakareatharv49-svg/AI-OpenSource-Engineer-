@@ -105,6 +105,7 @@ function validateRequest(input: SandboxRequest): string | null {
 
 export function buildSandboxDockerArgs(workspacePath: string, request: SandboxRequest): string[] {
   const command = CHECK_COMMANDS[request.runtime][request.check];
+  const mountSource = path.resolve(workspacePath).replace(/\\\\/g, "/");
   return [
     "run",
     "--rm",
@@ -119,7 +120,7 @@ export function buildSandboxDockerArgs(workspacePath: string, request: SandboxRe
     "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m",
     "--user=65532:65532",
     "--workdir=/workspace",
-    "--mount", `type=bind,src=${workspacePath},dst=/workspace,rw`,
+    "--mount", `type=bind,src=${mountSource},dst=/workspace,rw`,
     IMAGES[request.runtime],
     "sh",
     "-lc",
@@ -200,7 +201,9 @@ export async function runSandbox(
         settled = true;
         reject(error);
       });
-      child.on("close", (code) => finish({ code, stdout, stderr, timedOut, truncated }));
+      child.on("close", (code) => {
+        if (!timedOut) finish({ code, stdout, stderr, timedOut, truncated });
+      });
     });
 
     const durationMs = Date.now() - startedAt;
