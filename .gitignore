@@ -21,5 +21,5 @@ Thumbs.db
 
 temp-github/
 
-# Local durable contribution lifecycle state
-.data/
+# Local durable contribution lifecycle state (including server/.data)
+**/.data/
