@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import { request as httpRequest, type Server } from "node:http";
 import { app } from "../src/index.js";
+import { createGithubSession } from "../src/security/session.js";
 
 let server: Server;
 let baseUrl: string;
@@ -35,6 +36,34 @@ test("GET / returns the service banner", async () => {
   });
 });
 
+test("GET /api/auth/me reports an unauthenticated session without exposing credentials", async () => {
+  const response = await fetch(baseUrl + "/api/auth/me");
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { authenticated: false, user: null });
+});
+
+test("GET /api/auth/github fails closed when OAuth is not configured", async () => {
+  const previousId = process.env.GITHUB_OAUTH_CLIENT_ID;
+  delete process.env.GITHUB_OAUTH_CLIENT_ID;
+  try {
+    const response = await fetch(baseUrl + "/api/auth/github", { redirect: "manual" });
+    assert.equal(response.status, 503);
+    assert.match((await response.json()).error, /OAuth is not configured/i);
+  } finally {
+    if (previousId === undefined) delete process.env.GITHUB_OAUTH_CLIENT_ID;
+    else process.env.GITHUB_OAUTH_CLIENT_ID = previousId;
+  }
+});
+
+test("POST /api/ai/select-issue rejects anonymous requests before invoking an AI provider", async () => {
+  const response = await fetch(baseUrl + "/api/ai/select-issue", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Origin: "http://localhost:5173" },
+    body: JSON.stringify({ issues: [{ id: 1, title: "example" }] }),
+  });
+  assert.equal(response.status, 401);
+  assert.equal((await response.json()).code, "AUTH_REQUIRED");
+});
 
 test("GET /api/health returns an OK health status", async () => {
   const response = await fetch(baseUrl + "/api/health");
@@ -216,11 +245,13 @@ test("PUT /api/github/file rejects credential paths before contacting GitHub", a
 });
 
 test("AI endpoints throttle excessive requests before calling providers", async () => {
+  const rateLimitSession = createGithubSession({ login: "rate-limit-test", avatarUrl: null, accessToken: "test-token" });
+  const cookie = `aose_session=${rateLimitSession.id}`;
   let lastStatus = 0;
   for (let i = 0; i < 21; i += 1) {
     const response = await fetch(baseUrl + "/api/ai/select-issue", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:5173", Cookie: cookie },
       body: JSON.stringify({ issues: [] }),
     });
     lastStatus = response.status;
@@ -302,6 +333,8 @@ test("POST /api/github/safety-check requires manual review for workflow changes"
 
 // Integration-style tests mock only GitHub's API. The app's local HTTP request
 // still traverses Express, middleware, routing, validation, and response handling.
+let testSessionCookie = "";
+
 async function withMockedGitHubApi<T>(
   handler: (url: URL, init: RequestInit) => Response | Promise<Response>,
   run: () => Promise<T>
@@ -309,6 +342,8 @@ async function withMockedGitHubApi<T>(
   const originalFetch = globalThis.fetch;
   const previousToken = process.env.GITHUB_TOKEN;
   process.env.GITHUB_TOKEN = "test-token";
+  const testSession = createGithubSession({ login: "contributor", avatarUrl: null, accessToken: "test-token" });
+  testSessionCookie = `aose_session=${testSession.id}`;
   globalThis.fetch = (async (input: RequestInfo | URL, init: RequestInit = {}) => {
     const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
     if (url.hostname !== "api.github.com") {
@@ -378,7 +413,7 @@ test("POST /api/github/commit-proposal writes every proposed file in one branch 
   }, async () => {
     const response = await originalFetchForTest(baseUrl + "/api/github/commit-proposal", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Cookie: testSessionCookie },
       body: JSON.stringify({
         owner: "contributor",
         repo: "demo-fork",
@@ -423,7 +458,7 @@ test("POST /api/github/commit-proposal leaves the branch untouched when a blob c
   }, async () => {
     const response = await originalFetchForTest(baseUrl + "/api/github/commit-proposal", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Cookie: testSessionCookie },
       body: JSON.stringify({
         owner: "contributor",
         repo: "demo-fork",

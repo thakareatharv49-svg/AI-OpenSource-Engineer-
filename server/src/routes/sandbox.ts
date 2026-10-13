@@ -1,4 +1,5 @@
 import { Router } from "express";
+
 import { runSandbox, type SandboxCheck, type SandboxFile, type SandboxRuntime } from "../security/dockerSandbox.js";
 
 const router = Router();
@@ -36,9 +37,7 @@ export function selectSandboxSnapshotCandidates(entries: GitTreeEntry[]): GitTre
     .slice(0, SNAPSHOT_MAX_FILES);
 }
 
-async function fetchSandboxRepositorySnapshot(repository: string): Promise<{ files: SandboxFile[]; defaultBranch: string; totalBytes: number; treeTruncated: boolean }> {
-  const token = process.env.GITHUB_TOKEN;
-  if (!token) throw new Error("GITHUB_TOKEN is not configured");
+async function fetchSandboxRepositorySnapshot(repository: string, token: string): Promise<{ files: SandboxFile[]; defaultBranch: string; totalBytes: number; treeTruncated: boolean }> {
   const headers = {
     Accept: "application/vnd.github+json",
     Authorization: `Bearer ${token}`,
@@ -89,9 +88,10 @@ router.post("/snapshot", async (req, res) => {
   if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository) || repository.length > 200 || repositoryParts.some((part) => part === "." || part === "..")) {
     return res.status(400).json({ error: "Provide a valid owner/repository identifier." });
   }
-  if (!process.env.GITHUB_TOKEN) return res.status(503).json({ error: "Repository snapshots require GITHUB_TOKEN to be configured." });
+  const token = res.locals.githubSession?.accessToken as string | undefined;
+  if (!token) return res.status(401).json({ error: "Sign in with GitHub to continue.", code: "AUTH_REQUIRED" });
   try {
-    const snapshot = await fetchSandboxRepositorySnapshot(repository);
+    const snapshot = await fetchSandboxRepositorySnapshot(repository, token);
     if (snapshot.files.length === 0) {
       return res.status(422).json({ error: "No eligible text files could be included in the bounded repository snapshot." });
     }
@@ -140,6 +140,7 @@ router.post("/run", async (req, res) => {
   ) {
     return res.status(400).json({ error: "Provide runtime, check, and a list of workspace files." });
   }
+  if (!res.locals.githubSession) return res.status(401).json({ error: "Sign in with GitHub to continue.", code: "AUTH_REQUIRED" });
 
   sandboxBusy = true;
   const controller = new AbortController();
@@ -163,6 +164,7 @@ router.post("/cancel", (req, res) => {
   if (process.env.SANDBOX_ENABLED !== "true") return res.status(503).json({ error: "Isolated checks are disabled." });
   const runId = req.body && typeof req.body.runId === "string" ? req.body.runId : "";
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(runId)) return res.status(400).json({ error: "Provide a valid sandbox runId." });
+  if (!res.locals.githubSession) return res.status(401).json({ error: "Sign in with GitHub to continue.", code: "AUTH_REQUIRED" });
   if (!activeRun || activeRun.runId !== runId) return res.status(404).json({ error: "No active sandbox run matches this runId." });
   activeRun.controller.abort();
   return res.status(202).json({ status: "cancellation_requested" });

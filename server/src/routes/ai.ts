@@ -14,15 +14,9 @@ const isValidRepositorySlug = (value: unknown): value is string =>
   value.length <= 200 &&
   /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value);
 
-async function fetchRepositoryFiles(repository: string) {
+async function fetchRepositoryFiles(repository: string, token: string) {
   if (!isValidRepositorySlug(repository)) {
     throw new Error("Repository must use the owner/repository format.");
-  }
-
-  const token = process.env.GITHUB_TOKEN;
-
-  if (!token) {
-    throw new Error("GITHUB_TOKEN is not configured");
   }
 
   const headers = {
@@ -321,7 +315,9 @@ router.post("/analyze-repository", async (req, res) => {
       return res.status(413).json({ error: "Issue data exceeds the 30 KB limit." });
     }
 
-    const repositoryFiles = await fetchRepositoryFiles(repository);
+    const token = res.locals.githubSession?.accessToken as string | undefined;
+    if (!token) return res.status(401).json({ error: "Sign in with GitHub to continue.", code: "AUTH_REQUIRED" });
+    const repositoryFiles = await fetchRepositoryFiles(repository, token);
 
     const result = await generateJSON(`
 You are an expert open-source repository analyst.

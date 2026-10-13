@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { API_BASE_URL } from "../lib/api";
 
 type AuthUser = { login: string; avatarUrl: string | null };
@@ -13,29 +13,30 @@ export default function AuthStatus() {
     return "";
   });
 
-  const refresh = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/me`, { credentials: "include" });
-      if (!response.ok) throw new Error("Unable to check sign-in status.");
-      const data = await response.json() as { authenticated: boolean; user: AuthUser | null };
-      setUser(data.authenticated ? data.user : null);
-      setError("");
-    } catch {
-      setError("Authentication service unavailable");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
+    let active = true;
     const params = new URLSearchParams(window.location.search);
     if (params.has("auth")) {
       params.delete("auth");
       const query = params.toString();
       window.history.replaceState({}, "", window.location.pathname + (query ? `?${query}` : "") + window.location.hash);
     }
-    void refresh();
-  }, [refresh]);
+    void fetch(`${API_BASE_URL}/api/auth/me`, { credentials: "include" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Unable to check sign-in status.");
+        return await response.json() as { authenticated: boolean; user: AuthUser | null };
+      })
+      .then((data) => {
+        if (active) { setUser(data.authenticated ? data.user : null); setError(""); }
+      })
+      .catch(() => {
+        if (active) setError("Authentication service unavailable");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
 
   const logout = async () => {
     setError("");
