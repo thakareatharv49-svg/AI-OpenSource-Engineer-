@@ -91,7 +91,7 @@ Important: Milestone 1 implementation is complete and the latest CI run for the 
 Latest verified CI before Milestone 2 work:
 https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/actions/runs/38438225336 (success).
 
-Milestone 2 first slice is merged; branch CI run 38439279745 passed: https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/actions/runs/38439279745
+Milestone 2 foundation and lifecycle tests are merged. CI passed for PR #1 run 38439279745 and PR #2 run 38439471176: https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/actions/runs/38439471176
 
 ## 6. Roadmap — what remains to achieve
 
@@ -110,8 +110,9 @@ First slice merged to `main` on 2026-10-13 (PR #1, merge commit `0d8292056f1c0f2
 - Added a Docker runner that writes bounded, validated text files into a disposable temporary workspace and runs only fixed Node/Python check selections, never an arbitrary command supplied by the request.
 - Docker execution uses `--network=none`, read-only container root, dropped capabilities, `no-new-privileges`, non-root UID, PID/memory/CPU/file-descriptor limits, a timeout, bounded logs, and temporary-workspace cleanup. Timeout handling also requests container termination.
 - Added unit tests for isolation flags, path traversal, duplicate paths, file size bounds, Python test-file validation, and the endpoint's disabled-by-default behavior.
+- Added mocked Docker-process tests for output capture, non-zero exit handling, timeout-triggered `docker kill`, and temporary-workspace cleanup. The process runner is injectable for deterministic tests.
 - Added `docs/isolated-sandbox.md` and a `SANDBOX_ENABLED=false` example setting.
-- Verified the latest branch CI run passed: backend typecheck/tests, frontend build/lint, and dependency audits.
+- PR #1 and follow-up PR #2 are merged. CI passed on PR #1 head `13edeae889dd73ff806f3c2e84c57c54fb308f82` (run 38439279745) and PR #2 head `3bc67af8a9c23c9a90041a52cd03d0319fd32e3e` (run 38439471176).
 - The runner does not install dependencies, fetch full repositories, or yet provide UI cancellation. This is foundational isolation, not proof of full project tests or a hardened hostile-code sandbox.
 
 Remaining in Milestone 2:
@@ -175,4 +176,4 @@ A milestone is not done just because files were changed. It should have:
 
 ## 9. Current next action
 
-Continue Milestone 2: add mocked Docker lifecycle coverage, improve cancellation and cleanup guarantees, implement a safe full-repository snapshot/dependency-preparation strategy, and integrate isolated checks into proposal review only after these boundaries are tested. Then verify with a local Docker smoke test. Milestone 1 still has a separate live authenticated end-to-end verification gap because this session cannot inspect the user's local `.env` or operate the running app with their credentials.
+Continue Milestone 2: implement a safe full-repository snapshot and dependency-preparation strategy, then integrate isolated checks into proposal review only after those boundaries are tested. Run a real local Docker smoke test. Current automated tests mock the Docker process and do not prove Docker is installed or the container isolation works on the user's machine. Milestone 1 still has a separate live authenticated end-to-end verification gap because this session cannot inspect the user's local `.env` or operate the running app with their credentials.
