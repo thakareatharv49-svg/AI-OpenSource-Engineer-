@@ -8,6 +8,7 @@ import { repositoryContextBudget, selectRelevantRepositoryFiles } from "../secur
 import { validateIssueSelectionResult } from "../security/issueSelection.js";
 import { validateCodeReviewResult } from "../security/codeReview.js";
 import { validateRepositoryAnalysisResult } from "../security/repositoryAnalysis.js";
+import { validateImplementationPlanResult } from "../security/implementationPlan.js";
 
 dotenv.config();
 
@@ -359,9 +360,14 @@ Return ONLY valid JSON:
 }
 `);
 
+    const validatedPlan = validateImplementationPlanResult(result);
+    if (!validatedPlan) {
+      return res.status(502).json({ error: "The AI provider returned an invalid implementation plan. Retry planning with the current issue and repository analysis." });
+    }
+
     return res.json({
       message: "Solution plan created",
-      result,
+      result: validatedPlan,
     });
   } catch (error) {
     console.error("Build solution error:", error);
