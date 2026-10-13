@@ -52,6 +52,7 @@ const secretPatterns: Array<{ pattern: RegExp; reason: string }> = [
   { pattern: /\baws_session_token\s*[:=]\s*["']?(?!your_|example|changeme|placeholder|\$\{)[A-Za-z0-9/+=]{40,}(?![A-Za-z0-9/+=])/i, reason: "AWS session token assignment detected" },
   { pattern: /\bAKIA[0-9A-Z]{16}\b/, reason: "AWS access key pattern detected" },
   { pattern: /\bAIza[0-9A-Za-z_-]{30,}\b/, reason: "Google API key pattern detected" },
+  { pattern: /(?:[?&]|\b)sig=[A-Za-z0-9%+/=_-]{20,}(?:&|\b)[^\n]{0,500}\b(?:se|sp|sv)=/i, reason: "Azure shared-access-signature credential detected" },
   { pattern: /\bsk-(?!ant-)(?:proj-)?[A-Za-z0-9_-]{24,}\b/, reason: "AI-provider API key pattern detected" },
   { pattern: /\b(?:api[_-]?key|access[_-]?token|client[_-]?secret|password)\s*[:=]\s*["']?(?!your_|example|changeme|placeholder|\$\{|process\.env)[A-Za-z0-9_\-/+=]{20,}/i, reason: "Possible hard-coded credential detected" },
 ];
