@@ -165,3 +165,29 @@ test("returns deterministic, de-duplicated findings independent of file order", 
   );
   assert.equal(forward.safeToCommit, false);
 });
+
+
+test("blocks AWS secret-key and session-token assignments", () => {
+  const samples = [
+    "aws_secret_access_key=" + "a".repeat(40),
+    "aws_session_token=" + "AQoDYXdz" + "b".repeat(56),
+  ];
+  for (const sample of samples) {
+    const report = inspectProposedChanges([{ file: "src/aws-config.ts", after: sample }]);
+    assert.equal(report.safeToCommit, false, "AWS credential assignment must be blocked");
+    assert.ok(report.findings.some((finding) => finding.severity === "block"), sample.slice(0, 24));
+  }
+});
+
+test("allows short AWS credential placeholders in documentation", () => {
+  const report = inspectProposedChanges([{
+    file: "docs/aws-auth.md",
+    after: [
+      "aws_secret_access_key=example",
+      "aws_session_token=your-token-here",
+      "aws_secret_access_key=${AWS_SECRET_ACCESS_KEY}",
+    ].join("\\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});

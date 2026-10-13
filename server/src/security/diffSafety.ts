@@ -48,6 +48,8 @@ const secretPatterns: Array<{ pattern: RegExp; reason: string }> = [
   { pattern: /\bshp(?:at|ca|pa|ss)_[A-Za-z0-9]{20,}\b/, reason: "Shopify access token pattern detected" },
   { pattern: /\bdop_v1_[a-f0-9]{40,}\b/i, reason: "DigitalOcean API token pattern detected" },
   { pattern: /\bDefaultEndpointsProtocol=https?;AccountName=[^;\s]{3,};AccountKey=[A-Za-z0-9+/=]{40,}/i, reason: "Azure Storage connection string credential detected" },
+  { pattern: /\baws_secret_access_key\s*[:=]\s*["']?(?!your_|example|changeme|placeholder|\$\{)[A-Za-z0-9/+=]{40}(?![A-Za-z0-9/+=])/i, reason: "AWS secret access key assignment detected" },
+  { pattern: /\baws_session_token\s*[:=]\s*["']?(?!your_|example|changeme|placeholder|\$\{)[A-Za-z0-9/+=]{40,}(?![A-Za-z0-9/+=])/i, reason: "AWS session token assignment detected" },
   { pattern: /\bAKIA[0-9A-Z]{16}\b/, reason: "AWS access key pattern detected" },
   { pattern: /\bAIza[0-9A-Za-z_-]{30,}\b/, reason: "Google API key pattern detected" },
   { pattern: /\bsk-(?!ant-)(?:proj-)?[A-Za-z0-9_-]{24,}\b/, reason: "AI-provider API key pattern detected" },
