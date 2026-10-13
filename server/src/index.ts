@@ -24,6 +24,10 @@ const allowedOrigins = (
 // When bound to loopback, reject foreign Host headers to reduce DNS-rebinding
 // risk. Explicit non-loopback deployments remain the operator's responsibility.
 const normalizedBindHost = (HOST.startsWith("[") && HOST.endsWith("]") ? HOST.slice(1, -1) : HOST).toLowerCase();
+const isLoopbackBind = ["127.0.0.1", "localhost", "::1"].includes(normalizedBindHost);
+if (!isLoopbackBind) {
+  throw new Error("Refusing non-loopback bind: OAuth sessions and AI rate limits currently use in-memory stores. Keep HOST on loopback until a shared durable session store and distributed rate limiter are configured.");
+}
 if (["127.0.0.1", "localhost", "::1"].includes(normalizedBindHost)) {
   app.use((req, res, next) => {
     const requestHost = (req.get("host") ?? "").toLowerCase();
@@ -61,16 +65,28 @@ app.use((_req, res, next) => {
 });
 
 const aiRequestBuckets = new Map<string, { count: number; resetAt: number }>();
+function auditSensitiveRequest(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const startedAt = Date.now();
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+    res.on("finish", () => {
+      const session = res.locals.githubSession as { login?: string } | null;
+      console.log(JSON.stringify({ event: "security.audit", at: new Date().toISOString(), user: session?.login ?? "anonymous", method: req.method, path: req.path, status: res.statusCode, durationMs: Date.now() - startedAt }));
+    });
+  }
+  next();
+}
 const AI_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const AI_RATE_LIMIT_MAX = 20;
 
+app.use("/api/ai", attachGithubSession);
 app.use("/api/ai", (req, res, next) => {
   const now = Date.now();
   for (const [key, bucket] of aiRequestBuckets) {
     if (bucket.resetAt <= now) aiRequestBuckets.delete(key);
   }
 
-  const key = req.ip || req.socket.remoteAddress || "unknown";
+  const session = res.locals.githubSession as { login?: string } | null;
+  const key = session?.login ? `user:${session.login.toLowerCase()}` : `ip:${req.ip || req.socket.remoteAddress || "unknown"}`;
   let bucket = aiRequestBuckets.get(key);
   if (!bucket || bucket.resetAt <= now) {
     bucket = { count: 0, resetAt: now + AI_RATE_LIMIT_WINDOW_MS };
@@ -94,9 +110,9 @@ app.use("/api/ai", (req, res, next) => {
 });
 
 app.use("/api/auth", authRouter);
-app.use("/api/ai", attachGithubSession, requireTrustedOrigin, requireGithubSession, aiRouter);
-app.use("/api/sandbox", attachGithubSession, sandboxRouter);
-app.use("/api/github", attachGithubSession, githubRouter);
+app.use("/api/ai", requireTrustedOrigin, requireGithubSession, aiRouter);
+app.use("/api/sandbox", attachGithubSession, auditSensitiveRequest, sandboxRouter);
+app.use("/api/github", attachGithubSession, auditSensitiveRequest, githubRouter);
 
 app.get("/", (_req, res) => {
   res.json({
