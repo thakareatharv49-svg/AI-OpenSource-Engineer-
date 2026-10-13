@@ -384,7 +384,7 @@ Definition of done: backend typecheck/tests, frontend build/lint, production dep
 
 ## 31. Milestone 27 — Additional developer and deployment credential artifact protection
 
-**Implementation in progress on branch `feat/milestone-27-developer-credential-artifacts`.** Extend the path-based safety gate to block common local developer/deployment credential artifacts: `.envrc`, `.direnv/`, Doppler configuration under `.doppler/`, Wrangler state under `.wrangler/`, Firebase local state under `.firebase/`, Netlify local state, and Vercel environment files. Add deterministic regression tests for blocked paths and explicit documentation-template exemptions.
+**Merged in PR #59 on 2026-10-13 (merge commit `82411722e6879d447e0f43c96d8f51778fd5df8b`).** Extend the path-based safety gate to block common local developer/deployment credential artifacts: `.envrc`, `.direnv/`, Doppler configuration under `.doppler/`, Wrangler state under `.wrangler/`, Firebase local state under `.firebase/`, Netlify local state, and Vercel environment files. Add deterministic regression tests for blocked paths and explicit documentation-template exemptions.
 
 Scope: filename/path-based defense in depth only. It does not parse these formats or establish that templates are secret-free. Keep content scanning and human approval in place.
 
@@ -393,8 +393,17 @@ Definition of done: review the final diff; backend typecheck/tests, frontend bui
 
 ## 32. Milestone 28 — Developer-tool authentication store protection
 
-**Implementation in progress on branch `feat/milestone-28-developer-auth-stores`.** Extend the path-based safety gate to block common developer-tool authentication stores and package-manager credential files: Git credential stores, GitHub CLI auth under `.config/gh/`, Bundler config, Cargo credentials, Poetry auth, and Composer auth. Add regression tests for both root-level and nested paths.
+**Merged in PR #60 on 2026-10-13 (merge commit `bcb7d3a56b21ea3a4e6809ebda895f50159bb800`).** Extend the path-based safety gate to block common developer-tool authentication stores and package-manager credential files: Git credential stores, GitHub CLI auth under `.config/gh/`, Bundler config, Cargo credentials, Poetry auth, and Composer auth. Add regression tests for both root-level and nested paths.
 
 Scope: filename/path-based defense in depth; this does not parse or validate credential contents. Existing content scanning and human approval remain in place.
 
 Definition of done: backend typecheck/tests, frontend build/lint, and CodeQL pass on the final PR head; merge only after all required checks pass.
+
+
+## 33. Milestone 29 — Package-manager and build-tool authentication store protection
+
+**Implementation in progress on branch `feat/milestone-29-package-manager-auth-stores`.** Extend the proposal path-safety gate to block common package-manager and build-tool credential stores: Yarn auth configuration, npm's local auth token files, pip/uv/PDM credential configuration, container registry auth, Terraform CLI credentials, Gradle properties, and Maven settings. Add deterministic blocked-path tests and explicit documentation-template exemptions.
+
+Scope: filename/path-based defense in depth only. These rules do not parse credential contents or prove that templates are secret-free; preserve content scanning and human approval.
+
+Definition of done: review the final diff; backend typecheck/tests, frontend build/lint, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
