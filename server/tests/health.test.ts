@@ -297,3 +297,151 @@ test("POST /api/github/safety-check requires manual review for workflow changes"
   const data = await response.json();
   assert.ok(data.safetyReport.findings.some((finding: { severity: string }) => finding.severity === "review"));
 });
+
+
+// Integration-style tests mock only GitHub's API. The app's local HTTP request
+// still traverses Express, middleware, routing, validation, and response handling.
+async function withMockedGitHubApi<T>(
+  handler: (url: URL, init: RequestInit) => Response | Promise<Response>,
+  run: () => Promise<T>
+): Promise<T> {
+  const originalFetch = globalThis.fetch;
+  const previousToken = process.env.GITHUB_TOKEN;
+  process.env.GITHUB_TOKEN = "test-token";
+  globalThis.fetch = (async (input: RequestInfo | URL, init: RequestInit = {}) => {
+    const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
+    if (url.hostname !== "api.github.com") {
+      return originalFetch(input, init);
+    }
+    return handler(url, init);
+  }) as typeof fetch;
+
+  try {
+    return await run();
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (previousToken === undefined) delete process.env.GITHUB_TOKEN;
+    else process.env.GITHUB_TOKEN = previousToken;
+  }
+}
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+test("POST /api/github/commit-proposal writes every proposed file in one branch update", async () => {
+  const calls: Array<{ method: string; path: string; body?: Record<string, unknown> }> = [];
+  let blobCount = 0;
+
+  await withMockedGitHubApi(async (url, init) => {
+    const method = init.method ?? "GET";
+    const body = typeof init.body === "string" ? JSON.parse(init.body) as Record<string, unknown> : undefined;
+    calls.push({ method, path: url.pathname, body });
+
+    if (url.pathname === "/user") return jsonResponse({ login: "contributor" });
+    if (url.pathname === "/repos/contributor/demo-fork") {
+      return jsonResponse({
+        full_name: "contributor/demo-fork",
+        fork: true,
+        parent: { full_name: "upstream/demo" },
+      });
+    }
+    if (url.pathname.endsWith("/git/ref/heads/ai-contribution-test")) {
+      return jsonResponse({ object: { sha: "parent-commit" } });
+    }
+    if (url.pathname.endsWith("/git/commits/parent-commit")) {
+      return jsonResponse({ tree: { sha: "parent-tree" } });
+    }
+    if (url.pathname.endsWith("/git/blobs") && method === "POST") {
+      blobCount += 1;
+      return jsonResponse({ sha: "blob-" + blobCount });
+    }
+    if (url.pathname.endsWith("/git/trees") && method === "POST") {
+      const tree = body?.tree as Array<{ path: string }>;
+      assert.deepEqual(tree.map((entry) => entry.path), ["src/one.ts", "src/two.ts"]);
+      return jsonResponse({ sha: "proposal-tree" });
+    }
+    if (url.pathname.endsWith("/git/commits") && method === "POST") {
+      assert.deepEqual(body?.parents, ["parent-commit"]);
+      assert.equal(body?.tree, "proposal-tree");
+      return jsonResponse({ sha: "proposal-commit", html_url: "https://github.com/contributor/demo-fork/commit/proposal-commit" });
+    }
+    if (url.pathname.endsWith("/git/refs/heads/ai-contribution-test") && method === "PATCH") {
+      assert.deepEqual(body, { sha: "proposal-commit", force: false });
+      return jsonResponse({ ref: "refs/heads/ai-contribution-test" });
+    }
+    return jsonResponse({ message: "Unexpected mocked GitHub request: " + method + " " + url.pathname }, 500);
+  }, async () => {
+    const response = await originalFetchForTest(baseUrl + "/api/github/commit-proposal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        owner: "contributor",
+        repo: "demo-fork",
+        branchName: "ai-contribution-test",
+        commitMessage: "Add two source files",
+        changes: [
+          { filePath: "src/one.ts", content: "export const one = 1;\n" },
+          { filePath: "src/two.ts", content: "export const two = 2;\n" },
+        ],
+      }),
+    });
+    assert.equal(response.status, 201);
+    const data = await response.json();
+    assert.equal(data.filesCommitted, 2);
+    assert.equal(data.commit.sha, "proposal-commit");
+    assert.equal(calls.filter((call) => call.method === "PATCH").length, 1);
+    assert.equal(calls.filter((call) => call.method === "PUT").length, 0);
+  });
+});
+
+test("POST /api/github/commit-proposal leaves the branch untouched when a blob cannot be prepared", async () => {
+  let blobCount = 0;
+  let refUpdates = 0;
+  const originalFetch = globalThis.fetch;
+
+  await withMockedGitHubApi(async (url, init) => {
+    const method = init.method ?? "GET";
+    if (url.pathname === "/user") return jsonResponse({ login: "contributor" });
+    if (url.pathname === "/repos/contributor/demo-fork") {
+      return jsonResponse({ full_name: "contributor/demo-fork", fork: true, parent: { full_name: "upstream/demo" } });
+    }
+    if (url.pathname.endsWith("/git/ref/heads/ai-contribution-test")) {
+      return jsonResponse({ object: { sha: "parent-commit" } });
+    }
+    if (url.pathname.endsWith("/git/commits/parent-commit")) return jsonResponse({ tree: { sha: "parent-tree" } });
+    if (url.pathname.endsWith("/git/blobs") && method === "POST") {
+      blobCount += 1;
+      return blobCount === 1 ? jsonResponse({ sha: "blob-1" }) : jsonResponse({ message: "simulated GitHub failure" }, 503);
+    }
+    if (method === "PATCH") refUpdates += 1;
+    return jsonResponse({ message: "Unexpected mocked GitHub request" }, 500);
+  }, async () => {
+    const response = await originalFetchForTest(baseUrl + "/api/github/commit-proposal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        owner: "contributor",
+        repo: "demo-fork",
+        branchName: "ai-contribution-test",
+        commitMessage: "Add two source files",
+        changes: [
+          { filePath: "src/one.ts", content: "export const one = 1;\n" },
+          { filePath: "src/two.ts", content: "export const two = 2;\n" },
+        ],
+      }),
+    });
+    assert.equal(response.status, 503);
+    const data = await response.json();
+    assert.equal(data.branchUnchanged, true);
+    assert.equal(data.failedFile, "src/two.ts");
+    assert.equal(refUpdates, 0);
+  });
+});
+
+// Preserve the real fetch for local test-server requests even while GitHub API
+// calls are mocked inside the route.
+const originalFetchForTest = globalThis.fetch.bind(globalThis);
