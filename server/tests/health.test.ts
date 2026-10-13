@@ -55,6 +55,16 @@ test("GET /api/auth/github fails closed when OAuth is not configured", async () 
   }
 });
 
+test("POST /api/ai/select-issue rejects anonymous requests before invoking an AI provider", async () => {
+  const response = await fetch(baseUrl + "/api/ai/select-issue", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Origin: "http://localhost:5173" },
+    body: JSON.stringify({ issues: [{ id: 1, title: "example" }] }),
+  });
+  assert.equal(response.status, 401);
+  assert.equal((await response.json()).code, "AUTH_REQUIRED");
+});
+
 test("GET /api/health returns an OK health status", async () => {
   const response = await fetch(baseUrl + "/api/health");
   assert.equal(response.status, 200);
