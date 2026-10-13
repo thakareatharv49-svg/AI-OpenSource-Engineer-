@@ -68,6 +68,10 @@ Open `http://localhost:5000/api/health`. A healthy server returns:
 {"status":"ok"}
 ```
 
+## Isolated sandbox checks
+
+The Docker-backed `/api/sandbox/run` endpoint is disabled by default. See [the sandbox guide](docs/isolated-sandbox.md) for setup, supported checks, limits, and current gaps. Do not enable it on a public unauthenticated deployment.
+
 ## Checks
 
 Run from the repository root:
