@@ -165,15 +165,26 @@ Remaining before Milestone 4 is complete:
 
 ### Milestone 5: Code quality and scalable execution
 
-**Implementation status: issue-aware bounded repository context and deterministic evaluation fixtures implemented; CI verification required before merge.**
+**Implementation status: core implementation merged in PR #17; deterministic proposal quality gates and structured quality telemetry are included in the Milestone 5 follow-up. CI verification is required before the follow-up is merged.**
 
-- Added deterministic issue-aware ranking for source files, matching paths, tests, and language/build manifests instead of selecting a broad path-only top ten.
-- Added default limits of 16 files, 20 KB per file, and 120 KB aggregate context; helper limits are capped.
-- Excluded dependency/build/generated directories, lockfiles, binary extensions, oversized files, and common secret-like paths.
-- Bounded fetched content by UTF-8 bytes and exposed context size and truncation metadata in repository analysis responses.
-- Added fixtures for Python, Go, TypeScript/frontend issues, test/manifest inclusion, deterministic budgets, generated/secret-like filtering, and prompt-injection text as untrusted data.
-- This remains a bounded GitHub-tree sample, not a complete clone or semantic index. Large/truncated repositories may need targeted retrieval.
-- Selector tests cannot prove AI patches are correct or accepted upstream. Live GitHub OAuth, model providers, and Docker isolation remain separate local checks.
+Repository understanding and scalability:
+- Issue-aware file ranking selects relevant implementation files, tests, and language/build manifests instead of a broad path-only top ten.
+- Default limits are 16 files, 20 KB per file, and 120 KB aggregate context; helper limits are capped.
+- Common dependency/build/generated directories, lockfiles, binary extensions, oversized files, and common secret-like paths are excluded.
+- Retrieved content is byte-budgeted. Repository analysis exposes selected-file count, context byte count, and truncation metadata, including GitHub's truncated-tree flag.
+- Deterministic tests cover Python, Go, TypeScript/frontend issue patterns, test/manifest inclusion, byte/file budgets, generated/secret-like filtering, and prompt-injection text treated as untrusted input.
+
+Proposal quality and telemetry:
+- Generated proposals are structurally checked before the API presents them as usable. Empty/incomplete model output is rejected rather than passed along as a code proposal.
+- Deterministic path/content/secret checks are returned alongside proposals. Blocking findings prevent the proposal from being marked ready for human review; workflow/build/placeholder findings require manual review and cannot be labeled safe to commit.
+- AI review cannot overrule deterministic safety findings to approve a proposal.
+- Structured logs record AI request outcome/status/latency, provider attempt success/failure and duration, available provider token counts, proposal quality-gate results, and AI review verdicts. Logs intentionally omit prompts, source contents, and credentials.
+- Token counts are a usage proxy, not a dollar-cost calculation. Provider billing/cost requires provider-specific pricing and billing data; human acceptance rate and aggregate build/test pass rate are not yet durable dashboard metrics.
+
+Limits that remain explicit:
+- This is a bounded GitHub-tree sample, not a full clone or semantic index. Large/truncated repositories may need targeted retrieval.
+- Selector fixtures and safety gates cannot prove AI-generated patches are correct or accepted upstream. Labeled real-task evaluation and live GitHub OAuth/model/Docker verification remain separate checks.
+- Local/single-process telemetry is diagnostic only; it is not a durable production analytics system.
 
 ### Later milestone: production readiness
 - Add operational metrics, structured logs, tracing, error reporting, backup/retention policy, and incident guidance.

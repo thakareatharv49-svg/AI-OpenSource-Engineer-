@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 import { Router } from "express";
+import { validateGeneratedProposal } from "../security/proposalQuality.js";
 import { repositoryContextBudget, selectRelevantRepositoryFiles } from "../security/repositoryContext.js";
 
 dotenv.config();
@@ -60,6 +61,7 @@ function getOpenAI() {
 }
 
 async function generateJSON(prompt: string) {
+  const geminiStartedAt = Date.now();
   // Treat issue text, repository files, and model feedback as untrusted data.
   // They may contain prompt injection; they must never override these rules.
   const safePrompt = `SECURITY BOUNDARY:
@@ -93,12 +95,15 @@ ${prompt}`;
       .replace(/\s*```$/i, "")
       .trim();
 
-    return JSON.parse(cleanedText);
-  } catch (geminiError) {
-    console.error("Gemini failed. Switching to OpenAI:", geminiError);
+    const parsed = JSON.parse(cleanedText);
+    console.log(JSON.stringify({ event: "ai.provider", provider: "gemini", outcome: "success", durationMs: Date.now() - geminiStartedAt, inputTokens: response.usageMetadata?.promptTokenCount, outputTokens: response.usageMetadata?.candidatesTokenCount }));
+    return parsed;
+  } catch {
+    console.log(JSON.stringify({ event: "ai.provider", provider: "gemini", outcome: "failure", durationMs: Date.now() - geminiStartedAt }));
   }
 
   // 2. Try OpenAI
+  const openaiStartedAt = Date.now();
   try {
     const openai = getOpenAI();
 
@@ -119,12 +124,15 @@ ${prompt}`;
       .replace(/\s*```$/i, "")
       .trim();
 
-    return JSON.parse(cleanedText);
-  } catch (openaiError) {
-    console.error("OpenAI failed. Switching to Ollama:", openaiError);
+    const parsed = JSON.parse(cleanedText);
+    console.log(JSON.stringify({ event: "ai.provider", provider: "openai", outcome: "success", durationMs: Date.now() - openaiStartedAt, inputTokens: response.usage?.input_tokens, outputTokens: response.usage?.output_tokens }));
+    return parsed;
+  } catch {
+    console.log(JSON.stringify({ event: "ai.provider", provider: "openai", outcome: "failure", durationMs: Date.now() - openaiStartedAt }));
   }
 
   // 3. Try Ollama (Local AI)
+  const ollamaStartedAt = Date.now();
   try {
     const response = await fetch("http://localhost:11434/api/generate", {
       method: "POST",
@@ -150,6 +158,8 @@ Do not include explanations outside the JSON.`,
 
     const data = (await response.json()) as {
       response?: string;
+      prompt_eval_count?: number;
+      eval_count?: number;
     };
 
     if (!data.response) {
@@ -162,9 +172,11 @@ Do not include explanations outside the JSON.`,
       .replace(/\s*```$/i, "")
       .trim();
 
-    return JSON.parse(cleanedText);
-  } catch (ollamaError) {
-    console.error("Ollama failed:", ollamaError);
+    const parsed = JSON.parse(cleanedText);
+    console.log(JSON.stringify({ event: "ai.provider", provider: "ollama", outcome: "success", durationMs: Date.now() - ollamaStartedAt, inputTokens: data.prompt_eval_count, outputTokens: data.eval_count }));
+    return parsed;
+  } catch {
+    console.log(JSON.stringify({ event: "ai.provider", provider: "ollama", outcome: "failure", durationMs: Date.now() - ollamaStartedAt }));
 
     throw new Error(
       "All AI providers failed. Please check your API credits and local Ollama installation."
@@ -435,10 +447,15 @@ Return ONLY valid JSON:
 }
 `);
 
-    return res.json({
-      message: "Code proposal generated",
-      result,
-    });
+    const qualityGate = validateGeneratedProposal(result);
+    if (!qualityGate.validStructure) {
+      return res.status(502).json({
+        error: "The AI provider returned an incomplete code proposal. Retry generation or provide more source context.",
+        qualityGate,
+      });
+    }
+    console.log(JSON.stringify({ event: "ai.proposal.quality", validStructure: qualityGate.validStructure, readyForHumanReview: qualityGate.readyForHumanReview, safeToCommit: qualityGate.safeToCommit, fileCount: qualityGate.fileCount, findingCount: qualityGate.safetyReport.findings.length }));
+    return res.json({ message: "Code proposal generated", result, qualityGate });
   } catch (error) {
     console.error("Code generation error:", error);
 
@@ -536,10 +553,14 @@ Rules:
 - Use empty arrays when no issues are identified.
 `);
 
-    return res.json({
-      message: "Code review completed",
-      result,
-    });
+    const qualityGate = validateGeneratedProposal(codeProposal);
+    if (qualityGate.safetyReport.findings.length > 0 && result && typeof result === "object") {
+      result.overallStatus = "Changes Requested";
+      result.summary = [typeof result.summary === "string" ? result.summary : "", "Deterministic safety checks require follow-up before approval."].filter(Boolean).join(" ");
+      result.securityIssues = [...(Array.isArray(result.securityIssues) ? result.securityIssues : []), ...qualityGate.reasons];
+    }
+    console.log(JSON.stringify({ event: "ai.review.result", verdict: result?.overallStatus ?? "invalid", confidence: Number.isInteger(result?.confidence) ? result.confidence : null, deterministicFindings: qualityGate.safetyReport.findings.length }));
+    return res.json({ message: "Code review completed", result, qualityGate });
   } catch (error) {
     console.error("Code review error:", error);
 
