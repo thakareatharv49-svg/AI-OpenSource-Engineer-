@@ -33,3 +33,21 @@ export function validateCodeReviewResult(value: unknown): CodeReviewResult | nul
     confidence: candidate.confidence as number,
   };
 }
+
+type ProposalReviewGate = {
+  readyForHumanReview: boolean;
+  safeToCommit: boolean;
+  reasons: string[];
+};
+
+/** Deterministic proposal checks always override an optimistic model verdict. */
+export function enforceProposalReviewGate(result: CodeReviewResult, gate: ProposalReviewGate): CodeReviewResult {
+  if (gate.readyForHumanReview && gate.safeToCommit) return result;
+  const findings = gate.reasons.length > 0 ? gate.reasons : ["The proposal did not pass deterministic validation."];
+  return {
+    ...result,
+    overallStatus: "Changes Requested",
+    summary: [result.summary, "Deterministic proposal validation failed; approval is blocked until the findings are resolved."].filter(Boolean).join(" "),
+    securityIssues: [...new Set([...result.securityIssues, ...findings])],
+  };
+}
