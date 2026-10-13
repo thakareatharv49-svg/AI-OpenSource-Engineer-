@@ -277,6 +277,15 @@ Definition of done: inspect the complete diff; pass backend typecheck/tests, fro
 
 ## 16. Milestone 12 — Additional developer-platform credential coverage
 
-**Implementation in progress on branch `security/expand-gitlab-huggingface-discord-secret-coverage`.** Extend the proposal safety gate to detect GitLab personal/deploy/runner tokens, Hugging Face access tokens, Anthropic API keys, and Discord webhook URLs. Add deterministic positive regression cases and short documentation-placeholder cases to reduce avoidable false positives. Pattern matching is defense in depth and does not establish that a proposal contains no secrets; token formats evolve, and repository history/dependencies are outside this scanner's scope.
+**Merged in PR #46 on 2026-10-13 (merge commit `862ce3921e45503d8a28ccda36330830b55b7f21`).** The proposal safety gate now detects GitLab personal/deploy/runner tokens, Hugging Face access tokens, Anthropic API keys, and Discord webhook URLs. Regression cases cover positive patterns and short documentation placeholders. Pattern matching is defense in depth; token formats evolve, and repository history/dependencies are outside this scanner's scope.
 
 Definition of done: inspect the complete diff; pass backend tests/typecheck, frontend build/lint, production dependency audit, and CodeQL on the PR head; merge only after required checks pass. Keep live OAuth, Redis, Docker, and authenticated end-to-end verification gaps explicit.
+
+
+## 17. Milestone 13 — Cloud-provider credential coverage
+
+**Implementation in progress on branch `security/expand-cloud-provider-secret-coverage`.** Add high-confidence proposal-content detection for Google OAuth client secrets, Twilio API keys, Shopify access tokens, DigitalOcean personal access tokens, and Azure Storage connection-string credentials. Add regression cases for each format and short placeholder examples. Avoid recording realistic contiguous credential samples in repository fixtures because repository secret-scanning protections may block them; construct deterministic fixtures from harmless fragments instead.
+
+Scope: static, pattern-based defense in depth only. It cannot prove a proposal contains no secrets and does not scan repository history, external dependencies, or credentials outside proposed file content.
+
+Definition of done: inspect final diff; pass backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL on final PR head; merge only after all checks pass. Preserve explicit live OAuth, Redis, Docker, and authenticated end-to-end verification gaps.
