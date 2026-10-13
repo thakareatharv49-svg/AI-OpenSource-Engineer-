@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 import { Router } from "express";
+import { repositoryContextBudget, selectRelevantRepositoryFiles } from "../security/repositoryContext.js";
 
 dotenv.config();
 
@@ -14,106 +15,28 @@ const isValidRepositorySlug = (value: unknown): value is string =>
   value.length <= 200 &&
   /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value);
 
-async function fetchRepositoryFiles(repository: string, token: string) {
-  if (!isValidRepositorySlug(repository)) {
-    throw new Error("Repository must use the owner/repository format.");
-  }
-
-  const headers = {
-    Accept: "application/vnd.github+json",
-    Authorization: `Bearer ${token}`,
-    "User-Agent": "AI-OpenSource-Engineer",
-  };
-
-  const repositoryResponse = await fetch(
-    `https://api.github.com/repos/${repository}`,
-    { headers }
-  );
-
-  if (!repositoryResponse.ok) {
-    throw new Error("Failed to fetch repository information");
-  }
-
-  const repositoryData = await repositoryResponse.json();
+async function fetchRepositoryFiles(repository: string, token: string, issue: unknown) {
+  if (!isValidRepositorySlug(repository)) throw new Error("Repository must use the owner/repository format.");
+  const headers = { Accept: "application/vnd.github+json", Authorization: `Bearer ${token}`, "User-Agent": "AI-OpenSource-Engineer" };
+  const repositoryResponse = await fetch(`https://api.github.com/repos/${repository}`, { headers });
+  if (!repositoryResponse.ok) throw new Error("Failed to fetch repository information");
+  const repositoryData = await repositoryResponse.json() as { default_branch?: string };
   const defaultBranch = repositoryData.default_branch;
-
-  const treeResponse = await fetch(
-    `https://api.github.com/repos/${repository}/git/trees/${defaultBranch}?recursive=1`,
-    { headers }
-  );
-
-  if (!treeResponse.ok) {
-    throw new Error("Failed to fetch repository files");
-  }
-
-  const treeData = await treeResponse.json();
-
-  const sourceExtensions =
-    /\.(ts|tsx|js|jsx|mjs|cjs|py|pyi|go|rs|java|kt|kts|swift|c|h|cc|cpp|hpp|cs|php|rb|ex|exs|erl|hrl|scala|sc|vue|svelte|html|css|scss|sass|less|sql|sh|bash|ps1|yml|yaml|toml|json|md)$/i;
-  const ignoredPath =
-    /(^|\/)(node_modules|vendor|dist|build|coverage|\.git|\.next|\.venv|venv|__pycache__)(\/|$)/i;
-  const ignoredFile =
-    /(^|\/)(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|Cargo\.lock|poetry\.lock|Pipfile\.lock|composer\.lock|Gemfile\.lock)$/i;
-
-  const files = treeData.tree
-    .filter(
-      (file: any) =>
-        file.type === "blob" &&
-        typeof file.size === "number" &&
-        file.size > 0 &&
-        file.size <= 25_000 &&
-        sourceExtensions.test(file.path) &&
-        !ignoredPath.test(file.path) &&
-        !ignoredFile.test(file.path) &&
-        !/\.min\.(js|css)$/i.test(file.path)
-    )
-    .sort((a: any, b: any) => {
-      const score = (path: string) => {
-        const normalized = path.replace(/\\/g, "/").toLowerCase();
-        let rank = 0;
-        if (/(^|\/)(src|app|lib|pkg|internal|tests?|spec)(\/|$)/.test(normalized)) rank += 40;
-        if (/\.(ts|tsx|js|jsx|py|go|rs|java|kt|swift|c|h|cpp|cs|php|rb|vue|svelte)$/.test(normalized)) rank += 20;
-        if (/(^|\/)(readme|contributing|pyproject\.toml|go\.mod|cargo\.toml|package\.json)$/.test(normalized)) rank += 10;
-        if (/(^|\/)(example|examples|fixture|fixtures|generated|migrations)(\/|$)/.test(normalized)) rank -= 20;
-        return rank;
-      };
-      return score(b.path) - score(a.path) || a.path.localeCompare(b.path);
-    })
-    .slice(0, 10);
-
-  const filesWithContent = await Promise.all(
-    files.map(async (file: any) => {
-      const fileResponse = await fetch(
-        `https://api.github.com/repos/${repository}/contents/${file.path
-          .split("/")
-          .map(encodeURIComponent)
-          .join("/")}?ref=${encodeURIComponent(defaultBranch)}`,
-        { headers }
-      );
-
-      if (!fileResponse.ok) {
-        return {
-          path: file.path,
-          content: "Unable to fetch file content",
-        };
-      }
-
-      const fileData = await fileResponse.json();
-
-      const content = fileData.encoding === "base64"
-        ? Buffer.from(fileData.content, "base64").toString("utf-8")
-        : "";
-
-      return {
-        path: file.path,
-        content,
-      };
-    })
-  );
-
-  return filesWithContent;
+  if (!defaultBranch || !/^[A-Za-z0-9_.-]+$/.test(defaultBranch)) throw new Error("Repository returned an invalid default branch.");
+  const treeResponse = await fetch(`https://api.github.com/repos/${repository}/git/trees/${encodeURIComponent(defaultBranch)}?recursive=1`, { headers });
+  if (!treeResponse.ok) throw new Error("Failed to fetch repository files");
+  const treeData = await treeResponse.json() as { truncated?: boolean; tree?: Array<{path:string;type:string;size?:number;sha?:string}> };
+  if (!Array.isArray(treeData.tree)) throw new Error("GitHub returned an invalid repository tree.");
+  const selected = selectRelevantRepositoryFiles(treeData.tree, issue);
+  const fetched = await Promise.all(selected.map(async (file) => {
+    const response = await fetch(`https://api.github.com/repos/${repository}/contents/${file.path.split("/").map(encodeURIComponent).join("/")}?ref=${encodeURIComponent(defaultBranch)}`, { headers });
+    if (!response.ok) return { path: file.path, content: "" };
+    const data = await response.json() as { encoding?: string; content?: string };
+    return { path: file.path, content: data.encoding === "base64" && typeof data.content === "string" ? Buffer.from(data.content, "base64").toString("utf-8") : "" };
+  }));
+  const bounded = repositoryContextBudget(fetched);
+  return { files: bounded.files, context: { selectedFiles: bounded.files.length, contextBytes: bounded.totalBytes, truncated: treeData.truncated === true || bounded.truncated, repositoryTreeTruncated: treeData.truncated === true } };
 }
-
 
 /* ---------------- Gemini Helper ---------------- */
 
@@ -317,7 +240,8 @@ router.post("/analyze-repository", async (req, res) => {
 
     const token = res.locals.githubSession?.accessToken as string | undefined;
     if (!token) return res.status(401).json({ error: "Sign in with GitHub to continue.", code: "AUTH_REQUIRED" });
-    const repositoryFiles = await fetchRepositoryFiles(repository, token);
+    const repositoryContext = await fetchRepositoryFiles(repository, token, issue);
+    const repositoryFiles = repositoryContext.files;
 
     const result = await generateJSON(`
 You are an expert open-source repository analyst.
@@ -336,7 +260,7 @@ ${JSON.stringify(issue, null, 2)}
 Inspect the supplied file paths and source contents to identify the most relevant files.
 Base findings on the actual supplied content, and clearly distinguish confirmed facts
 from assumptions. Do not invent files, functions, APIs, or source code. If the bounded
-file sample is insufficient, explain what additional files must be inspected.
+file sample is insufficient, explain what additional files must be inspected. The API reports context byte/file limits and truncation.
 
 Return ONLY valid JSON:
 {
@@ -353,6 +277,7 @@ Return ONLY valid JSON:
       message: "Repository analysis completed",
       result,
       files: repositoryFiles,
+      context: repositoryContext.context,
     });
   } catch (error) {
     console.error("Repository analysis error:", error);
