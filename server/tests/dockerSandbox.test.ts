@@ -21,7 +21,7 @@ testCase("Docker sandbox disables network and drops privileges", () => {
   assert.ok(args.some((arg) => arg.startsWith("type=bind,src=") && arg.endsWith(",dst=/input,readonly")));
   assert.ok(args.includes("cp -R /input/. /workspace/ && npm test"));
   assert.ok(args.includes("node:22-alpine"));
-  assert.ok(args.includes("npm test"));
+  assert.ok(args.includes("cp -R /input/. /workspace/ && npm test"));
 });
 
 testCase("sandbox rejects path traversal without invoking Docker", async () => {
