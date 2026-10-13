@@ -31,6 +31,12 @@ test("blocks private keys and common provider tokens", () => {
     "hf_12345678901234567890123456789012",
     "sk-ant-123456789012345678901234",
     "https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789AB",
+    "GOCSPX-" + "123456789012345678901234",
+    "SK" + "1234567890abcdef1234567890abcdef",
+    "shpat_" + "12345678901234567890123456789012",
+    "shpca_" + "12345678901234567890123456789012",
+    "dop_v1_" + "1234567890abcdef".repeat(4),
+    "DefaultEndpointsProtocol=https;AccountName=storageacct;AccountKey=" + "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/abcdefghijklmnop==",
   ]) {
     const report = inspectProposedChanges([{ file: "src/config.ts", after: `const example = "${secret}";` }]);
     assert.equal(report.safeToCommit, false, secret);
