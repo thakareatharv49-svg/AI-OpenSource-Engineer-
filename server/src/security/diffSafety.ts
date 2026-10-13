@@ -30,6 +30,9 @@ const unsafePathPatterns = [
   /(?:^|\/)\.cargo\/credentials(?:\.toml)?$/i,
   /(?:^|\/)\.pypoetry\/auth\.toml$/i,
   /(?:^|\/)\.composer\/auth\.json$/i,
+  /(?:^|\/)\.vault-token$/i,
+  /(?:^|\/)\.config\/sops\/age\/keys\.txt$/i,
+  /(?:^|\/)\.age\/keys\.txt$/i,
   /(?:^|\/)\.yarnrc(?:\.yml)?$/i,
   /(?:^|\/)\.npm\/_auth(?:Token)?$/i,
   /(?:^|\/)\.config\/pip\/pip\.conf$/i,
@@ -92,6 +95,9 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
   const exampleFile = /\.(?:example|sample|template)(?:\.json)?$/i.test(normalized);
   if (exampleFile) return false;
   return /(?:^|\/)\.terraform(?:\/|$)/i.test(normalized) ||
+    /(?:^|\/)\.minikube(?:\/|$)/i.test(normalized) ||
+    /(?:^|\/)\.kube\/cache(?:\/|$)/i.test(normalized) ||
+    /(?:^|\/)\.config\/(?:op|1password)(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.azure(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.config\/gcloud(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.docker\/config\.json$/i.test(normalized) ||
