@@ -36,7 +36,7 @@ export function selectSandboxSnapshotCandidates(entries: GitTreeEntry[]): GitTre
     .slice(0, SNAPSHOT_MAX_FILES);
 }
 
-async function fetchSandboxRepositorySnapshot(repository: string): Promise<{ files: SandboxFile[]; defaultBranch: string; totalBytes: number }> {
+async function fetchSandboxRepositorySnapshot(repository: string): Promise<{ files: SandboxFile[]; defaultBranch: string; totalBytes: number; treeTruncated: boolean }> {
   const token = process.env.GITHUB_TOKEN;
   if (!token) throw new Error("GITHUB_TOKEN is not configured");
   const headers = {
@@ -73,7 +73,7 @@ async function fetchSandboxRepositorySnapshot(repository: string): Promise<{ fil
     files.push({ path: entry.path, content });
     totalBytes += bytes;
   }
-  return { files, defaultBranch, totalBytes };
+  return { files, defaultBranch, totalBytes, treeTruncated: treeData.truncated === true };
 }
 
 
@@ -89,6 +89,7 @@ router.post("/snapshot", async (req, res) => {
   if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository) || repository.length > 200 || repositoryParts.some((part) => part === "." || part === "..")) {
     return res.status(400).json({ error: "Provide a valid owner/repository identifier." });
   }
+  if (!process.env.GITHUB_TOKEN) return res.status(503).json({ error: "Repository snapshots require GITHUB_TOKEN to be configured." });
   try {
     const snapshot = await fetchSandboxRepositorySnapshot(repository);
     if (snapshot.files.length === 0) {
@@ -100,8 +101,11 @@ router.post("/snapshot", async (req, res) => {
       files: snapshot.files,
       fileCount: snapshot.files.length,
       totalBytes: snapshot.totalBytes,
+      treeTruncated: snapshot.treeTruncated,
       dependencyPolicy: "Dependencies are not installed; checks run offline against the supplied snapshot.",
-      warning: "This is a bounded source snapshot, not a complete clone. Oversized, binary, secret-like, and generated files are excluded.",
+      warning: snapshot.treeTruncated
+        ? "GitHub truncated the repository tree; this snapshot may omit files. Oversized, binary, secret-like, and generated files are also excluded."
+        : "This is a bounded source snapshot, not a complete clone. Oversized, binary, secret-like, and generated files are excluded.",
     });
   } catch {
     return res.status(502).json({ error: "Unable to prepare a repository snapshot from GitHub." });
