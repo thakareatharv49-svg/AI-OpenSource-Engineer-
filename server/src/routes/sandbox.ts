@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireGithubSession } from "../security/session.js";
 import { runSandbox, type SandboxCheck, type SandboxFile, type SandboxRuntime } from "../security/dockerSandbox.js";
 
 const router = Router();
@@ -36,9 +37,7 @@ export function selectSandboxSnapshotCandidates(entries: GitTreeEntry[]): GitTre
     .slice(0, SNAPSHOT_MAX_FILES);
 }
 
-async function fetchSandboxRepositorySnapshot(repository: string): Promise<{ files: SandboxFile[]; defaultBranch: string; totalBytes: number; treeTruncated: boolean }> {
-  const token = process.env.GITHUB_TOKEN;
-  if (!token) throw new Error("GITHUB_TOKEN is not configured");
+async function fetchSandboxRepositorySnapshot(repository: string, token: string): Promise<{ files: SandboxFile[]; defaultBranch: string; totalBytes: number; treeTruncated: boolean }> {
   const headers = {
     Accept: "application/vnd.github+json",
     Authorization: `Bearer ${token}`,
@@ -77,7 +76,10 @@ async function fetchSandboxRepositorySnapshot(repository: string): Promise<{ fil
 }
 
 
-router.use((req, res, next) => {\n  if (process.env.SANDBOX_ENABLED !== "true") { next(); return; }\n  requireGithubSession(req, res, next);\n});\n\nimport { requireGithubSession } from "../security/session.js";\n\nlet sandboxBusy = false;
+router.use((req, res, next) => {
+  if (process.env.SANDBOX_ENABLED !== "true") { next(); return; }
+  requireGithubSession(req, res, next);
+});\n\nlet sandboxBusy = false;
 let activeRun: { runId: string; controller: AbortController } | null = null;
 
 router.post("/snapshot", async (req, res) => {
@@ -89,9 +91,10 @@ router.post("/snapshot", async (req, res) => {
   if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository) || repository.length > 200 || repositoryParts.some((part) => part === "." || part === "..")) {
     return res.status(400).json({ error: "Provide a valid owner/repository identifier." });
   }
-  if (!process.env.GITHUB_TOKEN) return res.status(503).json({ error: "Repository snapshots require GITHUB_TOKEN to be configured." });
+  const token = res.locals.githubSession?.accessToken as string | undefined;
+  if (!token) return res.status(401).json({ error: "Sign in with GitHub to continue.", code: "AUTH_REQUIRED" });
   try {
-    const snapshot = await fetchSandboxRepositorySnapshot(repository);
+    const snapshot = await fetchSandboxRepositorySnapshot(repository, token);
     if (snapshot.files.length === 0) {
       return res.status(422).json({ error: "No eligible text files could be included in the bounded repository snapshot." });
     }
