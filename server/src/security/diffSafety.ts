@@ -51,6 +51,8 @@ const secretPatterns: Array<{ pattern: RegExp; reason: string }> = [
   { pattern: /\baws_secret_access_key\s*[:=]\s*["']?(?!your_|example|changeme|placeholder|\$\{)[A-Za-z0-9/+=]{40}(?![A-Za-z0-9/+=])/i, reason: "AWS secret access key assignment detected" },
   { pattern: /\baws_session_token\s*[:=]\s*["']?(?!your_|example|changeme|placeholder|\$\{)[A-Za-z0-9/+=]{40,}(?![A-Za-z0-9/+=])/i, reason: "AWS session token assignment detected" },
   { pattern: /\b(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|redis|rediss):\/\/[^/\s:@]+:(?!example\b|placeholder\b|your[-_]?|\$\{|changeme\b|password\b)[^/\s@]{8,}@/i, reason: "Database connection string contains embedded credentials" },
+  { pattern: /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{20,}\b/, reason: "JWT-like bearer token detected" },
+  { pattern: /\bhttps?:\/\/[^/\s:@]+:(?!example\b|placeholder\b|your[-_]?|\$\{|changeme\b|password\b)[^/\s@]{8,}@/i, reason: "URL contains embedded credentials" },
   { pattern: /\bAKIA[0-9A-Z]{16}\b/, reason: "AWS access key pattern detected" },
   { pattern: /\bAIza[0-9A-Za-z_-]{30,}\b/, reason: "Google API key pattern detected" },
   { pattern: /(?=[^\n]*\bsig=[A-Za-z0-9%+/=_-]{20,})(?=[^\n]*\b(?:se|sp|sv)=)[^\n]*/i, reason: "Azure shared-access-signature credential detected" },
