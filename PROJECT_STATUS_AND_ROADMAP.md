@@ -237,3 +237,18 @@ Separate environment-dependent verification gaps remain:
 - Verify the full authenticated issue-to-commit workflow with real GitHub OAuth and configured AI provider credentials.
 - Measure real task outcomes using a labeled issue set; diagnostic token/latency logs are not a durable cost or acceptance-rate dashboard.
 - Dependency installation remains disabled until a separately isolated and reviewed preparation mechanism is designed.
+
+
+## 10. Milestone 7 — Cross-platform proposal path safety
+
+**Status: merged in PR #34 on 2026-10-13.** The server rejects cross-platform dangerous proposal paths, including Windows alternate-data-stream syntax, trailing dots/spaces, reserved device names, and whitespace-trimmed paths. Regression tests cover these cases. The path validator preserves the raw supplied path rather than trimming away evidence of an unsafe name.
+
+## 11. Milestone 8 — Prevent invisible Unicode path spoofing
+
+**Implementation in progress on branch `security/reject-spoofed-proposal-paths`.** The server-side proposal safety gate now rejects Unicode control and formatting characters in paths. This blocks invisible formatting characters such as bidirectional overrides and zero-width characters that can make a filename appear different in code review. Regression cases cover bidi overrides, zero-width characters, and directional isolates.
+
+Definition of done for this milestone: backend tests and typecheck, frontend build/lint, production dependency audit, and any configured security workflow must pass on the final PR head. Do not merge while checks are pending or failing. The change is static validation only; it does not replace human review or live end-to-end verification.
+
+## 12. Next after Milestone 8
+
+Continue closing the explicit live-verification gaps: run the documented Docker smoke test locally, verify OAuth and the full issue-to-commit workflow with real credentials, test Redis-backed shared state under concurrency/restart, and complete backup/restore and adversarial security checks. Keep the backend loopback-only until the production deployment gate is actually satisfied.

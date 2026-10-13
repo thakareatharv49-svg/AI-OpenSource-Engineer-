@@ -61,6 +61,9 @@ test("blocks cross-platform dangerous path names", () => {
     "src/com1.ts",
     "src/lpt9.log",
     "src/subdir./file.ts",
+    "src/review\u202Etxt.ts",
+    "src/zero\u200Bwidth.ts",
+    "src/isolate\u2066name\u2069.ts",
   ]) {
     const report = inspectProposedChanges([{ file, after: "export {};\n" }]);
     assert.equal(report.safeToCommit, false, file);
