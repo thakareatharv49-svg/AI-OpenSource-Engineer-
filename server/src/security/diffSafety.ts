@@ -30,11 +30,11 @@ const unsafePathPatterns = [
   /(?:^|\/)\.cargo\/credentials(?:\.toml)?$/i,
   /(?:^|\/)\.pypoetry\/auth\.toml$/i,
   /(?:^|\/)\.composer\/auth\.json$/i,
-  /(?:^|\\/)\.yarnrc(?:\\.yml)?$/i,
-  /(?:^|\\/)\.npm\\/_auth(?:Token)?$/i,
-  /(?:^|\\/)\.config\\/pip\\/pip\\.conf$/i,
-  /(?:^|\\/)\.config\\/uv\\/credentials\\.toml$/i,
-  /(?:^|\\/)\.pdm\\.toml$/i,
+  /(?:^|\/)\.yarnrc(?:\.yml)?$/i,
+  /(?:^|\/)\.npm\/_auth(?:Token)?$/i,
+  /(?:^|\/)\.config\/pip\/pip\.conf$/i,
+  /(?:^|\/)\.config\/uv\/credentials\.toml$/i,
+  /(?:^|\/)\.pdm\.toml$/i,
   /(?:^|\/)\.ssh(?:\/|$)/i,
   /(?:^|\/)\.aws(?:\/|$)/i,
   /(?:^|\/)(?:secrets?|credentials?)(?:\/|$)/i,
@@ -95,10 +95,10 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
     /(?:^|\/)\.azure(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.config\/gcloud(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.docker\/config\.json$/i.test(normalized) ||
-    /(?:^|\\/)\.config\\/containers\\/auth\\.json$/i ||
-    /(?:^|\\/)\.terraform\\.d\\/credentials\\.tfrc\\.json$/i ||
-    /(?:^|\\/)\.gradle\\/gradle\\.properties$/i ||
-    /(?:^|\\/)\.m2\\/settings\\.xml$/i ||
+    /(?:^|\/)\.config\/containers\/auth\.json$/i.test(normalized) ||
+    /(?:^|\/)\.terraform\.d\/credentials\.tfrc\.json$/i.test(normalized) ||
+    /(?:^|\/)\.gradle\/gradle\.properties$/i.test(normalized) ||
+    /(?:^|\/)\.m2\/settings\.xml$/i.test(normalized) ||
     /(?:^|\/)\.pulumi\/credentials\.json$/i.test(normalized) ||
     /(?:^|\/)\.doppler(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.wrangler(?:\/|$)/i.test(normalized) ||
