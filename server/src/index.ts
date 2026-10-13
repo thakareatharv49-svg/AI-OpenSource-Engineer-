@@ -66,6 +66,23 @@ app.use((_req, res, next) => {
 });
 
 const aiRequestBuckets = new Map<string, { count: number; resetAt: number }>();
+function recordAiRequestMetrics(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const startedAt = Date.now();
+  res.on("finish", () => {
+    const session = res.locals.githubSession as { login?: string } | null;
+    console.log(JSON.stringify({
+      event: "ai.request",
+      at: new Date().toISOString(),
+      user: session?.login ?? "anonymous",
+      route: req.path,
+      method: req.method,
+      status: res.statusCode,
+      durationMs: Date.now() - startedAt,
+    }));
+  });
+  next();
+}
+
 function auditSensitiveRequest(req: express.Request, res: express.Response, next: express.NextFunction) {
   const startedAt = Date.now();
   if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
@@ -79,7 +96,7 @@ function auditSensitiveRequest(req: express.Request, res: express.Response, next
 const AI_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const AI_RATE_LIMIT_MAX = 20;
 
-app.use("/api/ai", attachGithubSession);
+app.use("/api/ai", attachGithubSession, recordAiRequestMetrics);
 app.use("/api/ai", (req, res, next) => {
   const now = Date.now();
   for (const [key, bucket] of aiRequestBuckets) {
