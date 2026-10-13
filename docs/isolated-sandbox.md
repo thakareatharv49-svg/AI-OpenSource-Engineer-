@@ -18,6 +18,7 @@ Example request:
 
 ```json
 {
+  "runId": "8c7d9e10-2b3a-4c5d-8e6f-1234567890ab",
   "runtime": "node",
   "check": "test",
   "timeoutMs": 30000,
@@ -35,6 +36,16 @@ Example request:
 ```
 
 Supported Node checks: `test`, `lint`, `build`, `typecheck`. The matching `package.json` script is executed inside the container. Supported Python checks: `test` uses `python -m unittest`; `lint`, `build`, and `typecheck` currently use `python -m compileall -q .`.
+
+## Cancellation
+
+The caller supplies a UUID `runId` in `POST /api/sandbox/run`. While that request is running, a second request to `POST /api/sandbox/cancel` with the same `runId` requests termination of the matching active container. The run request returns a `cancelled` result when cancellation is handled. Cancellation is best-effort: a Docker daemon or host failure can prevent immediate termination, so this endpoint is not a substitute for operator-level container monitoring.
+
+Example cancellation body:
+
+```json
+{ "runId": "8c7d9e10-2b3a-4c5d-8e6f-1234567890ab" }
+```
 
 ## Current constraints
 
