@@ -318,7 +318,7 @@ Definition of done: pass backend typecheck/tests, frontend build/lint, productio
 
 ## 21. Milestone 17 — Database connection-string credential detection
 
-**Implemented on branch `security/database-connection-string-detection`; final CI pending.** Detect embedded username/password credentials in common PostgreSQL, MySQL/MariaDB, MongoDB, and Redis connection strings. Regression tests cover each family and common documentation/environment-variable placeholders.
+**Merged in PR #52 on 2026-10-13 (merge commit `7a15cdc63809230407b4433016c8d4841820343d`).** Detect embedded username/password credentials in common PostgreSQL, MySQL/MariaDB, MongoDB, and Redis connection strings. Regression tests cover each family and common documentation/environment-variable placeholders. CI, frontend build/lint, backend typecheck/tests, dependency audit, and CodeQL passed on the final PR head.
 
 Scope: pattern-based detection of proposed content only. It does not connect to databases, validate credential activity, scan repository history/dependencies, or replace secret managers and least-privilege access.
 
@@ -327,8 +327,8 @@ Definition of done: pass backend typecheck/tests, frontend build/lint, productio
 
 ## 22. Milestone 18 — JWT-like bearer token detection
 
-**Implemented on branch `security/database-connection-string-detection`; final CI pending.** Detect JWT-shaped bearer tokens with three sufficiently long base64url-like segments. Add regression coverage for a representative token. This is format-based heuristic detection and may flag non-secret signed JWT examples; review findings before treating them as live credentials.
+**Merged in PR #52 on 2026-10-13 (merge commit `7a15cdc63809230407b4433016c8d4841820343d`).** Detect JWT-shaped bearer tokens with three sufficiently long base64url-like segments, with regression coverage. This is format-based heuristic detection and may flag non-secret signed JWT examples; review findings before treating them as live credentials.
 
 ## 23. Milestone 19 — Credentials embedded in HTTP URLs
 
-**Implemented on branch `security/database-connection-string-detection`; final CI pending.** Detect HTTP(S) URLs that embed a username and sufficiently long password before the host. Add tests for credentialed URLs and ordinary documentation placeholders. This scans proposed text only and does not validate credentials or scan repository history/dependencies.
+**Merged in PR #52 on 2026-10-13 (merge commit `7a15cdc63809230407b4433016c8d4841820343d`).** Detect HTTP(S) URLs that embed a username and sufficiently long password before the host, with regression tests for credentialed URLs and ordinary documentation placeholders. This scans proposed text only and does not validate credentials or scan repository history/dependencies.
