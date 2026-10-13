@@ -4,6 +4,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { pathToFileURL } from "node:url";
 import aiRouter from "./routes/ai.js";
+import sandboxRouter from "./routes/sandbox.js";
 
 dotenv.config();
 
@@ -90,6 +91,7 @@ app.use("/api/ai", (req, res, next) => {
 });
 
 app.use("/api/ai", aiRouter);
+app.use("/api/sandbox", sandboxRouter);
 app.use("/api/github", githubRouter);
 
 app.get("/", (_req, res) => {

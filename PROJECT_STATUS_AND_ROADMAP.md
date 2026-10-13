@@ -78,7 +78,7 @@ Completed implementation in the repository on 2026-10-13:
 - Updated README to document atomic proposal commits.
 - CI run for commit `c263a773d4c0af41c9bcd077e20614b1df1dc5d3` passed. A later run also reported backend typecheck/tests, frontend build, and dependency audits successful; lint was still running at the last observed check for the newest docs commit.
 
-Important: Milestone 1's implementation is complete, but a real end-to-end run using configured GitHub and AI credentials has not yet been confirmed. Keep the milestone in verification until this is tested in the real app. Never claim the live workflow is complete based only on mocked API tests.
+Important: Milestone 1 implementation is complete and the latest CI run for the project-memory commit passed. A real end-to-end run using configured GitHub and AI credentials has not been confirmed in this session, so that remains an explicit verification gap. Never claim the live workflow is complete based only on mocked API tests.
 
 ## 5. Recent commits related to Milestone 1
 
@@ -88,8 +88,10 @@ Important: Milestone 1's implementation is complete, but a real end-to-end run u
 - `7402ae2558819177a10a326a49aa2ed03081e99e` — fix: validate atomic proposal payload shape
 - `c0f155e5a56e14876b05c20463d51ec356169cec` — docs: document atomic contribution commits
 
-Latest CI run at the time of this update:
-https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/actions/runs/38437444251
+Latest verified CI before Milestone 2 work:
+https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/actions/runs/38438225336 (success).
+
+Milestone 2 branch commits are pending CI: see the pull request and its checks for the current result.
 
 ## 6. Roadmap — what remains to achieve
 
@@ -103,12 +105,19 @@ https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/actions/runs/3843
 - Only after a real run, record what was observed and any remaining integration issue.
 
 ### Milestone 2: Isolated test execution
-- Execute generated changes and target-repository tests only inside a disposable sandbox/VM/container.
-- No host secrets, GitHub token, or writable access to the developer's home directory.
-- Restrict outbound network by default and impose CPU, memory, disk, process, and wall-clock limits.
-- Capture logs, exit codes, test summaries, and artifact/diff outputs.
-- Ensure cancellation and cleanup work even after timeouts or crashes.
-- Start with a local container/VM adapter and mock tests before enabling real repository execution.
+Implemented first slice on branch `feat/milestone-2-isolated-sandbox` (not yet merged):
+- Added an opt-in `POST /api/sandbox/run` endpoint; `SANDBOX_ENABLED` must be set to `true`.
+- Added a Docker runner that writes bounded, validated text files into a disposable temporary workspace and runs only fixed Node/Python check selections, never an arbitrary command supplied by the request.
+- Docker execution uses `--network=none`, read-only container root, dropped capabilities, `no-new-privileges`, non-root UID, PID/memory/CPU/file-descriptor limits, a timeout, bounded logs, and temporary-workspace cleanup. Timeout handling also requests container termination.
+- Added unit tests for isolation flags, path traversal, duplicate paths, file size bounds, and Python test-file validation.
+- The runner does not install dependencies, fetch full repositories, or yet provide UI cancellation. This is foundational isolation, not proof of full project tests or a hardened hostile-code sandbox.
+
+Remaining in Milestone 2:
+- Run CI and fix any failures.
+- Add a robust repository snapshot / dependency preparation strategy that keeps dependency downloads separate from untrusted execution.
+- Improve cancellation, container cleanup after daemon failures, and resource/disk limits.
+- Add integration tests with a mocked Docker process and documented local Docker smoke test.
+- Integrate the runner with the proposal-review flow only after its input/output and security boundaries are validated.
 
 ### Milestone 3: Authentication and deployment security
 - Implement real application-user authentication and authorization if multi-user/public deployment is required.
@@ -164,4 +173,4 @@ A milestone is not done just because files were changed. It should have:
 
 ## 9. Current next action
 
-Resume with the latest CI run, then complete a live authenticated end-to-end contribution test. Fix integration failures before beginning Milestone 2. Do not mark Milestone 1 fully verified until that real run has been observed.
+Finish Milestone 2 by running CI on the sandbox branch, correcting failures, adding mocked Docker lifecycle coverage and a local smoke-test guide, then verify the PR checks before merging. Milestone 1 still has a separate live authenticated end-to-end verification gap because this session cannot inspect the user's local `.env` or operate the running app with their credentials.

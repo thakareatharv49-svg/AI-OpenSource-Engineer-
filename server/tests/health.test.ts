@@ -445,3 +445,25 @@ test("POST /api/github/commit-proposal leaves the branch untouched when a blob c
 // Preserve the real fetch for local test-server requests even while GitHub API
 // calls are mocked inside the route.
 const originalFetchForTest = globalThis.fetch.bind(globalThis);
+
+
+test("POST /api/sandbox/run stays disabled unless explicitly enabled", async () => {
+  const previous = process.env.SANDBOX_ENABLED;
+  delete process.env.SANDBOX_ENABLED;
+  try {
+    const response = await fetch(baseUrl + "/api/sandbox/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        runtime: "node",
+        check: "test",
+        files: [{ path: "package.json", content: '{"scripts":{"test":"node --test"}}' }],
+      }),
+    });
+    assert.equal(response.status, 503);
+    assert.match((await response.json()).error, /disabled/i);
+  } finally {
+    if (previous === undefined) delete process.env.SANDBOX_ENABLED;
+    else process.env.SANDBOX_ENABLED = previous;
+  }
+});
