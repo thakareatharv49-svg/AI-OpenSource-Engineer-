@@ -103,7 +103,7 @@ test("allows explicitly named templates for additional deployment artifacts", ()
   const report = inspectProposedChanges([
     { file: ".envrc.example", after: "export API_KEY=your-token-here\n" },
     { file: ".doppler/.config.template", after: "token: placeholder\n" },
-    { file: ".vercel/.env.production.sample", after: "API_KEY=example\n" },
+    { file: ".wrangler/config.sample", after: "account_id: example\n" },
   ]);
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
