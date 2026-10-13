@@ -47,6 +47,10 @@ test("blocks unsafe paths, duplicate paths, and empty changes", () => {
     { file: "src/a.ts", after: "const a = 1;" },
     { file: "src/a.ts", after: "const a = 2;" },
   ]).safeToCommit, false);
+  assert.equal(inspectProposedChanges([
+    { file: "src/Café.ts", after: "export const first = 1;" },
+    { file: "src/Cafe\\u0301.ts", after: "export const second = 2;" },
+  ]).safeToCommit, false, "canonically equivalent Unicode paths must be treated as duplicates");
   assert.equal(inspectProposedChanges([{ file: "src/a.ts", after: "  " }]).safeToCommit, false);
 });
 

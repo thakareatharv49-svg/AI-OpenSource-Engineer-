@@ -245,10 +245,17 @@ Separate environment-dependent verification gaps remain:
 
 ## 11. Milestone 8 — Prevent invisible Unicode path spoofing
 
-**Implementation in progress on branch `security/reject-spoofed-proposal-paths`.** The server-side proposal safety gate now rejects Unicode control and formatting characters in paths. This blocks invisible formatting characters such as bidirectional overrides and zero-width characters that can make a filename appear different in code review. Regression cases cover bidi overrides, zero-width characters, and directional isolates.
+**Merged in PR #37 on 2026-10-13.** The server-side proposal safety gate now rejects Unicode control and formatting characters in paths. This blocks invisible formatting characters such as bidirectional overrides and zero-width characters that can make a filename appear different in code review. Regression cases cover bidi overrides, zero-width characters, and directional isolates.
 
 Definition of done for this milestone: backend tests and typecheck, frontend build/lint, production dependency audit, and any configured security workflow must pass on the final PR head. Do not merge while checks are pending or failing. The change is static validation only; it does not replace human review or live end-to-end verification.
 
 ## 12. Next after Milestone 8
 
 Continue closing the explicit live-verification gaps: run the documented Docker smoke test locally, verify OAuth and the full issue-to-commit workflow with real credentials, test Redis-backed shared state under concurrency/restart, and complete backup/restore and adversarial security checks. Keep the backend loopback-only until the production deployment gate is actually satisfied.
+
+
+## 13. Milestone 9 — Unicode-normalized duplicate-path detection
+
+**Implementation in progress on branch `security/normalize-duplicate-proposal-paths`.** Proposal duplicate detection now normalizes file paths to Unicode NFC before case-insensitive comparison. This prevents a single proposal from naming the same apparent file twice using canonically equivalent composed and decomposed Unicode sequences, which can behave inconsistently across developer filesystems and Git tooling. A regression test covers a composed accented filename versus its decomposed equivalent.
+
+Definition of done: verify the reviewed diff, pass backend tests/typecheck, frontend build/lint, dependency audit, and CodeQL on the latest PR head. Merge only after all required checks pass. This check detects collisions inside one proposal; it does not assert that every existing upstream repository path is normalized.
