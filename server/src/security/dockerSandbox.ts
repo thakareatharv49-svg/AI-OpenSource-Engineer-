@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { mkdtemp, mkdir, chmod, writeFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 
 export type SandboxRuntime = "node" | "python";
 export type SandboxCheck = "test" | "lint" | "build" | "typecheck";
@@ -162,7 +163,9 @@ export async function runSandbox(
       await chmod(destination, 0o666);
     }
 
+    const containerName = "ai-oss-sandbox-" + randomUUID();
     const args = buildSandboxDockerArgs(workspace, request);
+    args.splice(1, 0, "--name", containerName);
     const result = await new Promise<{ code: number | null; stdout: string; stderr: string; timedOut: boolean; truncated: boolean }>((resolve, reject) => {
       let stdout = "";
       let stderr = "";
@@ -179,7 +182,9 @@ export async function runSandbox(
       const timer = setTimeout(() => {
         timedOut = true;
         child.kill("SIGKILL");
-        finish({ code: null, stdout, stderr, timedOut, truncated });
+        const killer = spawn("docker", ["kill", containerName], { stdio: "ignore", windowsHide: true });
+        killer.on("error", () => finish({ code: null, stdout, stderr, timedOut, truncated }));
+        killer.on("close", () => finish({ code: null, stdout, stderr, timedOut, truncated }));
       }, timeoutMs);
       child.stdout?.on("data", (chunk: Buffer) => {
         if (stdout.length < MAX_OUTPUT_CHARS) stdout += chunk.toString("utf8").slice(0, MAX_OUTPUT_CHARS - stdout.length);
