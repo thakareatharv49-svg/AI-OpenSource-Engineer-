@@ -26,6 +26,17 @@ test("blocks private keys and common provider tokens", () => {
   }
 });
 
+test("detects secrets obscured by invisible or compatibility Unicode characters", () => {
+  const token = "ghp_123456789012345678901234567890123456";
+  const invisible = token.slice(0, 8) + "\u200B" + token.slice(8);
+  const fullWidthPrefix = "ｇｈｐ＿" + token.slice(4);
+  for (const secret of [invisible, fullWidthPrefix]) {
+    const report = inspectProposedChanges([{ file: "src/config.ts", after: `const token = "${secret}";` }]);
+    assert.equal(report.safeToCommit, false, "obfuscated credential must be blocked");
+    assert.ok(report.findings.some((finding) => finding.severity === "block"));
+  }
+});
+
 test("blocks sensitive file paths", () => {
   for (const file of [".env", "config/.env.production", ".npmrc", ".ssh/id_ed25519", "secrets/cloud.json", ".git/config", ".gitmodules"]) {
     const report = inspectProposedChanges([{ file, after: "placeholder content" }]);

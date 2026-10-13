@@ -125,8 +125,13 @@ export function inspectProposedChanges(input: unknown): SafetyReport {
       findings.push({ severity: "block", file, reason: "Sensitive credential or private-key paths cannot be committed" });
     }
 
+    // Scan a compatibility-normalized copy so invisible format characters or full-width
+    // lookalikes cannot trivially hide recognizable credentials from the safety gate.
+    // The committed source remains unchanged; normalization is for detection only.
+    const normalizedContent = content.normalize("NFKC").replace(/\p{Cf}/gu, "");
+
     for (const { pattern, reason } of secretPatterns) {
-      if (pattern.test(content)) {
+      if (pattern.test(normalizedContent)) {
         findings.push({ severity: "block", file, reason });
       }
     }
