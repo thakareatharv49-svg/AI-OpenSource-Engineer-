@@ -263,3 +263,35 @@ test("blocks credentialed HTTP URLs but allows documentation placeholders", () =
   assert.equal(placeholder.safeToCommit, true);
   assert.deepEqual(placeholder.findings, []);
 });
+
+
+test("blocks additional AI-provider API key prefixes without storing literal credentials", () => {
+  const samples = ["sk-or-v1-" + "a".repeat(32), "gsk_" + "b".repeat(32)];
+  for (const sample of samples) {
+    const report = inspectProposedChanges([{ file: "src/ai-provider.ts", after: 'const apiKey = "' + sample + '";' }]);
+    assert.equal(report.safeToCommit, false, "provider credential must be blocked");
+    assert.ok(report.findings.some((finding) => finding.severity === "block"));
+  }
+});
+
+test("detects additional private-key container formats", () => {
+  for (const marker of ["-----BEGIN ENCRYPTED PRIVATE KEY-----", "-----BEGIN PGP PRIVATE KEY BLOCK-----", "PuTTY-User-Key-File-2: ssh-ed25519"]) {
+    const report = inspectProposedChanges([{ file: "src/key-fixture.txt", after: marker }]);
+    assert.equal(report.safeToCommit, false, marker);
+    assert.ok(report.findings.some((finding) => finding.severity === "block"), marker);
+  }
+});
+
+test("detects embedded credentials in non-HTTP service URLs", () => {
+  for (const url of ["ftp://build-user:supersecretpass@files.example.test/releases", "amqps://queue-user:long-secret-pass@broker.example.test/vhost", "ssh://deploy-user:another-secret-pass@git.example.test/repository", "sftp://backup-user:backup-secret-pass@storage.example.test/incoming"]) {
+    const report = inspectProposedChanges([{ file: "src/service-config.ts", after: 'const endpoint = "' + url + '";' }]);
+    assert.equal(report.safeToCommit, false, url.split("@")[0]);
+    assert.ok(report.findings.some((finding) => finding.reason === "Non-HTTP URL contains embedded credentials"));
+  }
+});
+
+test("allows non-HTTP URLs with documentation placeholders", () => {
+  const report = inspectProposedChanges([{ file: "docs/service-config.md", after: ["ftp://user:example@files.example.test/path", "amqps://user:your-password@broker.example.test/vhost", "ssh://user:${DEPLOY_PASSWORD}@git.example.test/repository"].join("\n") }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});

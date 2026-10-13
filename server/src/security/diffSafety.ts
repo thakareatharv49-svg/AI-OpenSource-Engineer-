@@ -29,7 +29,10 @@ const unsafePathPatterns = [
 ];
 
 const secretPatterns: Array<{ pattern: RegExp; reason: string }> = [
-  { pattern: /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/, reason: "Private key material detected" },
+  { pattern: /\bsk-or-v1-[A-Za-z0-9]{20,}\b/, reason: "OpenRouter API key pattern detected" },
+  { pattern: /\bgsk_[A-Za-z0-9]{20,}\b/, reason: "Groq API key pattern detected" },
+  { pattern: /-----BEGIN (?:(?:RSA |EC |OPENSSH |DSA |ENCRYPTED )?PRIVATE KEY|PGP PRIVATE KEY BLOCK)-----/, reason: "Private key material detected" },
+  { pattern: /\bPuTTY-User-Key-File-[0-9]+:/, reason: "PuTTY private key material detected" },
   { pattern: /\bgh[pousr]_[A-Za-z0-9_]{20,}\b/, reason: "GitHub access token pattern detected" },
   { pattern: /\bgithub_pat_[A-Za-z0-9_]{20,}\b/, reason: "GitHub fine-grained token pattern detected" },
   { pattern: /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/, reason: "Slack access token pattern detected" },
@@ -53,6 +56,7 @@ const secretPatterns: Array<{ pattern: RegExp; reason: string }> = [
   { pattern: /\b(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|redis|rediss):\/\/[^/\s:@]+:(?!example\b|placeholder\b|your[-_]?|\$\{|changeme\b|password\b)[^/\s@]{8,}@/i, reason: "Database connection string contains embedded credentials" },
   { pattern: /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{20,}\b/, reason: "JWT-like bearer token detected" },
   { pattern: /\bhttps?:\/\/[^/\s:@]+:(?!example\b|placeholder\b|your[-_]?|\$\{|changeme\b|password\b)[^/\s@]{8,}@/i, reason: "URL contains embedded credentials" },
+  { pattern: /\b(?:ftp|ftps|amqp|amqps|ssh|sftp):\/\/[^/\s:@]+:(?!example\b|placeholder\b|your[-_]?|\$\{|changeme\b|password\b)[^/\s@]{8,}@/i, reason: "Non-HTTP URL contains embedded credentials" },
   { pattern: /\bAKIA[0-9A-Z]{16}\b/, reason: "AWS access key pattern detected" },
   { pattern: /\bAIza[0-9A-Za-z_-]{30,}\b/, reason: "Google API key pattern detected" },
   { pattern: /(?=[^\n]*\bsig=[A-Za-z0-9%+/=_-]{20,})(?=[^\n]*\b(?:se|sp|sv)=)[^\n]*/i, reason: "Azure shared-access-signature credential detected" },

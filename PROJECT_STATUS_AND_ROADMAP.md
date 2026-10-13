@@ -332,3 +332,22 @@ Definition of done: pass backend typecheck/tests, frontend build/lint, productio
 ## 23. Milestone 19 — Credentials embedded in HTTP URLs
 
 **Merged in PR #52 on 2026-10-13 (merge commit `7a15cdc63809230407b4433016c8d4841820343d`).** Detect HTTP(S) URLs that embed a username and sufficiently long password before the host, with regression tests for credentialed URLs and ordinary documentation placeholders. This scans proposed text only and does not validate credentials or scan repository history/dependencies.
+
+
+## 24. Milestone 20 — Additional AI-provider credential coverage
+
+**Implementation in PR: milestones 20–22.** Add high-confidence detection for OpenRouter (`sk-or-v1-`) and Groq (`gsk_`) API-key formats. Regression tests construct synthetic values from harmless fragments rather than storing a complete realistic token literal.
+
+Scope: proposal-content heuristic only; formats can change and this does not scan history or dependencies.
+
+## 25. Milestone 21 — Broader private-key format detection
+
+**Implementation in PR: milestones 20–22.** Expand private-key marker detection to include encrypted PEM private keys, PGP private-key blocks, and PuTTY private-key headers, with marker-only fixtures that do not include actual key material.
+
+Scope: marker-based detection can miss unfamiliar formats and may need review for false positives.
+
+## 26. Milestone 22 — Credentials embedded in non-HTTP service URLs
+
+**Implementation in PR: milestones 20–22.** Detect embedded username/password pairs in FTP/FTPS, AMQP/AMQPS, SSH, and SFTP URLs, with placeholder exclusions and regression tests. Existing HTTP(S) checks remain unchanged.
+
+Scope: proposal-content heuristic only; it does not validate whether credentials are live or scan repository history/dependencies.
