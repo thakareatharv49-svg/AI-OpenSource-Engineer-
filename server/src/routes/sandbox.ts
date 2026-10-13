@@ -28,7 +28,7 @@ export function selectSandboxSnapshotCandidates(entries: GitTreeEntry[]): GitTre
       if (file.type !== "blob" || typeof file.sha !== "string" || typeof file.size !== "number") return false;
       if (file.size <= 0 || file.size > SNAPSHOT_MAX_FILE_BYTES || file.path.length > 240) return false;
       const parts = file.path.split("/");
-      if (file.path.startsWith("/") || file.path.includes("\\") || parts.some((part) => !part || part === "." || part === "..")) return false;
+      if (file.path.startsWith("/") || file.path.includes("\\") || /[?#\\u0000-\\u001f]/.test(file.path) || parts.some((part: string) => !part || part === "." || part === "..")) return false;
       if (SNAPSHOT_IGNORED_PATH.test(file.path) || SNAPSHOT_IGNORED_FILE.test(file.path)) return false;
       return SNAPSHOT_EXTENSIONS.test(file.path);
     })
@@ -85,7 +85,7 @@ router.post("/snapshot", async (req, res) => {
     return res.status(503).json({ error: "Isolated checks are disabled." });
   }
   const repository = req.body && typeof req.body.repository === "string" ? req.body.repository : "";
-  const repositoryParts = repository.split("/");
+  const repositoryParts: string[] = repository.split("/");
   if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository) || repository.length > 200 || repositoryParts.some((part) => part === "." || part === "..")) {
     return res.status(400).json({ error: "Provide a valid owner/repository identifier." });
   }
