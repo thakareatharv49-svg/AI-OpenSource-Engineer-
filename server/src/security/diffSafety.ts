@@ -19,6 +19,8 @@ const unsafePathPatterns = [
   /(?:^|\/)\.git(?:\/|$)/i,
   /(?:^|\/)\.gitmodules$/i,
   /(?:^|\/)\.env(?:\.|$)/i,
+  /(?:^|\/)\.envrc$/i,
+  /(?:^|\/)\.direnv(?:\/|$)/i,
   /(?:^|\/)\.npmrc$/i,
   /(?:^|\/)\.pypirc$/i,
   /(?:^|\/)\.netrc$/i,
@@ -83,6 +85,11 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
     /(?:^|\/)\.config\/gcloud(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.docker\/config\.json$/i.test(normalized) ||
     /(?:^|\/)\.pulumi\/credentials\.json$/i.test(normalized) ||
+    /(?:^|\/)\.doppler(?:\/|$)/i.test(normalized) ||
+    /(?:^|\/)\.wrangler(?:\/|$)/i.test(normalized) ||
+    /(?:^|\/)\.firebase(?:\/|$)/i.test(normalized) ||
+    /(?:^|\/)\.netlify\/state\.json$/i.test(normalized) ||
+    /(?:^|\/)\.vercel\/\.env(?:\.[^/]+)?$/i.test(normalized) ||
     /(?:^|\/)(?:\.terraformrc|terraform\.rc)$/i.test(normalized) ||
     /(?:^|\/)[^/]+\.tfvars(?:\.json)?$/i.test(normalized) ||
     /(?:^|\/)terraform\.tfstate(?:\..*)?$/i.test(normalized) ||
