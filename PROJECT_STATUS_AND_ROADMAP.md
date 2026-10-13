@@ -375,8 +375,17 @@ Scope: defense-in-depth based on filenames and paths. It does not inspect binary
 
 ## 30. Milestone 26 — Cloud CLI and deployment-tool credential artifact protection
 
-**Implementation in PR: milestone 26.** Extend the path-based safety gate to block common local cloud-authentication and deployment-tool artifacts: Azure CLI token/profile directories (.azure/), Google Cloud credential caches (.config/gcloud/), Docker registry auth (.docker/config.json), Pulumi credentials (.pulumi/credentials.json), and Terraform CLI credential files (.terraformrc / terraform.rc). Add regression tests for each family and explicitly named template exemptions.
+**Merged in PR #58 on 2026-10-13 (merge commit `469d12e24e4f94eb14606c151f433ece280b63dd`).** Extend the path-based safety gate to block common local cloud-authentication and deployment-tool artifacts: Azure CLI token/profile directories (.azure/), Google Cloud credential caches (.config/gcloud/), Docker registry auth (.docker/config.json), Pulumi credentials (.pulumi/credentials.json), and Terraform CLI credential files (.terraformrc / terraform.rc). Add regression tests for each family and explicitly named template exemptions.
 
 Scope: filename/path-based defense in depth only. It does not parse these formats, inspect credential validity, or prove that template files contain no secrets. Keep human review and the content scanner in place.
 
 Definition of done: backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL pass on the final PR head; merge only after all required checks pass.
+
+
+## 31. Milestone 27 — Additional developer and deployment credential artifact protection
+
+**Implementation in progress on branch `feat/milestone-27-developer-credential-artifacts`.** Extend the path-based safety gate to block common local developer/deployment credential artifacts: `.envrc`, `.direnv/`, Doppler configuration under `.doppler/`, Wrangler state under `.wrangler/`, Firebase local state under `.firebase/`, Netlify local state, and Vercel environment files. Add deterministic regression tests for blocked paths and explicit documentation-template exemptions.
+
+Scope: filename/path-based defense in depth only. It does not parse these formats or establish that templates are secret-free. Keep content scanning and human approval in place.
+
+Definition of done: review the final diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head; merge only after all required checks pass.
