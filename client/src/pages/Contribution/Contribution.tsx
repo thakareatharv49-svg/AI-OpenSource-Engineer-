@@ -93,6 +93,37 @@ function Contribution() {
       localStorage.setItem("ai-ose-lifecycle-pointer", JSON.stringify({ id: data.contribution.id, version: data.contribution.version, state: data.contribution.state }));
     } catch (error) { console.warn("Lifecycle update failed:", error); }
   };
+
+  const handleCancelWorkflow = async () => {
+    if (!workflowId || workflowVersion === null || workflowState === "commit_complete" || workflowState === "cancelled") return;
+    try {
+      const response = await apiFetch(`${API_BASE_URL}/api/lifecycle/${workflowId}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state: "cancelled", expectedVersion: workflowVersion, message: "Cancelled by the user" }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to cancel contribution workflow");
+      setWorkflowVersion(data.contribution.version);
+      setWorkflowState("cancelled");
+      setStarted(false);
+      setStage(0);
+      setApproved(false);
+      setChangesRequested(false);
+      setSelectedIssue(null);
+      setAISelection(null);
+      setRepositoryAnalysis(null);
+      setRepositoryFiles([]);
+      setSolutionPlan(null);
+      setCodeProposal(null);
+      setCodeReview(null);
+      setForkedRepository("");
+      setBranchName("");
+      setCommitSuccess(false);
+      localStorage.removeItem("ai-ose-lifecycle-pointer");
+    } catch (error) {
+      console.warn("Contribution workflow cancellation failed:", error);
+    }
+  };
   useEffect(() => {
     let active = true;
     const restore = async () => {
@@ -1094,7 +1125,7 @@ useEffect(() => {
   return (
     <main className="contribution-page">
       <div className="contribution-container">
-        {workflowState && <p role="status" aria-live="polite">Saved contribution lifecycle state: {workflowState}. Refreshing this page preserves the server-side progress record.</p>}
+        {workflowState && <div role="status" aria-live="polite"><p>Saved contribution lifecycle state: {workflowState}. Refreshing this page preserves the server-side progress record.</p>{workflowState !== "commit_complete" && workflowState !== "cancelled" && <button className="contribution-start-button" onClick={() => void handleCancelWorkflow()}>Cancel Workflow</button>}</div>}
         <span className="contribution-label">
           AI OPEN SOURCE ENGINEER
         </span>
