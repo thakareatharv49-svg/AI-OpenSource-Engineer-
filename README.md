@@ -22,7 +22,7 @@ An AI-assisted open-source contribution workflow that discovers issues, analyzes
 
 - Node.js 22 or newer
 - npm
-- A GitHub token with the permissions needed to read public repositories, create forks, push to your fork, and open pull requests
+- A GitHub OAuth App configured with the callback URL below
 - At least one configured AI provider: Gemini, OpenAI, or a local Ollama installation with the configured model available
 
 ## Run locally
@@ -36,7 +36,7 @@ cd server
 Copy-Item .env.example .env
 ```
 
-Edit `server/.env` and add your `GITHUB_TOKEN` and whichever AI provider key(s) you use. Never commit real API keys.
+Create a GitHub OAuth App in GitHub Developer Settings. Set its callback URL to `http://localhost:5000/api/auth/github/callback`, then add its client ID and client secret to `server/.env` as `GITHUB_OAUTH_CLIENT_ID` and `GITHUB_OAUTH_CLIENT_SECRET`. Add whichever AI provider key(s) you use. Never commit real secrets. Users sign in through the **Sign in with GitHub** control; the top bar shows the connected account and **Sign out** clears the server-side session.
 
 Start the backend:
 

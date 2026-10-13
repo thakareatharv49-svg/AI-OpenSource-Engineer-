@@ -1,3 +1,5 @@
+const apiFetch = (input: RequestInfo | URL, init: RequestInit = {}) => fetch(input, { ...init, credentials: "include" });
+
 import { useEffect, useRef, useState } from "react";
 import "./Contribution.css";
 import ContributionProgress from "../../components/contribution/ContributionProgress";
@@ -156,7 +158,7 @@ const [forkedRepository, setForkedRepository] = useState("");
       setIssueError("");
 
       try {
-        const response = await fetch(
+        const response = await apiFetch(
           `${API_BASE_URL}/api/github/issues`
         );
 
@@ -186,7 +188,7 @@ const [forkedRepository, setForkedRepository] = useState("");
     setAiError("");
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_BASE_URL}/api/ai/select-issue`,
         {
           method: "POST",
@@ -239,7 +241,7 @@ const [forkedRepository, setForkedRepository] = useState("");
     try {
       const repository = getRepositoryName(selectedIssue.url);
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_BASE_URL}/api/ai/analyze-repository`,
         {
           method: "POST",
@@ -288,7 +290,7 @@ const [forkedRepository, setForkedRepository] = useState("");
     try {
       const repository = getRepositoryName(selectedIssue.url);
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_BASE_URL}/api/ai/build-solution`,
         {
           method: "POST",
@@ -335,7 +337,7 @@ const [forkedRepository, setForkedRepository] = useState("");
     try {
       const repository = getRepositoryName(selectedIssue.url);
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_BASE_URL}/api/ai/generate-code`,
         {
           method: "POST",
@@ -394,7 +396,7 @@ const [forkedRepository, setForkedRepository] = useState("");
     try {
       const repository = getRepositoryName(selectedIssue.url);
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_BASE_URL}/api/ai/review-code`,
         {
           method: "POST",
@@ -471,7 +473,7 @@ const [forkedRepository, setForkedRepository] = useState("");
     setSandboxResult(null);
     try {
       const repository = getRepositoryName(selectedIssue.url);
-      const snapshotResponse = await fetch(`${API_BASE_URL}/api/sandbox/snapshot`, {
+      const snapshotResponse = await apiFetch(`${API_BASE_URL}/api/sandbox/snapshot`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ repository }),
@@ -501,7 +503,7 @@ const [forkedRepository, setForkedRepository] = useState("");
       runId = crypto.randomUUID();
       sandboxRunId.current = runId;
       setSandboxRunning(true);
-      const response = await fetch(`${API_BASE_URL}/api/sandbox/run`, {
+      const response = await apiFetch(`${API_BASE_URL}/api/sandbox/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ runId, runtime: sandboxRuntime, check: sandboxCheck, timeoutMs: 60000, files }),
@@ -522,7 +524,7 @@ const [forkedRepository, setForkedRepository] = useState("");
     if (!runId) return;
     setSandboxError("");
     try {
-      const response = await fetch(`${API_BASE_URL}/api/sandbox/cancel`, {
+      const response = await apiFetch(`${API_BASE_URL}/api/sandbox/cancel`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ runId }),
@@ -547,7 +549,7 @@ const [forkedRepository, setForkedRepository] = useState("");
     const repository = getRepositoryName(selectedIssue.url);
     const [owner, repo] = repository.split("/");
 
-    const response = await fetch(
+    const response = await apiFetch(
       `${API_BASE_URL}/api/github/fork`,
       {
         method: "POST",
@@ -599,7 +601,7 @@ const [forkedRepository, setForkedRepository] = useState("");
         throw new Error("Invalid GitHub repository.");
       }
 
-      const repositoryResponse = await fetch(
+      const repositoryResponse = await apiFetch(
         `${API_BASE_URL}/api/github/repository/${owner}/${repo}`
       );
 
@@ -616,7 +618,7 @@ const [forkedRepository, setForkedRepository] = useState("");
       setBaseBranch(baseBranch);
       const newBranchName = `ai-contribution-${Date.now()}`;
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_BASE_URL}/api/github/branch`,
         {
           method: "POST",
@@ -718,7 +720,7 @@ const [forkedRepository, setForkedRepository] = useState("");
 
       // The server validates the entire proposal and writes one Git commit.
       // This prevents a failed multi-file proposal from leaving partial commits.
-      const response = await fetch(`${API_BASE_URL}/api/github/commit-proposal`, {
+      const response = await apiFetch(`${API_BASE_URL}/api/github/commit-proposal`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -763,7 +765,7 @@ const [forkedRepository, setForkedRepository] = useState("");
   setPrError("");
 
   try {
-    const response = await fetch(
+    const response = await apiFetch(
       `${API_BASE_URL}/api/github/pull-request`,
       {
         method: "POST",
