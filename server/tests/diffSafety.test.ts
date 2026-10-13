@@ -109,6 +109,23 @@ test("allows explicitly named templates for additional deployment artifacts", ()
   assert.deepEqual(report.findings, []);
 });
 
+test("blocks developer-tool authentication stores and package-manager credentials", () => {
+  for (const file of [
+    ".git-credentials",
+    ".config/gh/hosts.yml",
+    "home/.config/gh/hosts.yml",
+    ".bundle/config",
+    ".cargo/credentials",
+    ".cargo/credentials.toml",
+    ".pypoetry/auth.toml",
+    ".composer/auth.json",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) => finding.severity === "block"), file);
+  }
+});
+
 test("blocks sensitive file paths", () => {
   for (const file of [".env", "config/.env.production", ".npmrc", ".ssh/id_ed25519", "secrets/cloud.json", ".git/config", ".gitmodules"]) {
     const report = inspectProposedChanges([{ file, after: "placeholder content" }]);
