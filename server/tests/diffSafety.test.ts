@@ -476,3 +476,33 @@ test("allows explicitly named templates for additional authentication artifacts"
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks local secret-manager, encryption-key, and Kubernetes cache artifacts", () => {
+  for (const file of [
+    ".vault-token",
+    "home/.vault-token",
+    ".config/sops/age/keys.txt",
+    "infra/.age/keys.txt",
+    ".minikube/client.key",
+    ".minikube/profiles/dev/config.json",
+    ".kube/cache/discovery/cluster.example/servergroups.json",
+    ".config/op/config",
+    "home/.config/1password/agent.sock",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "synthetic placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) => finding.severity === "block"), file);
+  }
+});
+
+test("allows explicitly named local secret-store documentation templates", () => {
+  const report = inspectProposedChanges([
+    { file: ".vault-token.example", after: "replace-with-your-vault-token" },
+    { file: ".config/sops/age/keys.txt.template", after: "# placeholder only" },
+    { file: ".minikube/config.sample", after: "apiVersion: v1" },
+    { file: ".config/op/config.example", after: "account: example" },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
