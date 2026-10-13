@@ -263,6 +263,13 @@ Definition of done: verify the reviewed diff, pass backend tests/typecheck, fron
 
 ## 14. Milestone 10 — Unicode-obfuscated secret detection
 
-**Implementation in progress on branch `security/normalize-obfuscated-secrets`.** Secret scanning now checks a detection-only copy of proposed content normalized with Unicode NFKC and stripped of invisible Unicode format characters. This is intended to catch recognizable credentials disguised with zero-width format characters or compatibility-form characters without rewriting the source that would be committed. Regression tests cover an inserted zero-width character and a full-width token prefix.
+**Merged in PR #44 on 2026-10-13 (merge commit `fae25e9078ab7c7730f40393353e67f11da81401`).** Secret scanning now checks a detection-only copy of proposed content normalized with Unicode NFKC and stripped of invisible Unicode format characters. This is intended to catch recognizable credentials disguised with zero-width format characters or compatibility-form characters without rewriting the source that would be committed. Regression tests cover an inserted zero-width character and a full-width token prefix.
 
 Definition of done: inspect the final diff; pass backend tests/typecheck, frontend build/lint, production dependency audit, and CodeQL; merge only after all required checks pass. This is a defense-in-depth heuristic, not a guarantee that all secrets can be detected.
+
+
+## 15. Milestone 11 — Broader provider credential pattern coverage
+
+**Implementation in progress on branch `security/expand-secret-pattern-coverage`.** Extend the proposal safety gate with targeted detection for Slack access tokens and webhook URLs, Stripe API keys, npm tokens, PyPI upload tokens, and SendGrid API keys. Add deterministic regression tests for each pattern. This remains heuristic defense in depth: it cannot identify every secret format, and matches must be reviewed for false positives. The scanner checks proposal content only; it does not scan the entire repository history or external dependencies.
+
+Definition of done: inspect the complete diff; pass backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL on the PR head; merge only when required checks pass. Keep real OAuth, Redis, Docker, and end-to-end verification gaps explicit.
