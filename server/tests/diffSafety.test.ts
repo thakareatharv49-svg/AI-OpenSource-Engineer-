@@ -25,6 +25,12 @@ test("blocks private keys and common provider tokens", () => {
     "npm_123456789012345678901234567890123456",
     "pypi-123456789012345678901234567890123456",
     "SG.123456789012345678.123456789012345678",
+    "glpat-123456789012345678901234",
+    "gldt-123456789012345678901234",
+    "glrt-123456789012345678901234",
+    "hf_12345678901234567890123456789012",
+    "sk-ant-123456789012345678901234",
+    "https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789AB",
   ]) {
     const report = inspectProposedChanges([{ file: "src/config.ts", after: `const example = "${secret}";` }]);
     assert.equal(report.safeToCommit, false, secret);
@@ -100,4 +106,17 @@ test("enforces file-count and total-content limits", () => {
   assert.equal(inspectProposedChanges([
     { file: "src/large.ts", after: "x".repeat(200_001) },
   ]).safeToCommit, false);
+});
+
+test("does not block short documentation placeholders for newer token formats", () => {
+  const report = inspectProposedChanges([{
+    file: "docs/authentication.md",
+    after: [
+      "Use glpat-your-token-here as a placeholder in examples.",
+      "The sample Hugging Face value is hf_example.",
+      "https://discord.com/api/webhooks/123456789012345678/not-a-real-webhook-token",
+    ].join("\\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
 });
