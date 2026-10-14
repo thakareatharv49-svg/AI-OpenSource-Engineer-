@@ -257,7 +257,7 @@ test("allows short AWS credential placeholders in documentation", () => {
       "aws_secret_access_key=example",
       "aws_session_token=your-token-here",
       "aws_secret_access_key=${AWS_SECRET_ACCESS_KEY}",
-    ].join("\\n"),
+    ].join("\n"),
   }]);
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
@@ -682,7 +682,7 @@ test("blocks database CLI password files and Redis command history", () => {
 test("allows explicitly named database CLI credential documentation templates", () => {
   const report = inspectProposedChanges([
     { file: "docs/.pgpass.example", after: "hostname:port:database:username:password" },
-    { file: "fixtures/.my.cnf.template", after: "[client]\\nuser=example" },
+    { file: "fixtures/.my.cnf.template", after: "[client]\nuser=example" },
     { file: "docs/database-cli-credentials.md", after: "Keep database credentials out of source control." },
   ]);
   assert.equal(report.safeToCommit, true);
@@ -910,7 +910,7 @@ test("blocks Kubernetes SecretList manifests with secret payloads regardless of 
   const manifests = [
     {
       file: "clusters/prod/objects.yaml",
-      after: "apiVersion: v1\\nkind: SecretList\\nitems:\\n  - metadata:\\n      name: service-token\\n    type: Opaque\\n    data:\\n      token: cGxhY2Vob2xkZXI=\\n",
+      after: "apiVersion: v1\nkind: SecretList\nitems:\n  - metadata:\n      name: service-token\n    type: Opaque\n    data:\n      token: cGxhY2Vob2xkZXI=\n",
     },
     {
       file: "clusters/prod/objects.json",
@@ -941,15 +941,15 @@ test("allows SecretList documentation templates and non-secret Kubernetes lists"
   const report = inspectProposedChanges([
     {
       file: "docs/secret-list.yaml.example",
-      after: "apiVersion: v1\\nkind: SecretList\\nitems:\\n  - data:\\n      token: replace-me\\n",
+      after: "apiVersion: v1\nkind: SecretList\nitems:\n  - data:\n      token: replace-me\n",
     },
     {
       file: "deploy/config-list.yaml",
-      after: "apiVersion: v1\\nkind: ConfigMapList\\nitems:\\n  - data:\\n      LOG_LEVEL: info\\n",
+      after: "apiVersion: v1\nkind: ConfigMapList\nitems:\n  - data:\n      LOG_LEVEL: info\n",
     },
     {
       file: "src/kubernetesSecretList.ts",
-      after: "export function listSecrets() { return []; }\\n",
+      after: "export function listSecrets() { return []; }\n",
     },
   ]);
   assert.equal(report.safeToCommit, true);
