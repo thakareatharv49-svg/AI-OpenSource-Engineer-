@@ -28,7 +28,6 @@ const unsafePathPatterns = [
   /(?:^|\/)\.my\.cnf$/i,
   /(?:^|\/)\.mylogin\.cnf$/i,
   /(?:^|\/)\.rediscli_history$/i,
-  /(?:^|\\/)\.my\.cnf$/i,
   /(?:^|\/)\.git-credentials$/i,
   /(?:^|\/)\.config\/gh(?:\/|$)/i,
   /(?:^|\/)\.bundle\/config$/i,
