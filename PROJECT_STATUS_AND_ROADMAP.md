@@ -420,8 +420,17 @@ Definition of done: inspect the final diff; backend typecheck/tests, frontend bu
 
 ## 35. Milestone 31 — Desktop password-manager, OS keyring, and GPG private-key artifact protection
 
-**Implementation in progress on branch `feat/milestone-31-desktop-secret-store-protection`.** Extend path-based proposal safety to block common local secret-storage artifacts: GPG private-key storage under `.gnupg/private-keys-v1.d/`, password-store contents under `.password-store/`, Linux desktop keyrings under `.local/share/keyrings/`, and local configuration/state locations for KeePassXC, KWallet, Bitwarden, and the Bitwarden CLI. Add regression tests for nested paths and explicitly named documentation-template exemptions.
+**Merged in PR #63 on 2026-10-14 (merge commit `a6bc6b1e7c674f1645647609444e67583c68d7e4`).** Extend path-based proposal safety to block common local secret-storage artifacts: GPG private-key storage under `.gnupg/private-keys-v1.d/`, password-store contents under `.password-store/`, Linux desktop keyrings under `.local/share/keyrings/`, and local configuration/state locations for KeePassXC, KWallet, Bitwarden, and the Bitwarden CLI. Add regression tests for nested paths and explicitly named documentation-template exemptions.
 
 Scope: filename/path-based defense in depth only. It does not parse encrypted stores, establish whether contents are sensitive or live, or replace credential scanning and human review. Some application configuration files may be non-secret, so the matcher is limited to named local store locations.
 
 Definition of done: inspect the final diff; backend typecheck/tests, frontend build/lint, dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
+
+
+## 36. Milestone 32 — Windows and macOS operating-system credential-store protection
+
+**Implementation in progress on branch `feat/milestone-32-windows-macos-credential-store-protection`.** Extend path-based proposal safety to block macOS Keychain directories and database files, plus Windows Credential Manager, Vault, and DPAPI user-master-key store paths under AppData. Add deterministic regression tests for nested user-profile paths and explicitly named documentation-template exemptions.
+
+Scope: filename/path-based defense in depth only. The checks do not parse operating-system credential formats, establish whether artifacts are live, or replace content scanning and human review. Keep matching limited to known credential-store locations and avoid broad rules that block ordinary application files.
+
+Definition of done: inspect the final diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
