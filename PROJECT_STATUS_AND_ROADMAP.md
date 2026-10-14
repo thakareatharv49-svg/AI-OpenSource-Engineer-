@@ -567,8 +567,18 @@ Definition of done: preserve the path-based defense-in-depth caveat and keep the
 
 ## 51. Milestone 47 — Ansible Vault and Packer secret artifact protection
 
-**Implementation in progress on branch `feat/milestone-47-ansible-packer-secret-protection`.** Extend proposal path safety to block common Ansible Vault password-file names and Packer variable files (`.pkrvars.hcl` and `.pkrvars.json`), including custom and nested paths. Add regression tests for blocked artifacts, named documentation-template exemptions, and ordinary Ansible/Packer source files.
+**Merged in PR #79 on 2026-10-14 (merge commit `a2eeedfe7bcdd94fa8f746d6087b3c07d2ef382b`).** Proposal path safety blocks common Ansible Vault password-file names and Packer variable files ending in `.pkrvars.hcl` or `.pkrvars.json`, including nested and auto-loaded variants. Regression coverage checks blocked paths, explicit template exemptions, and ordinary Ansible/Packer source files.
 
-Scope: filename-based defense in depth. It does not parse Ansible configuration or Packer variables, prove that a file contains a live secret, or cover every custom filename. Keep content scanning and human review in place.
+Scope: filename-based defense in depth. It does not parse Ansible or Packer formats, prove that a file contains a live secret, or cover every custom filename. Keep content scanning and human review in place.
+
+Validation: backend typecheck/tests, frontend build/lint including production dependency audit, and CodeQL passed on the final PR head before merge.
+
+Definition of done: preserve the scope caveat and keep the checks covered by regression tests.
+
+## 52. Milestone 48 — AWS CLI and IAM Identity Center credential protection
+
+**Implementation in progress on branch `feat/milestone-48-aws-cli-credential-protection`.** Extend proposal path safety to block AWS shared credentials files, IAM Identity Center SSO token cache entries, AWS CLI role credential cache entries, and local aws-vault state. Add regression tests for nested home-directory paths, explicitly named safe templates, and ordinary AWS infrastructure source/documentation.
+
+Scope: filename-based defense in depth. It cannot detect credentials stored under arbitrary custom paths, parse arbitrary AWS configuration for embedded secrets, or establish token validity. Keep content scanning and human review in place.
 
 Definition of done: inspect the complete diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.

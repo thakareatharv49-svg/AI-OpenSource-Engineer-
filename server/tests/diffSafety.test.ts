@@ -1090,3 +1090,31 @@ test("allows named Ansible and Packer templates and ordinary infrastructure sour
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks AWS CLI credentials, IAM Identity Center tokens, and aws-vault state", () => {
+  for (const file of [
+    ".aws/credentials",
+    "home/alice/.aws/credentials",
+    "home/alice/.aws/sso/cache/abc123.json",
+    "home/alice/.aws/cli/cache/role-cache.json",
+    "home/alice/.aws-vault/keys",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "synthetic placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) =>
+      finding.reason === "Sensitive infrastructure state or deployment credential artifact cannot be committed"
+    ), file);
+  }
+});
+
+test("allows named AWS credential templates and ordinary AWS configuration", () => {
+  const report = inspectProposedChanges([
+    { file: "docs/credentials.example", after: "[default]\\naws_access_key_id = EXAMPLE\\naws_secret_access_key = EXAMPLE" },
+    { file: "docs/aws-credentials.sample", after: "[default]\\naws_access_key_id = EXAMPLE" },
+    { file: "infra/aws-provider.tf", after: 'provider "aws" { region = "us-east-1" }' },
+    { file: "docs/aws-identity-center.md", after: "Use short-lived IAM Identity Center sessions." },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
