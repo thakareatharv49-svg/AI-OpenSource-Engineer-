@@ -527,7 +527,7 @@ Definition of done: inspect the complete diff; backend typecheck/tests, frontend
 
 ## 47. Milestone 43 — Kubernetes SecretList manifest protection
 
-**Implementation in progress on branch `feat/milestone-43-kubernetes-secretlist-protection`.** Close a structural detection gap for Kubernetes `SecretList` resources: block YAML and JSON SecretList manifests containing `data` or `stringData` payloads, including items whose serialized representation omits an individual `kind: Secret` field. Add regression tests for generic filenames, named documentation templates, non-secret ConfigMap lists, and ordinary application source.
+**Merged in PR #75 on 2026-10-14 (merge commit `d6f8bc09d1a9257a3a5b36f7c27a23ef9c104057`).** Close a structural detection gap for Kubernetes `SecretList` resources: block YAML and JSON SecretList manifests containing `data` or `stringData` payloads, including items whose serialized representation omits an individual `kind: Secret` field. Regression tests cover generic filenames, named documentation templates, non-secret ConfigMap lists, and ordinary application source.
 
 Scope: regex-based structural detection is defense in depth, not a full YAML/JSON schema validator or secret-value validator. Keep explicit documentation-template exemptions, content scanning, and human review.
 
