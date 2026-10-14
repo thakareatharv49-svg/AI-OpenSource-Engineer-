@@ -607,8 +607,18 @@ Definition of done: preserve the scope caveat and keep the safety checks covered
 
 ## 55. Milestone 51 — Alternate Azure and Google Cloud credential artifact protection
 
-**Implementation in progress on branch `feat/milestone-51-alternate-azure-gcp-credentials`.** Extend filename-based detection to recognizable Azure CLI/MSAL token-cache files (`accessTokens.json`, `azureProfile.json`, and `msal_token_cache.*`) and Google Cloud SDK credential databases (`credentials.db`, `access_tokens.db`, and `legacy_credentials/`) plus downloaded Google OAuth client-secret JSON files. Add regression coverage for root/nested and alternate-location paths, explicitly named safe templates, and ordinary cloud infrastructure source/documentation.
+**Merged in PR #83 on 2026-10-14 (merge commit `224dfe5aae845c8cb89eacce63b27dfaa95b16bc`).** Proposal path safety blocks recognizable Azure CLI/MSAL token caches, Google Cloud SDK credential databases, legacy credential directories, and downloaded Google OAuth client-secret JSON files even when copied outside standard configuration trees. Regression coverage includes alternate root/nested paths and safe named templates.
 
 Scope: filename/path-based defense in depth. It cannot identify credentials stored under arbitrary custom names, parse all cloud config formats, or establish whether a token is live. Explicitly named `.example`, `.sample`, and `.template` artifacts remain permitted. Keep content scanning and human review in place.
+
+Validation: backend typecheck/tests, frontend build/lint including production dependency audit, and CodeQL passed on the final PR head before merge.
+
+Definition of done: preserve the scope caveat and keep the safety checks covered by regression tests.
+
+## 56. Milestone 52 — Cloud service-identity key artifact protection
+
+**Implementation in progress on branch `feat/milestone-52-cloud-service-identity-keys`.** Extend filename-based path protection to recognizable Azure service-principal credential exports and Google Cloud service-identity key files, including `azureauth.json`, service-principal exports, cloud credential bundles, and service-account key/credential variants. Add root/nested-path regression tests, explicitly named safe templates, and ordinary infrastructure source/documentation cases.
+
+Scope: filename/path-based defense in depth. It cannot identify keys saved under arbitrary custom filenames or inspect arbitrary file contents based on path alone. Explicitly named `.example`, `.sample`, and `.template` artifacts remain permitted. Prefer workload identity federation and short-lived credentials over downloaded long-lived service-account keys.
 
 Definition of done: inspect the complete diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
