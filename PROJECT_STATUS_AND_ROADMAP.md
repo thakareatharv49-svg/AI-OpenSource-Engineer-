@@ -547,8 +547,10 @@ Definition of done: preserve the path-based defense-in-depth caveat and keep the
 
 ## 49. Milestone 45 — Terraform state and CLI credential protection
 
-**Implementation in progress on branch `feat/milestone-45-terraform-credential-protection`.** Extend proposal safety to block Terraform state artifacts even when renamed or workspace-specific, saved plan files and their backups, and Terraform CLI credential files (`.terraformrc`, `terraform.rc`, and `credentials.tfrc.json`) including credentials copied outside the default `.terraform.d` directory. Regression tests cover nested paths, renamed state and plans, documentation-template exemptions, and ordinary Terraform source/configuration files.
+**Merged in PR #77 on 2026-10-14 (merge commit `6f3988dd76231292c5efed6946a10a28e08d4f2e`).** Extend proposal safety to block Terraform state artifacts even when renamed or workspace-specific, saved plan files and backups, and Terraform CLI credential files (`.terraformrc`, `terraform.rc`, and `credentials.tfrc.json`) including credentials copied outside the default `.terraform.d` directory. Regression tests cover nested paths, renamed state and plans, documentation-template exemptions, and ordinary Terraform source/configuration files.
 
-Scope: path-based defense in depth. State files can contain sensitive values even when marked sensitive by Terraform, but the matcher cannot inspect remote state or prove a local file contains a live credential. Keep content scanning and human review in place.
+Scope: path-based defense in depth. State and plan files can contain sensitive values, but the matcher cannot inspect remote state or prove a local artifact contains live credentials. Keep content scanning and human review in place.
 
-Definition of done: review the complete diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
+Validation: backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL all passed on the final PR head before merge.
+
+Definition of done: preserve the path-based defense-in-depth caveat and keep the safety checks covered by regression tests.
