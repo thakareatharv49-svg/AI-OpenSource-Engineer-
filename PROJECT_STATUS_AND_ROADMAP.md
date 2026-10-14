@@ -587,8 +587,18 @@ Definition of done: preserve the scope caveat and keep the checks covered by reg
 
 ## 53. Milestone 49 — Kubernetes kubeconfig credential protection
 
-**Implementation in progress on branch `feat/milestone-49-kubeconfig-credential-protection`.** Extend proposal path safety to block the local `.kube` directory, including kubeconfig files, cluster authentication contexts, cached discovery data, client certificate references, and exec-plugin authentication state. Add regression tests for common and nested kubeconfig paths, explicitly named safe examples, and ordinary Kubernetes manifests/documentation.
+**Merged in PR #81 on 2026-10-14 (merge commit `f59926d85c967e33d807a39209893f8bc15cbc93`).** Proposal path safety blocks local `.kube` paths that can contain kubeconfig files, cluster authentication contexts, cached discovery data, client-certificate references, and exec-plugin authentication state. Regression tests cover root and nested kubeconfig paths, named safe examples, and ordinary Kubernetes manifests/documentation.
 
 Scope: path-based defense in depth. It cannot detect kubeconfig files stored under arbitrary custom paths or prove that a given context contains a live credential. Keep content scanning and human review in place.
+
+Validation: backend typecheck/tests, frontend build/lint including production dependency audit, and CodeQL passed on the final PR head before merge.
+
+Definition of done: preserve the scope caveat and keep the checks covered by regression tests.
+
+## 54. Milestone 50 — Azure and Google Cloud credential artifact protection
+
+**Implementation in progress on branch `feat/milestone-50-azure-gcp-credential-protection`.** Extend cloud credential path protections to catch Google Application Default Credentials files even when copied outside the standard gcloud configuration directory. Expand regression coverage for nested Azure CLI and Google Cloud SDK authentication stores, alternate ADC locations, safe named templates, and ordinary cloud infrastructure source/documentation.
+
+Scope: path-based defense in depth. It cannot detect credentials stored under arbitrary custom filenames or parse all cloud configuration formats for embedded secrets. Keep content scanning and human review in place.
 
 Definition of done: inspect the complete diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.

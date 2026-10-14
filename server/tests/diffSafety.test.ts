@@ -434,6 +434,23 @@ test("blocks common cloud CLI, container registry, and infrastructure-tool crede
   }
 });
 
+
+test("blocks Google Application Default Credentials outside the standard SDK directory", () => {
+  for (const file of [
+    "application_default_credentials.json",
+    "home/alice/application_default_credentials.json",
+    "workspace/runtime/application_default_credentials.json",
+    "home/runner/.config/gcloud/application_default_credentials.json",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "synthetic placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) =>
+      finding.reason === "Sensitive infrastructure state or deployment credential artifact cannot be committed"
+    ), file);
+  }
+});
+
+
 test("allows explicitly named cloud credential templates", () => {
   const report = inspectProposedChanges([
     { file: ".docker/config.json.example", after: '{"auths":{}}' },
