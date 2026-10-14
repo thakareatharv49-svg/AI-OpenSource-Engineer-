@@ -98,8 +98,13 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
   const normalized = path.replace(/\\/g, "/");
   const exampleFile = /\.(?:example|sample|template)(?:\.json)?$/i.test(normalized);
   if (exampleFile) return false;
-  // Vault, Consul, and Nomad CLI state can persist reusable ACL tokens and auth context.
-  return /(?:^|\/)\.config\/(?:vault|consul|nomad)(?:\/|$)/i.test(normalized) ||
+  // Ansible Vault password files and Packer variable files can contain reusable deployment secrets.
+  return /(?:^|\/)\.vault_pass(?:word)?(?:\.txt)?$/i.test(normalized) ||
+    /(?:^|\/)\.(?:ansible[-_.]?vault[-_.]?password|vault[-_.]?password)(?:\.txt)?$/i.test(normalized) ||
+    /(?:^|\/)(?:vault-password-file|ansible-vault-password-file)$/i.test(normalized) ||
+    /(?:^|\/)[^/]+\.pkrvars\.(?:hcl|json)$/i.test(normalized) ||
+    // Vault, Consul, and Nomad CLI state can persist reusable ACL tokens and auth context.
+    /(?:^|\/)\.config\/(?:vault|consul|nomad)(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.vault\.d(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.(?:consul|nomad)-token$/i.test(normalized) ||
     /(?:^|\/)consul\.token$/i.test(normalized) ||
