@@ -791,6 +791,6 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 78. Milestone 74 — OpenRouter API-key pattern edge-case coverage
 
-**Implementation in progress.** Add synthetic regression tests for the existing `sk-or-v1-` prefix and minimum 20-character alphanumeric suffix detector. Cover exact boundary, mixed-case letters and digits, longer values, short/malformed near misses, prefix/version case sensitivity, and safe documentation/environment placeholders. Keep production detector behavior unchanged and use synthetic values only.
+**Implementation in progress.** Add synthetic regression tests for the existing `sk-or-v1-` detector and minimum 20-character alphanumeric suffix. Keep production behavior unchanged. Tests are being aligned with the detector's actual accepted character classes and overlapping generic AI-provider detector so assertions reflect the safety gate's observable behavior.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
