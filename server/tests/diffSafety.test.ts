@@ -1023,3 +1023,37 @@ test("allows named Terraform artifact templates and ordinary Terraform source", 
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks Vault, Consul, and Nomad local token and CLI authentication state", () => {
+  for (const file of [
+    ".vault-token",
+    "home/alice/.vault.d/agent-token",
+    "home/alice/.config/vault/token-helper.json",
+    "home/alice/.config/consul/config.json",
+    "etc/consul/consul.token",
+    "home/alice/.consul-token",
+    "home/alice/.config/nomad/cli.hcl",
+    "home/alice/.nomad-token",
+    "var/lib/nomad/nomad.token",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "synthetic placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) =>
+      finding.reason === "Sensitive infrastructure state or deployment credential artifact cannot be committed"
+    ), file);
+  }
+});
+
+test("allows named Vault, Consul, and Nomad documentation templates and ordinary HCL", () => {
+  const report = inspectProposedChanges([
+    { file: "docs/.vault-token.example", after: "replace-with-local-token" },
+    { file: "docs/consul.token.sample", after: "replace-with-local-token" },
+    { file: "docs/.nomad-token.template", after: "replace-with-local-token" },
+    { file: "infra/nomad-job.hcl", after: 'job "example" { datacenters = ["dc1"] }' },
+    { file: "infra/consul-service.hcl", after: 'service { name = "example" }' },
+    { file: "docs/vault-consul-nomad-security.md", after: "Keep ACL tokens out of source control." },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});

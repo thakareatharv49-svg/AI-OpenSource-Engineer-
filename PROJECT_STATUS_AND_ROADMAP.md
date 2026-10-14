@@ -554,3 +554,11 @@ Scope: path-based defense in depth. State and plan files can contain sensitive v
 Validation: backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL all passed on the final PR head before merge.
 
 Definition of done: preserve the path-based defense-in-depth caveat and keep the safety checks covered by regression tests.
+
+## 50. Milestone 46 — Vault, Consul, and Nomad credential protection
+
+**Implementation in progress on branch `feat/milestone-46-vault-consul-nomad-credential-protection`.** Extend proposal safety to block local HashiCorp Vault, Consul, and Nomad CLI authentication state: Vault token/config directories, Consul and Nomad config directories, and common standalone ACL token files. Add regression coverage for nested home paths, explicit documentation-template exemptions, and normal HCL/source documentation.
+
+Scope: path-based defense in depth. These rules cannot identify every user-defined token sink or prove a file contains a live credential. Keep content scanning and human review in place.
+
+Definition of done: inspect the complete diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
