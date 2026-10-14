@@ -617,8 +617,10 @@ Definition of done: preserve the scope caveat and keep the safety checks covered
 
 ## 56. Milestone 52 — Cloud service-identity key artifact protection
 
-**Implementation in progress on branch `feat/milestone-52-cloud-service-identity-keys`.** Extend filename-based path protection to recognizable Azure service-principal credential exports and Google Cloud service-identity key files, including `azureauth.json`, service-principal exports, cloud credential bundles, and service-account key/credential variants. Add root/nested-path regression tests, explicitly named safe templates, and ordinary infrastructure source/documentation cases.
+**Merged in PR [#84](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/84) on 2026-10-14.** Merge commit: `97e660853488c23cde996015ecb60a3231dce218`.
+
+Extended filename-based path protection to recognizable Azure service-principal credential exports and Google Cloud service-identity key files, including `azureauth.json`, service-principal exports, cloud credential bundles, and service-account key/credential variants. Added root/nested-path regression tests, explicitly named safe templates, and ordinary infrastructure source/documentation cases.
+
+Validation on the final PR head passed: backend typecheck and tests; frontend build and lint, including production dependency audit; and CodeQL JavaScript/TypeScript analysis.
 
 Scope: filename/path-based defense in depth. It cannot identify keys saved under arbitrary custom filenames or inspect arbitrary file contents based on path alone. Explicitly named `.example`, `.sample`, and `.template` artifacts remain permitted. Prefer workload identity federation and short-lived credentials over downloaded long-lived service-account keys.
-
-Definition of done: inspect the complete diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
