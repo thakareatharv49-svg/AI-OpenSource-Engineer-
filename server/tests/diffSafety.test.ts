@@ -1489,3 +1489,34 @@ test("allows Discord webhook URL near misses and explanatory placeholders", () =
     assert.deepEqual(report.findings, [], content);
   }
 });
+
+
+test("enforces Google OAuth client-secret minimum length and accepted characters", () => {
+  for (const secret of [
+    "GOCSPX-" + "a".repeat(20),
+    "GOCSPX-" + "B9-_".repeat(4) + "C9A0",
+    "GOCSPX-" + "Z".repeat(120),
+  ]) {
+    const report = inspectProposedChanges([{ file: "src/config.ts", after: `const clientSecret = "${secret}";` }]);
+    assert.equal(report.safeToCommit, false, secret);
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" &&
+      finding.reason === "Google OAuth client secret pattern detected"
+    ), secret);
+  }
+});
+
+test("allows Google OAuth client-secret near misses and explanatory placeholders", () => {
+  for (const content of [
+    "GOCSPX-" + "a".repeat(19),
+    "gocspx-" + "B".repeat(30),
+    "GOCSPX-placeholder",
+    "GOCSPX-example",
+    "Google OAuth client secrets use the GOCSPX- prefix.",
+    "GOCSPY-" + "C".repeat(40),
+  ]) {
+    const report = inspectProposedChanges([{ file: "docs/oauth-examples.md", after: content }]);
+    assert.equal(report.safeToCommit, true, content);
+    assert.deepEqual(report.findings, [], content);
+  }
+});
