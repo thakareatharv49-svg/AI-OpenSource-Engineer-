@@ -192,7 +192,7 @@ test("does not block short documentation placeholders for newer token formats", 
       "Use glpat-your-token-here as a placeholder in examples.",
       "The sample Hugging Face value is hf_example.",
       "https://discord.com/api/webhooks/123456789012345678/not-a-real-webhook-token",
-    ].join("\n"),
+    ].join("\\n"),
   }]);
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
