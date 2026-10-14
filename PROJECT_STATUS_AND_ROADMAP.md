@@ -699,6 +699,14 @@ Scope: pattern detection is defense in depth, not token validation; tests use sy
 
 ## 66. Milestone 62 — Slack webhook URL detection edge-case coverage
 
-**Implementation in progress** on branch `test/milestone-62-slack-webhook-edge-cases`. Add synthetic regression tests for the existing Slack webhook URL detector (`hooks.slack.com/services/T…/B…/…`), covering team/channel identifier minimum lengths, the 20-character secret boundary, longer URL-shaped values, supported characters, harmless near misses, and placeholders. Keep detector behavior unchanged; do not use real credentials.
+**Completed and merged on 2026-10-14** in [PR #94](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/94), merge commit `4f114e5400f0bf31791046b996da7c46e8290be1`. Added synthetic regression coverage for the existing Slack webhook URL detector, including team/channel identifier minimum lengths, the 20-character secret boundary, longer URL-shaped values, supported characters, and safe near misses/placeholders. The detector itself was unchanged. An initial test fixture used hyphens not accepted by the detector's secret character class; it was corrected to use alphanumeric characters.
+
+Validation on the final PR head passed: backend typecheck/tests; frontend build and lint, including production dependency audit; and CodeQL JavaScript/TypeScript analysis.
+
+Scope: pattern detection is defense in depth, not webhook validation; tests use synthetic values and do not guarantee coverage of every Slack webhook format or replace secret scanning and human review.
+
+## 67. Milestone 63 — Discord webhook URL detection edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing Discord webhook URL detector, covering supported host variants, numeric webhook ID boundaries, token minimum length and accepted characters, longer token-shaped values, and harmless near misses/placeholders. Keep detector behavior unchanged and do not use real credentials.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL must pass on the final PR head before merge.
