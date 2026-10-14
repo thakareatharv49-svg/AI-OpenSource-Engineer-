@@ -99,12 +99,12 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
   const exampleFile = /\.(?:example|sample|template)(?:\.json)?$/i.test(normalized);
   if (exampleFile) return false;
   // Vault, Consul, and Nomad CLI state can persist reusable ACL tokens and auth context.
-  return /(?:^|\\/)\\.config\\/(?:vault|consul|nomad)(?:\\/|$)/i.test(normalized) ||
-    /(?:^|\\/)\\.vault\\.d(?:\\/|$)/i.test(normalized) ||
-    /(?:^|\\/)\\.(?:consul|nomad)-token$/i.test(normalized) ||
-    /(?:^|\\/)consul\\.token$/i.test(normalized) ||
-    /(?:^|\\/)nomad\\.token$/i.test(normalized) ||
-    /(?:^|\\/)\\.vault-token$/i.test(normalized) ||
+  return /(?:^|\/)\.config\/(?:vault|consul|nomad)(?:\/|$)/i.test(normalized) ||
+    /(?:^|\/)\.vault\.d(?:\/|$)/i.test(normalized) ||
+    /(?:^|\/)\.(?:consul|nomad)-token$/i.test(normalized) ||
+    /(?:^|\/)consul\.token$/i.test(normalized) ||
+    /(?:^|\/)nomad\.token$/i.test(normalized) ||
+    /(?:^|\/)\.vault-token$/i.test(normalized) ||
     /(?:^|\/)\.terraform(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.minikube(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.kube\/cache(?:\/|$)/i.test(normalized) ||
