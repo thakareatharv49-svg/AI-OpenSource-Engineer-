@@ -758,3 +758,35 @@ test("allows explicitly named remote-access credential templates and ordinary so
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks local CI/CD agent registration tokens and credential stores", () => {
+  for (const file of [
+    "home/alice/.circleci/cli.yml",
+    "etc/gitlab-runner/config.toml",
+    "home/alice/.gitlab-runner/config.toml",
+    "etc/buildkite-agent/buildkite-agent.cfg",
+    "home/alice/.buildkite-agent/token",
+    "home/alice/.drone/config",
+    "var/lib/jenkins/.jenkins/credentials.xml",
+    "home/alice/.config/jenkins/credentials.xml",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "synthetic placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) =>
+      finding.reason === "Sensitive infrastructure state or deployment credential artifact cannot be committed"
+    ), file);
+  }
+});
+
+test("allows explicitly named CI/CD credential templates and ordinary source", () => {
+  const report = inspectProposedChanges([
+    { file: "docs/cli.yml.example", after: "api_token: replace-me" },
+    { file: "docs/config.toml.sample", after: "token = \"replace-me\"" },
+    { file: "docs/credentials.xml.template", after: "<credentials />" },
+    { file: "src/ci/runner.ts", after: "export const runner = 'example';" },
+    { file: "docs/ci-agent-security.md", after: "Do not commit runner registration tokens." },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});

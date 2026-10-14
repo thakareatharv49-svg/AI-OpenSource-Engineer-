@@ -162,7 +162,14 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
     /(?:^|\/)(?:\.config\/tailscale|\.local\/share\/tailscale)\/(?:tailscaled\.state|.*(?:auth|identity|key)[^/]*\.json)$/i.test(normalized) ||
     /(?:^|\/)(?:\.tsh\/keys|\.config\/teleport\/keys)(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.config\/rclone\/rclone\.conf$/i.test(normalized) ||
-    /(?:^|\/)(?:\.oci\/sessions|\.config\/oci\/sessions)(?:\/|$)/i.test(normalized);
+    /(?:^|\/)(?:\.oci\/sessions|\.config\/oci\/sessions)(?:\/|$)/i.test(normalized) ||
+    // CI/CD agents and build runners may persist reusable registration or API tokens locally.
+    /(?:^|\/)\.circleci\/cli\.yml$/i.test(normalized) ||
+    /(?:^|\/)(?:\.gitlab-runner|gitlab-runner)\/config\.toml$/i.test(normalized) ||
+    /(?:^|\/)(?:\.buildkite-agent|buildkite-agent)\/(?:buildkite-agent\.cfg|token)$/i.test(normalized) ||
+    /(?:^|\/)\.drone\/config$/i.test(normalized) ||
+    /(?:^|\/)\.jenkins\/credentials\.xml$/i.test(normalized) ||
+    /(?:^|\/)\.config\/jenkins\/credentials\.xml$/i.test(normalized);
 }
 
 function isSafeRelativePath(path: string): boolean {

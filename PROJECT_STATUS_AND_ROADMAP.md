@@ -482,8 +482,17 @@ Definition of done: review the final diff; backend typecheck/tests, frontend bui
 
 ## 42. Milestone 38 — Remote-access, tunnel, and sync-client authentication protection
 
-**Implementation in progress on branch `feat/milestone-38-remote-access-auth-store-protection`.** Extend path-based proposal safety to block common local authentication material used by ngrok and Cloudflare Tunnel, Tailscale, Teleport, rclone, and OCI CLI session stores. Add regression coverage for nested home paths, explicitly named documentation templates, and ordinary source files.
+**Merged in PR #70 on 2026-10-14 (merge commit `f6dfee2c0648c9432774972cd9011ec97674dfef`).** Extend path-based proposal safety to block common local authentication material used by ngrok and Cloudflare Tunnel, Tailscale, Teleport, rclone, and OCI CLI session stores. Add regression coverage for nested home paths, explicitly named documentation templates, and ordinary source files.
 
 Scope: path-based defense in depth. Client versions and operating systems may store credentials differently; these rules do not parse, decrypt, or prove that a file contains an active credential. Keep content scanning and human review in place.
 
 Definition of done: inspect the final diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
+
+
+## 43. Milestone 39 — CI/CD agent and build-runner credential protection
+
+**Implementation in progress on branch `feat/milestone-39-ci-cd-agent-credential-protection`.** Extend path-based proposal safety to block common local CI/CD runner and build-agent credential stores, including CircleCI CLI configuration, GitLab Runner configuration, Buildkite agent configuration/token files, Drone CLI configuration, and Jenkins credential XML. Add regression coverage for nested home/system paths, explicitly named documentation templates, and ordinary source files.
+
+Scope: filename/path-based defense in depth. CI products and versions vary, and configuration files may contain both operational settings and credentials. These rules do not parse formats or guarantee complete coverage; preserve content scanning and human review.
+
+Definition of done: inspect the complete diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
