@@ -121,6 +121,8 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
     /(?:^|\/)\.config\/(?:op|1password)(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.azure(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.config\/gcloud(?:\/|$)/i.test(normalized) ||
+    // Google Application Default Credentials may be copied outside the standard gcloud config directory.
+    /(?:^|\/)application_default_credentials\.json$/i.test(normalized) ||
     /(?:^|\/)\.docker\/config\.json$/i.test(normalized) ||
     /(?:^|\/)\.config\/containers\/auth\.json$/i.test(normalized) ||
     /(?:^|\/)\.terraform\.d\/credentials\.tfrc\.json$/i.test(normalized) ||
