@@ -751,6 +751,14 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 73. Milestone 69 — Azure shared-access-signature (SAS) detection edge-case coverage
 
-**Implementation in progress.** Add synthetic regression tests for the existing Azure SAS detector, covering a sufficiently long `sig` value with `se`, `sp`, and `sv` fields, case-insensitive query keys, parameter order, short/missing signatures, missing required fields, and documentation placeholders. Keep production detector behavior unchanged and use synthetic values only.
+**Completed and merged on 2026-10-14** in [PR #102](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/102), merge commit `d7cca3ba1f3dadc02d47d876a689298e124581e1`. Added synthetic regression tests for sufficient signature length, case-insensitive query keys, parameter order, short/missing signatures, missing fields, malformed near misses, and documentation placeholders. Production detector behavior was unchanged.
+
+Validation on the final PR head passed: backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
+
+## 74. Milestone 70 — AWS secret access key assignment edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing AWS `aws_secret_access_key` assignment detector. Cover exactly 40-character keys, mixed accepted characters, case-insensitive variable names, too-short values, placeholders, environment-variable references, and unrelated AWS access-key-ID assignments. Keep production detector behavior unchanged and use synthetic values only.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, CodeQL, and JavaScript/TypeScript analysis must pass on the final PR head before merge.
