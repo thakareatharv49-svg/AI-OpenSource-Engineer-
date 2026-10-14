@@ -675,6 +675,14 @@ Scope: tests strengthen confidence in the current pattern but do not validate to
 
 ## 63. Milestone 59 — GitLab token detection edge-case coverage
 
-**Implementation in progress** on branch `test/milestone-59-gitlab-token-edge-cases`. Add focused regression tests for the existing GitLab personal access token (`glpat-`) and deploy/runner token (`gldt-`, `glrt-`) patterns. Cover minimum accepted lengths, supported characters, longer token-shaped strings, and harmless near misses/placeholders. Keep detector behavior unchanged unless tests expose a specific defect; use synthetic values only.
+**Completed and merged on 2026-10-14** in [PR #91](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/91), merge commit `b68fcc8c32c3382c5647eac2e8a5e510074b6970`. Added synthetic regression coverage for GitLab personal access (`glpat-`) and deploy/runner (`gldt-`, `glrt-`) token-shaped strings, including minimum suffix lengths, supported characters, longer values, and harmless near misses/placeholders. The detector itself was unchanged. A failing fixture exposed a word-boundary detail; the fixture was corrected and all checks passed on the final PR head.
+
+Validation on the final PR head passed: backend typecheck/tests; frontend build and lint, including production dependency audit; and CodeQL JavaScript/TypeScript analysis.
+
+Scope: tests strengthen confidence in the current pattern but do not validate token authenticity, guarantee coverage of every GitLab token format, or replace secret scanning and human review.
+
+## 64. Milestone 60 — GitHub Actions token detection edge-case coverage
+
+**Planned.** Add focused synthetic regression tests for the existing GitHub access-token detector (`gh[pousr]_`), including GitHub Actions installation tokens (`ghs_`) and runner-related tokens (`ghr_`) where supported by the current pattern. Cover minimum accepted suffix length, accepted characters, longer token-shaped values, and harmless near misses/placeholders. Keep detector behavior unchanged unless tests expose a specific defect; do not use real credentials.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL must pass on the final PR head before merge.
