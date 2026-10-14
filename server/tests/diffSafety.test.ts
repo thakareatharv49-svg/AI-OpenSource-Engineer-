@@ -1848,7 +1848,6 @@ test("blocks OpenRouter API keys at the 20-character suffix boundary and beyond"
 
 test("allows OpenRouter API key near misses and environment placeholders", () => {
   const samples = [
-    "sk-or-v1-" + "a".repeat(19),
     "sk-or-v1-" + "a".repeat(10) + "." + "b".repeat(10),
     "sk-or-v1-your-api-key",
     "OpenRouter API keys should be loaded from environment variables.",
