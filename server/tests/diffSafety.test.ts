@@ -1887,7 +1887,7 @@ test("allows Resend API key near misses and environment placeholders", () => {
   ];
   const report = inspectProposedChanges([{
     file: "docs/resend-api-keys.md",
-    after: samples.join("\\n"),
+    after: samples.join("\n"),
   }]);
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
