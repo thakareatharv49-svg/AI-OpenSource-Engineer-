@@ -1590,3 +1590,38 @@ test("allows Shopify access-token near misses and explanatory placeholders", () 
     assert.deepEqual(report.findings, [], content);
   }
 });
+
+
+test("detects DigitalOcean API tokens at the 40-character hexadecimal boundary", () => {
+  for (const suffix of [
+    "a".repeat(40),
+    "0fA9".repeat(10),
+    "c".repeat(64),
+    "d".repeat(100),
+  ]) {
+    for (const prefix of ["dop_v1_", "DOP_V1_"]) {
+      const token = prefix + suffix;
+      const report = inspectProposedChanges([{ file: "src/config.ts", after: `const digitalOceanToken = "${token}";` }]);
+      assert.equal(report.safeToCommit, false, token);
+      assert.ok(report.findings.some((finding) =>
+        finding.severity === "block" &&
+        finding.reason === "DigitalOcean API token pattern detected"
+      ), token);
+    }
+  }
+});
+
+test("allows DigitalOcean token near misses and placeholders", () => {
+  for (const content of [
+    "dop_v1_" + "a".repeat(39),
+    "dop_v1_" + "g".repeat(40),
+    "dop_v1_" + "a".repeat(20) + "-" + "b".repeat(20),
+    "dop_v2_" + "a".repeat(40),
+    "dop_v1_placeholder",
+    "DigitalOcean tokens may use the dop_v1_ prefix followed by hexadecimal characters.",
+  ]) {
+    const report = inspectProposedChanges([{ file: "docs/digitalocean-examples.md", after: content }]);
+    assert.equal(report.safeToCommit, true, content);
+    assert.deepEqual(report.findings, [], content);
+  }
+});
