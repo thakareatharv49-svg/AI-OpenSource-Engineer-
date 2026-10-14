@@ -683,6 +683,14 @@ Scope: tests strengthen confidence in the current pattern but do not validate to
 
 ## 64. Milestone 60 — GitHub Actions token detection edge-case coverage
 
-**Implementation in progress** on branch `test/milestone-60-github-actions-token-edge-cases`. Add focused synthetic regression tests for the existing GitHub access-token detector (`gh[pousr]_`), including GitHub Actions installation tokens (`ghs_`) and runner-related tokens (`ghr_`). Cover minimum accepted suffix length, accepted characters, longer token-shaped values, and harmless near misses/placeholders. Keep detector behavior unchanged; do not use real credentials.
+**Completed and merged on 2026-10-14** in [PR #92](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/92), merge commit `d15719a8852c8c3fdf9098a309a765328cb4cb46`. Added synthetic regression coverage for the existing GitHub access-token detector (`gh[pousr]_`), including `ghs_` installation and `ghr_` runner-related token-shaped values. Tests cover minimum suffix length, accepted characters, longer values, and harmless near misses/placeholders; the detector itself was unchanged.
+
+Validation on the final PR head passed: backend typecheck/tests; frontend build and lint, including production dependency audit; and CodeQL JavaScript/TypeScript analysis.
+
+Scope: pattern detection is defense in depth, not token validation; tests use synthetic values and do not guarantee coverage of every GitHub token format or replace secret scanning and human review.
+
+## 65. Milestone 61 — Slack access-token detection edge-case coverage
+
+**Planned.** Add focused synthetic regression tests for the existing Slack access-token detector (`xox[baprs]-`). Cover minimum accepted suffix length, accepted characters, longer token-shaped values, prefix-family handling, and harmless near misses/explanatory placeholders. Keep detector behavior unchanged unless a specific defect is demonstrated; do not use real credentials.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL must pass on the final PR head before merge.
