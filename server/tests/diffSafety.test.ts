@@ -790,3 +790,46 @@ test("allows explicitly named CI/CD credential templates and ordinary source", (
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks self-hosted GitHub Actions runner credential artifacts", () => {
+  for (const file of [
+    "home/runner/actions-runner/.credentials",
+    "opt/actions-runner/.credentials_rsaparams",
+    "srv/actions-runner/.runner",
+    "srv/actions-runner/.service",
+    "srv/actions-runner/.credentials.public-key",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "synthetic placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) =>
+      finding.reason === "Sensitive infrastructure state or deployment credential artifact cannot be committed"
+    ), file);
+  }
+});
+
+test("blocks Azure DevOps agent authentication files in nested agent directories", () => {
+  for (const file of [
+    "opt/azagent/.credentials",
+    "opt/azagent/.credentials_rsaparams",
+    "opt/azagent/.agent",
+    "home/alice/azure-pipelines-agent/.credentials",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "synthetic placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) =>
+      finding.reason === "Sensitive infrastructure state or deployment credential artifact cannot be committed"
+    ), file);
+  }
+});
+
+test("allows named self-hosted runner credential templates and normal application files", () => {
+  const report = inspectProposedChanges([
+    { file: "docs/.credentials.example", after: "replace-with-local-runner-credential" },
+    { file: "docs/.runner.sample", after: "synthetic runner metadata" },
+    { file: "src/ci/runner.ts", after: "export const runnerStatus = 'ready';" },
+    { file: "docs/self-hosted-runner-security.md", after: "Keep runner registration credentials out of source control." },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
