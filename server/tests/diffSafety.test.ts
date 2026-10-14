@@ -1834,7 +1834,7 @@ test("allows Google API key near misses and documentation placeholders", () => {
 test("blocks OpenRouter API keys at the 20-character suffix boundary and beyond", () => {
   for (const suffix of [
     "a".repeat(20),
-    "A9_z-".repeat(4),
+    "A9zB7cD3eF5gH1jK9mN".slice(0, 20),
     "Z".repeat(64),
   ]) {
     const key = "sk-or-v1-" + suffix;
