@@ -808,6 +808,32 @@ test("blocks self-hosted GitHub Actions runner credential artifacts", () => {
   }
 });
 
+test("blocks GitHub Actions runner metadata in custom-named installation directories", () => {
+  for (const file of [
+    "opt/custom-runner/.runner",
+    "srv/ci-worker/.service",
+    "home/runner-02/.credentials.public-key",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "synthetic placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) =>
+      finding.reason === "Sensitive infrastructure state or deployment credential artifact cannot be committed"
+    ), file);
+  }
+});
+
+test("allows runner metadata templates and similarly named ordinary source files", () => {
+  const report = inspectProposedChanges([
+    { file: "docs/.runner.example", after: "placeholder runner metadata" },
+    { file: "docs/.service.sample", after: "placeholder service metadata" },
+    { file: "docs/.credentials.public-key.template", after: "placeholder public key" },
+    { file: "src/ci/runner.ts", after: "export const runner = 'ready';" },
+    { file: "src/services/service.ts", after: "export function service() { return true; }" },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
+
 test("blocks Azure DevOps agent authentication files in nested agent directories", () => {
   for (const file of [
     "opt/azagent/.credentials",

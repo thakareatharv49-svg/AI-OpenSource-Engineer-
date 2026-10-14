@@ -172,6 +172,10 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
     /(?:^|\/)\.config\/jenkins\/credentials\.xml$/i.test(normalized) ||
     // Self-hosted GitHub Actions runners persist registration and private-key material locally.
     /(?:^|\/)(?:actions-runner|\.actions-runner)\/(?:\.credentials(?:_rsaparams)?|\.runner|\.service|\.credentials\.public-key)$/i.test(normalized) ||
+    // Runner metadata is also sensitive when an installation uses a custom directory name.
+    /(?:^|\/)\.runner$/i.test(normalized) ||
+    /(?:^|\/)\.service$/i.test(normalized) ||
+    /(?:^|\/)\.credentials\.public-key$/i.test(normalized) ||
     // Azure DevOps agents keep reusable authentication material in the agent root.
     /(?:^|\/)(?:\.credentials|\.credentials_rsaparams|\.agent)$/i.test(normalized);
 }
