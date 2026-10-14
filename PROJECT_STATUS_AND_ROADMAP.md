@@ -691,6 +691,6 @@ Scope: pattern detection is defense in depth, not token validation; tests use sy
 
 ## 65. Milestone 61 — Slack access-token detection edge-case coverage
 
-**Planned.** Add focused synthetic regression tests for the existing Slack access-token detector (`xox[baprs]-`). Cover minimum accepted suffix length, accepted characters, longer token-shaped values, prefix-family handling, and harmless near misses/explanatory placeholders. Keep detector behavior unchanged unless a specific defect is demonstrated; do not use real credentials.
+**Implementation in progress** on branch `test/milestone-61-slack-token-edge-cases`. Add synthetic regression tests for the existing Slack access-token detector (`xox[baprs]-`), covering all supported prefix families, the 10-character suffix boundary, accepted characters, longer token-shaped values, and harmless near misses/explanatory placeholders. Keep detector behavior unchanged; do not use real credentials.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL must pass on the final PR head before merge.
