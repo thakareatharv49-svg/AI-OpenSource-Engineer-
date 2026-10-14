@@ -36,6 +36,8 @@ test("blocks private keys and common provider tokens", () => {
     "shpat_" + "12345678901234567890123456789012",
     "shpca_" + "12345678901234567890123456789012",
     "dop_v1_" + "1234567890abcdef".repeat(4),
+    "hvs." + "a".repeat(28),
+    "hvb." + "b".repeat(28),
     "DefaultEndpointsProtocol=https;AccountName=storageacct;AccountKey=" + "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/abcdefghijklmnop==",
   ]) {
     const report = inspectProposedChanges([{ file: "src/config.ts", after: `const example = "${secret}";` }]);
@@ -206,6 +208,8 @@ test("does not block short cloud-credential documentation placeholders", () => {
       "Twilio key: SK-not-a-real-key",
       "Shopify token: shpat_placeholder",
       "DigitalOcean token: dop_v1_example",
+      "Vault service token: hvs-example",
+      "Vault batch token: hvb-placeholder",
       "Azure connection string: DefaultEndpointsProtocol=https;AccountName=example;AccountKey=short",
     ].join("\n"),
   }]);
