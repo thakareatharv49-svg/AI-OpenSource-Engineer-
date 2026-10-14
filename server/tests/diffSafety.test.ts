@@ -1426,7 +1426,7 @@ test("enforces Slack webhook URL identifier and secret minimum lengths", () => {
   for (const url of [
     "https://hooks.slack.com/services/TABC123/BDEF456/" + "a".repeat(20),
     "http://hooks.slack.com/services/T123456/B654321/" + "b".repeat(20),
-    "https://hooks.slack.com/services/TABC1234/BDEF4567/" + "C9-z".repeat(8),
+    "https://hooks.slack.com/services/TABC1234/BDEF4567/" + "C9zQ".repeat(8),
     "https://hooks.slack.com/services/TABC123/BDEF456/" + "Z".repeat(120),
   ]) {
     const report = inspectProposedChanges([{ file: "src/config.ts", after: `const webhook = "${url}";` }]);
