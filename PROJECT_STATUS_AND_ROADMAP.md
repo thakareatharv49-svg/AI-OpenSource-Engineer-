@@ -783,6 +783,14 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 77. Milestone 73 — Google API-key pattern edge-case coverage
 
-**Implementation in progress.** Add synthetic regression tests for the existing `AIza` prefix plus at least 30 alphanumeric/underscore/hyphen characters detector. Cover the minimum boundary, mixed accepted characters, longer values, short and malformed near misses, prefix case sensitivity, and safe documentation/environment placeholders. Keep production detector behavior unchanged and use synthetic values only.
+**Completed and merged on 2026-10-15** in [PR #106](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/106), merge commit `3ac8a5d56025190cefacff48b00719aadf6938b1`. Added synthetic regression tests for the existing `AIza` prefix detector, covering the 30-character suffix boundary, mixed accepted characters, longer values, short/malformed near misses, case-sensitive prefix behavior, and documentation/environment placeholders. Production detector behavior was unchanged.
+
+Validation on the final PR head passed: backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
+
+## 78. Milestone 74 — OpenRouter API-key pattern edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing `sk-or-v1-` detector and minimum 20-character alphanumeric suffix. Keep production behavior unchanged. Tests are being aligned with the detector's actual accepted character classes and overlapping generic AI-provider detector so assertions reflect the safety gate's observable behavior.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
