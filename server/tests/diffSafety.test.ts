@@ -535,3 +535,30 @@ test("allows explicitly named desktop secret-store documentation templates", () 
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks Windows and macOS operating-system credential-store artifacts", () => {
+  for (const file of [
+    "Users/alice/Library/Keychains/login.keychain-db",
+    "Library/Keychains/System.keychain",
+    "backup/Alice.keychain",
+    "Users/alice/AppData/Roaming/Microsoft/Credentials/credential.bin",
+    "Users/alice/AppData/Local/Microsoft/Vault/Policy.vpol",
+    "Users/alice/AppData/Roaming/Microsoft/Protect/S-1-5-21/masterkey",
+    "AppData/Local/Microsoft/Credentials/9A1B2C3D",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "synthetic placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) => finding.severity === "block"), file);
+  }
+});
+
+test("allows explicitly named Windows and macOS credential-store documentation templates", () => {
+  const report = inspectProposedChanges([
+    { file: "docs/Keychains/login.keychain-db.example", after: "documentation only" },
+    { file: "docs/Credentials/credential.bin.sample", after: "replace with local fixture" },
+    { file: "docs/Vault/Policy.vpol.template", after: "example policy" },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
