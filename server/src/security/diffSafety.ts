@@ -123,7 +123,13 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
     /(?:^|\/)\.password-store(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.local\/share\/keyrings(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.config\/(?:keepassxc|kwalletd|bitwarden)(?:\/|$)/i.test(normalized) ||
-    /(?:^|\/)\.bitwarden(?:\/|$)/i.test(normalized);
+    /(?:^|\/)\.bitwarden(?:\/|$)/i.test(normalized) ||
+    // macOS Keychain databases and their containing store directory.
+    /(?:^|\/)Library\/Keychains(?:\/|$)/i.test(normalized) ||
+    /(?:^|\/)[^/]+\.keychain(?:-db)?$/i.test(normalized) ||
+    // Windows Credential Manager, Vault, and DPAPI user-master-key stores.
+    /(?:^|\/)AppData\/(?:Local|Roaming)\/Microsoft\/(?:Credentials|Vault|Protect)(?:\/|$)/i.test(normalized) ||
+    /(?:^|\/)Microsoft\/(?:Credentials|Vault|Protect)(?:\/|$)/i.test(normalized);
 }
 
 function isSafeRelativePath(path: string): boolean {
