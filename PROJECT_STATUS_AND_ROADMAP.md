@@ -509,8 +509,17 @@ Definition of done: inspect the complete diff; backend typecheck/tests, frontend
 
 ## 45. Milestone 41 — Runner metadata protection for custom installation paths
 
-**Implementation in progress on branch `feat/milestone-41-custom-runner-metadata-protection`.** Close a path-matching gap left by Milestone 40: block GitHub Actions runner metadata files (`.runner`, `.service`, and `.credentials.public-key`) even when the runner is installed in a directory that is not named `actions-runner` or `.actions-runner`. Add regression tests for custom installation roots, explicit documentation-template exemptions, and similarly named ordinary source files.
+**Merged in PR #73 on 2026-10-14 (merge commit `d99cc334417e8ecb29c66be4d6b12281a6202c0f`).** Block GitHub Actions runner metadata files (`.runner`, `.service`, and `.credentials.public-key`) even when the runner is installed in a directory that is not named `actions-runner` or `.actions-runner`. Regression tests cover custom installation roots, explicit documentation-template exemptions, and similarly named ordinary source files.
 
 Scope: filename/path-based defense in depth. The rules do not parse these files, establish whether they contain live credentials, or guarantee coverage of every runner implementation. Keep content scanning, isolated testing, and human approval in place.
 
 Definition of done: review the full diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
+
+
+## 46. Milestone 42 — Kubernetes Secret manifest protection
+
+**Implementation in progress on branch `feat/milestone-42-kubernetes-secret-manifest-protection`.** Extend proposal safety beyond filenames to detect Kubernetes manifests that declare `kind: Secret` together with `data` or `stringData`, including JSON resources and files with generic names. Block these manifests by default and add regression coverage for both formats, explicitly named documentation templates, ConfigMaps, and ordinary application code.
+
+Scope: structural content detection is defense in depth, not a secret-value validator. It does not decode Kubernetes data fields, establish whether values are live, or replace secret scanning and human review. Named `.example`, `.sample`, and `.template` files remain allowed for safe documentation examples.
+
+Definition of done: inspect the complete diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
