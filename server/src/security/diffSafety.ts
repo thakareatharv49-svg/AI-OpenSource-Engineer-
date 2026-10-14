@@ -180,6 +180,17 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
     /(?:^|\/)(?:\.credentials|\.credentials_rsaparams|\.agent)$/i.test(normalized);
 }
 
+function isKubernetesSecretManifest(path: string, content: string): boolean {
+  // Explicitly named templates are documentation artifacts, not deployable secret manifests.
+  if (/\.(?:example|sample|template)(?:\.json)?$/i.test(path)) return false;
+
+  const yamlSecret = /^\s*kind\s*:\s*["']?Secret["']?\s*(?:#.*)?$/im.test(content) &&
+    /^\s*(?:data|stringData)\s*:\s*(?:#.*)?$/im.test(content);
+  const jsonSecret = /["']kind["']\s*:\s*["']Secret["']/i.test(content) &&
+    /["'](?:data|stringData)["']\s*:\s*\{/i.test(content);
+  return yamlSecret || jsonSecret;
+}
+
 function isSafeRelativePath(path: string): boolean {
   const segments = path.split("/");
   const windowsReservedName = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
@@ -258,6 +269,10 @@ export function inspectProposedChanges(input: unknown): SafetyReport {
 
     if (isSensitiveDeploymentArtifact(file)) {
       findings.push({ severity: "block", file, reason: "Sensitive infrastructure state or deployment credential artifact cannot be committed" });
+    }
+
+    if (isKubernetesSecretManifest(file, content)) {
+      findings.push({ severity: "block", file, reason: "Kubernetes Secret manifests containing data or stringData cannot be committed" });
     }
 
     if (unsafePathPatterns.some((pattern) => pattern.test(file))) {
