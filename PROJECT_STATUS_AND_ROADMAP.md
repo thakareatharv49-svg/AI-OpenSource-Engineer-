@@ -500,8 +500,17 @@ Definition of done: inspect the complete diff; backend typecheck/tests, frontend
 
 ## 44. Milestone 40 — Self-hosted CI runner credential protection
 
-**Implementation in progress on branch `feat/milestone-40-self-hosted-runner-credential-protection`.** Extend proposal path-safety checks to block local GitHub Actions self-hosted runner registration/authentication artifacts (`.credentials`, `.credentials_rsaparams`, `.runner`, `.service`, and the public-key companion) and Azure DevOps agent authentication files (`.credentials`, `.credentials_rsaparams`, and `.agent`). Add regression coverage for nested installation paths, explicitly named documentation templates, and ordinary application source files.
+**Merged in PR #72 on 2026-10-14 (merge commit `4e94f9401216f0bdb8165063458136d76c8c5e39`).** Block local GitHub Actions self-hosted runner registration/authentication artifacts (`.credentials`, `.credentials_rsaparams`, `.runner`, `.service`, and the public-key companion) and Azure DevOps agent authentication files (`.credentials`, `.credentials_rsaparams`, and `.agent`). Regression coverage includes nested installation paths, explicitly named documentation templates, and ordinary application source files.
 
 Scope: path-based defense in depth only. Runner layouts vary by version and installation method; this does not parse credentials or guarantee complete coverage. Preserve content scanning, isolated testing, and human review.
 
 Definition of done: inspect the complete diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
+
+
+## 45. Milestone 41 — Runner metadata protection for custom installation paths
+
+**Implementation in progress on branch `feat/milestone-41-custom-runner-metadata-protection`.** Close a path-matching gap left by Milestone 40: block GitHub Actions runner metadata files (`.runner`, `.service`, and `.credentials.public-key`) even when the runner is installed in a directory that is not named `actions-runner` or `.actions-runner`. Add regression tests for custom installation roots, explicit documentation-template exemptions, and similarly named ordinary source files.
+
+Scope: filename/path-based defense in depth. The rules do not parse these files, establish whether they contain live credentials, or guarantee coverage of every runner implementation. Keep content scanning, isolated testing, and human approval in place.
+
+Definition of done: review the full diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
