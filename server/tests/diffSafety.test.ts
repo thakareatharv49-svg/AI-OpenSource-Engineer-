@@ -39,6 +39,7 @@ test("blocks private keys and common provider tokens", () => {
     "hvs." + "a".repeat(28),
     "hvb." + "b".repeat(28),
     "dckr_pat_" + "c".repeat(32),
+    "dapi" + "d".repeat(32),
     "DefaultEndpointsProtocol=https;AccountName=storageacct;AccountKey=" + "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/abcdefghijklmnop==",
   ]) {
     const report = inspectProposedChanges([{ file: "src/config.ts", after: `const example = "${secret}";` }]);
@@ -213,6 +214,8 @@ test("does not block short cloud-credential documentation placeholders", () => {
       "Vault batch token: hvb-placeholder",
       "Docker Hub token: dckr_pat-example",
       "Docker Hub token: dckr_pat-placeholder",
+      "Databricks token: dapi-example",
+      "Databricks token: dapi-placeholder",
       "Azure connection string: DefaultEndpointsProtocol=https;AccountName=example;AccountKey=short",
     ].join("\n"),
   }]);

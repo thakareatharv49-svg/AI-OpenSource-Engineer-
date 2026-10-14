@@ -79,6 +79,7 @@ const secretPatterns: Array<{ pattern: RegExp; reason: string }> = [
   { pattern: /\b(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|redis|rediss):\/\/[^/\s:@]+:(?!example\b|placeholder\b|your[-_]?|\$\{|changeme\b|password\b)[^/\s@]{8,}@/i, reason: "Database connection string contains embedded credentials" },
   { pattern: /\bhv[bs]\.[A-Za-z0-9_-]{20,}\b/, reason: "HashiCorp Vault service or batch token detected" },
   { pattern: /\bdckr_pat_[A-Za-z0-9_-]{20,}\b/, reason: "Docker Hub personal access token pattern detected" },
+  { pattern: /\bdapi[a-f0-9]{32}\b/i, reason: "Databricks personal access token pattern detected" },
   { pattern: /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{20,}\b/, reason: "JWT-like bearer token detected" },
   { pattern: /\bhttps?:\/\/[^/\s:@]+:(?!example\b|placeholder\b|your[-_]?|\$\{|changeme\b|password\b)[^/\s@]{8,}@/i, reason: "URL contains embedded credentials" },
   { pattern: /\b(?:ftp|ftps|amqp|amqps|ssh|sftp):\/\/[^/\s:@]+:(?!example\b|placeholder\b|your[-_]?|\$\{|changeme\b|password\b)[^/\s@]{8,}@/i, reason: "Non-HTTP URL contains embedded credentials" },
