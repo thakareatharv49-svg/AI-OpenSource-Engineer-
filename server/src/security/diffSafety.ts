@@ -115,6 +115,8 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
     /(?:^|\/)[^/]+\.tfvars(?:\.json)?$/i.test(normalized) ||
     /(?:^|\/)terraform\.tfstate(?:\..*)?$/i.test(normalized) ||
     /(?:^|\/)[^/]+\.tfplan$/i.test(normalized) ||
+    // PuTTY private-key files can be exported or copied outside the .ssh directory.
+    /\.ppk$/i.test(normalized) ||
     /\.(?:p12|pfx|jks|keystore|kdbx)$/i.test(normalized) ||
     /(?:^|\/)kubeconfig$/i.test(normalized) ||
     /(?:^|\/)\.kube\/config$/i.test(normalized) ||

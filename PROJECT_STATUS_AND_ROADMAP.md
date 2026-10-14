@@ -443,3 +443,12 @@ Definition of done: backend typecheck/tests, frontend build/lint, production dep
 Scope: filename/path-based defense in depth only. These checks do not parse browser databases, validate sessions, or replace content scanning and human review. Browser layouts vary by version and operating system, so this does not claim exhaustive coverage.
 
 Definition of done: review the complete diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
+
+
+## 38. Milestone 34 — PuTTY private-key file protection
+
+**Implementation in progress on branch `feat/milestone-34-putty-private-key-protection`.** Extend path-based proposal safety to block PuTTY `.ppk` private-key files even when they are stored outside a conventional `.ssh` directory. Add regression coverage for nested paths, case-insensitive extensions, documentation-template exemptions, public-key files, and ordinary key-handling documentation.
+
+Scope: filename/path-based defense in depth only. The matcher does not parse PPK contents, determine whether a key is encrypted or active, or replace secret scanning and human review. Public-key files are not blocked solely by their extension.
+
+Definition of done: review the complete diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.

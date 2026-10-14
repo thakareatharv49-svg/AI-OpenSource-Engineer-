@@ -606,3 +606,28 @@ test("does not block ordinary application cookie and login source files", () => 
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+test("blocks PuTTY private-key files even when stored outside the .ssh directory", () => {
+  for (const file of [
+    "Users/alice/Documents/keys/workstation.ppk",
+    "backup/remote-access/production.PPK",
+    "home/alice/Downloads/legacy.ppk",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "synthetic placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) =>
+      finding.reason === "Sensitive infrastructure state or deployment credential artifact cannot be committed"
+    ), file);
+  }
+});
+
+test("allows explicitly named PuTTY private-key documentation templates and public-key files", () => {
+  const report = inspectProposedChanges([
+    { file: "docs/example.ppk.example", after: "documentation only" },
+    { file: "fixtures/remote-access.ppk.sample", after: "placeholder only" },
+    { file: "keys/developer.pub", after: "ssh-ed25519 AAAA synthetic-public-key comment" },
+    { file: "docs/ssh-key-handling.md", after: "Never commit private keys." },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
