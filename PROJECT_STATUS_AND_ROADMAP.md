@@ -637,8 +637,18 @@ Scope: prefix/shape-based detection is defense in depth, not token validation. I
 
 ## 58. Milestone 54 — Docker Hub personal access token content detection
 
-**Implementation in progress on branch `feat/milestone-54-docker-hub-token-detection`.** Extend proposal content scanning to detect Docker Hub personal access token strings using the `dckr_pat_` prefix and a conservative minimum token-shape length. Add synthetic regression coverage and confirm short documentation placeholders remain allowed.
+**Merged in PR [#86](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/86) on 2026-10-14.** Merge commit: `194600f28466a2e34552487f77f141161ef62baa`.
+
+Extended proposal content scanning to detect Docker Hub personal access token-shaped values beginning with `dckr_pat_`. Synthetic regression coverage confirms realistic-length token-shaped values are blocked while short documentation placeholders remain allowed.
+
+Validation on the final PR head passed: backend typecheck and tests; frontend build and lint, including production dependency audit; and CodeQL.
 
 Scope: prefix/shape-based detection is defense in depth, not token validation. It does not establish whether a token is live, cover every future token format, or replace secret scanning and human review.
+
+## 59. Milestone 55 — npm access token content detection
+
+**Implementation in progress.** Extend proposal content scanning to recognize modern npm access-token strings using the `npm_` prefix and realistic token-shaped suffixes. Add synthetic positive tests and short documentation-placeholder cases.
+
+Scope: prefix/shape-based detection is defense in depth. It does not validate tokens, guarantee coverage of legacy or future npm token formats, or replace secret scanning and human review.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL must pass on the final PR head before merge.
