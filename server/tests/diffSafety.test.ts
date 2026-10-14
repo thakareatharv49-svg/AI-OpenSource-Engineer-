@@ -1382,3 +1382,41 @@ test("allows GitHub access token near misses and explanatory placeholders", () =
     assert.deepEqual(report.findings, [], content);
   }
 });
+
+
+test("enforces Slack access token minimum lengths across supported families", () => {
+  for (const token of [
+    "xoxb-" + "a".repeat(10),
+    "xoxa-" + "b".repeat(10),
+    "xoxp-" + "c".repeat(10),
+    "xoxr-" + "d".repeat(10),
+    "xoxs-" + "e".repeat(10),
+    "xoxb-" + "A_9-".repeat(3) + "A",
+    "xoxp-" + "z".repeat(80),
+    "xoxs-" + "Q-7".repeat(8),
+  ]) {
+    const report = inspectProposedChanges([{ file: "src/config.ts", after: `const token = "${token}";` }]);
+    assert.equal(report.safeToCommit, false, token);
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" &&
+      finding.reason === "Slack access token pattern detected"
+    ), token);
+  }
+});
+
+test("allows Slack access token near misses and explanatory placeholders", () => {
+  for (const content of [
+    "xoxb-" + "a".repeat(9),
+    "xoxa-" + "b".repeat(9),
+    "xoxp-" + "c".repeat(9),
+    "XOXB-" + "d".repeat(30),
+    "xoxz-" + "e".repeat(30),
+    "xoxb-example",
+    "xoxp-placeholder",
+    "Slack access tokens may use xoxb-, xoxp-, xoxa-, xoxr-, or xoxs- prefixes.",
+  ]) {
+    const report = inspectProposedChanges([{ file: "docs/token-examples.md", after: content }]);
+    assert.equal(report.safeToCommit, true, content);
+    assert.deepEqual(report.findings, [], content);
+  }
+});
