@@ -1686,7 +1686,7 @@ test("allows Azure SAS near misses and documentation placeholders", () => {
     "https://account.blob.core.windows.net/container?sv=2023-01-01&se=2030-01-01&sp=r",
     "https://account.blob.core.windows.net/container?sv=2023-01-01&se=2030-01-01&sig=your-signature-here",
     "Azure SAS URLs commonly contain sv, se, sp, and sig query parameters.",
-    "https://account.blob.core.windows.net/container?sv=2023-01-01\n&sig=" + "a".repeat(32),
+    "https://account.blob.core.windows.net/container?sv=2023-01-01\n&sig=" + "a".repeat(19),
   ];
   const report = inspectProposedChanges([{
     file: "docs/azure-sas-examples.md",
