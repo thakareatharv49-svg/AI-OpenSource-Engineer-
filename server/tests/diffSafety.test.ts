@@ -1682,7 +1682,7 @@ test("blocks Azure shared-access-signature credentials with a sufficiently long 
 test("allows Azure SAS near misses and documentation placeholders", () => {
   const samples = [
     "https://account.blob.core.windows.net/container?sv=2023-01-01&se=2030-01-01&sp=r&sig=" + "a".repeat(19),
-    "https://account.blob.core.windows.net/container?sv=2023-01-01&sp=r&sig=" + "a".repeat(32),
+    "https://account.blob.core.windows.net/container?sv=2023-01-01&se=2030-01-01&sig=" + "a".repeat(32),
     "https://account.blob.core.windows.net/container?sv=2023-01-01&se=2030-01-01&sp=r",
     "https://account.blob.core.windows.net/container?sv=2023-01-01&se=2030-01-01&sig=your-signature-here",
     "Azure SAS URLs commonly contain sv, se, sp, and sig query parameters.",
