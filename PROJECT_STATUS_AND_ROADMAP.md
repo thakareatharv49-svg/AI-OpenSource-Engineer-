@@ -491,8 +491,17 @@ Definition of done: inspect the final diff; backend typecheck/tests, frontend bu
 
 ## 43. Milestone 39 — CI/CD agent and build-runner credential protection
 
-**Implementation in progress on branch `feat/milestone-39-ci-cd-agent-credential-protection`.** Extend path-based proposal safety to block common local CI/CD runner and build-agent credential stores, including CircleCI CLI configuration, GitLab Runner configuration, Buildkite agent configuration/token files, Drone CLI configuration, and Jenkins credential XML. Add regression coverage for nested home/system paths, explicitly named documentation templates, and ordinary source files.
+**Merged in PR #71 on 2026-10-14 (merge commit `4739f127f6669e0fb9525d910f08bfdf551dcde6`).** Extend path-based proposal safety to block common local CI/CD runner and build-agent credential stores, including CircleCI CLI configuration, GitLab Runner configuration, Buildkite agent configuration/token files, Drone CLI configuration, and Jenkins credential XML. Add regression coverage for nested home/system paths, explicitly named documentation templates, and ordinary source files.
 
 Scope: filename/path-based defense in depth. CI products and versions vary, and configuration files may contain both operational settings and credentials. These rules do not parse formats or guarantee complete coverage; preserve content scanning and human review.
+
+Definition of done: inspect the complete diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
+
+
+## 44. Milestone 40 — Self-hosted CI runner credential protection
+
+**Implementation in progress on branch `feat/milestone-40-self-hosted-runner-credential-protection`.** Extend proposal path-safety checks to block local GitHub Actions self-hosted runner registration/authentication artifacts (`.credentials`, `.credentials_rsaparams`, `.runner`, `.service`, and the public-key companion) and Azure DevOps agent authentication files (`.credentials`, `.credentials_rsaparams`, and `.agent`). Add regression coverage for nested installation paths, explicitly named documentation templates, and ordinary application source files.
+
+Scope: path-based defense in depth only. Runner layouts vary by version and installation method; this does not parse credentials or guarantee complete coverage. Preserve content scanning, isolated testing, and human review.
 
 Definition of done: inspect the complete diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
