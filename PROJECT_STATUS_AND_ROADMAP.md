@@ -729,6 +729,12 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 70. Milestone 66 — Shopify access-token detection edge-case coverage
 
-**Implementation in progress.** Add synthetic regression tests for the existing Shopify token detector (`shp` plus one of `at`, `ca`, `pa`, or `ss`, underscore, then at least 20 alphanumeric characters). Cover each supported prefix, minimum-length boundary, longer values, and harmless near misses/placeholders. Keep production detector behavior unchanged and use synthetic values only.
+**Completed and merged on 2026-10-14** in [PR #98](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/98), merge commit `de2e82d104e050752359f7bba28c10527c35e7c4`. Added synthetic tests for all four supported Shopify prefixes (`shpat_`, `shpca_`, `shppa_`, `shpss_`), minimum-length 20-character suffixes, mixed-case alphanumeric values, longer values, and harmless near misses/placeholders. Production detector behavior was unchanged. Backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL all passed on the final PR head.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic tests do not guarantee coverage of every Shopify token format or replace secret scanning and human review.
+
+## 71. Milestone 67 — DigitalOcean API token detection edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing DigitalOcean detector (`dop_v1_` followed by at least 40 lowercase hexadecimal characters, case-insensitive prefix matching). Cover the 40-character boundary, longer hex values, uppercase prefix, and harmless near misses including too-short, non-hex, and placeholder text. Keep production detector behavior unchanged and use synthetic values only.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL must pass on the final PR head before merge.
