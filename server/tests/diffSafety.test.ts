@@ -1700,7 +1700,7 @@ test("allows Azure SAS near misses and documentation placeholders", () => {
 test("blocks AWS secret access key assignments at the 40-character boundary", () => {
   const samples = [
     "aws_secret_access_key = \"" + "a".repeat(40) + "\"",
-    "AWS_SECRET_ACCESS_KEY: '" + "Ab9+/=".repeat(6) + "Ab9+/=" + "'",
+    "AWS_SECRET_ACCESS_KEY: '" + "Ab9+/=".repeat(6) + "Ab9+" + "'",
     "aws_secret_access_key=" + "Z".repeat(40),
   ];
   for (const value of samples) {
