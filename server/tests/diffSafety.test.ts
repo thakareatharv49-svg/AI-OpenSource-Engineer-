@@ -631,3 +631,30 @@ test("allows explicitly named PuTTY private-key documentation templates and publ
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks database CLI password files and Redis command history", () => {
+  for (const file of [
+    "home/alice/.pgpass",
+    "Users/alice/AppData/Roaming/postgresql/pgpass.conf",
+    "home/alice/.my.cnf",
+    "home/alice/.mylogin.cnf",
+    "home/alice/.rediscli_history",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "synthetic placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) =>
+      finding.reason === "Sensitive credential or private-key paths cannot be committed"
+    ), file);
+  }
+});
+
+test("allows explicitly named database CLI credential documentation templates", () => {
+  const report = inspectProposedChanges([
+    { file: "docs/.pgpass.example", after: "hostname:port:database:username:password" },
+    { file: "fixtures/.my.cnf.template", after: "[client]\\nuser=example" },
+    { file: "docs/database-cli-credentials.md", after: "Keep database credentials out of source control." },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
