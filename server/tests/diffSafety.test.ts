@@ -211,8 +211,8 @@ test("does not block short cloud-credential documentation placeholders", () => {
       "DigitalOcean token: dop_v1_example",
       "Vault service token: hvs-example",
       "Vault batch token: hvb-placeholder",
-    "Docker Hub token: dckr_pat-example",
-    "Docker Hub token: dckr_pat-placeholder",
+      "Docker Hub token: dckr_pat-example",
+      "Docker Hub token: dckr_pat-placeholder",
       "Azure connection string: DefaultEndpointsProtocol=https;AccountName=example;AccountKey=short",
     ].join("\n"),
   }]);
