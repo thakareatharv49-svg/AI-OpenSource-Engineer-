@@ -557,8 +557,18 @@ Definition of done: preserve the path-based defense-in-depth caveat and keep the
 
 ## 50. Milestone 46 — Vault, Consul, and Nomad credential protection
 
-**Implementation in progress on branch `feat/milestone-46-vault-consul-nomad-credential-protection`.** Extend proposal safety to block local HashiCorp Vault, Consul, and Nomad CLI authentication state: Vault token/config directories, Consul and Nomad config directories, and common standalone ACL token files. Add regression coverage for nested home paths, explicit documentation-template exemptions, and normal HCL/source documentation.
+**Merged in PR #78 on 2026-10-14 (merge commit `c96971575372f4f8abce550a85dcc23b580deef8`).** Extend proposal path safety to block local HashiCorp Vault, Consul, and Nomad CLI authentication state, including Vault token/config directories, Consul and Nomad config directories, and common standalone ACL token files. Regression coverage includes nested paths, explicit documentation-template exemptions, and ordinary HCL/source documentation.
 
 Scope: path-based defense in depth. These rules cannot identify every user-defined token sink or prove a file contains a live credential. Keep content scanning and human review in place.
+
+Validation: backend typecheck/tests, frontend build/lint (including production dependency audit), and CodeQL all passed on the final PR head before merge.
+
+Definition of done: preserve the path-based defense-in-depth caveat and keep the safety checks covered by regression tests.
+
+## 51. Milestone 47 — Ansible Vault and Packer secret artifact protection
+
+**Implementation in progress on branch `feat/milestone-47-ansible-packer-secret-protection`.** Extend proposal path safety to block common Ansible Vault password-file names and Packer variable files (`.pkrvars.hcl` and `.pkrvars.json`), including custom and nested paths. Add regression tests for blocked artifacts, named documentation-template exemptions, and ordinary Ansible/Packer source files.
+
+Scope: filename-based defense in depth. It does not parse Ansible configuration or Packer variables, prove that a file contains a live secret, or cover every custom filename. Keep content scanning and human review in place.
 
 Definition of done: inspect the complete diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
