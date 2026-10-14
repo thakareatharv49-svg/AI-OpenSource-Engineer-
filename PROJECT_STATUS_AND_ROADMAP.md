@@ -627,8 +627,18 @@ Scope: filename/path-based defense in depth. It cannot identify keys saved under
 
 ## 57. Milestone 53 — HashiCorp Vault token content detection
 
-**Implementation in progress on branch `feat/milestone-53-vault-token-content-detection`.** Extend proposal content scanning to recognize HashiCorp Vault service-token (`hvs.`) and batch-token (`hvb.`) formats, including realistic-length synthetic regression values. Preserve short documentation placeholders and explicitly avoid storing live credentials in tests.
+**Merged in PR [#85](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/85) on 2026-10-14.** Merge commit: `55552f196fccb41319e3d6fb04d7b3606ca3f3b5`.
 
-Scope: prefix/shape-based detection is defense in depth, not token validation. It may miss custom or transformed token formats and must not replace secret scanning, human review, or Vault token hygiene.
+Extended proposal content scanning to detect realistic-shape HashiCorp Vault service tokens (`hvs.`) and batch tokens (`hvb.`). Regression tests use synthetic values and retain short documentation placeholders.
+
+Validation on the final PR head passed: backend typecheck and tests; frontend build and lint, including production dependency audit; and CodeQL.
+
+Scope: prefix/shape-based detection is defense in depth, not token validation. It may miss custom or transformed token formats and does not replace secret scanning, human review, or Vault token hygiene.
+
+## 58. Milestone 54 — Docker Hub personal access token content detection
+
+**Implementation in progress on branch `feat/milestone-54-docker-hub-token-detection`.** Extend proposal content scanning to detect Docker Hub personal access token strings using the `dckr_pat_` prefix and a conservative minimum token-shape length. Add synthetic regression coverage and confirm short documentation placeholders remain allowed.
+
+Scope: prefix/shape-based detection is defense in depth, not token validation. It does not establish whether a token is live, cover every future token format, or replace secret scanning and human review.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL must pass on the final PR head before merge.
