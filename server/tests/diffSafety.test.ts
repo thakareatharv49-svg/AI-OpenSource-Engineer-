@@ -506,3 +506,32 @@ test("allows explicitly named local secret-store documentation templates", () =>
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks desktop password-manager, OS keyring, and GPG private-key artifacts", () => {
+  for (const file of [
+    ".gnupg/private-keys-v1.d/ABCDEF.key",
+    "home/.gnupg/private-keys-v1.d/secret.key",
+    ".password-store/email/personal.gpg",
+    "home/.local/share/keyrings/login.keyring",
+    ".config/keepassxc/keepassxc.ini",
+    ".config/kwalletd/kdewallet.kwl",
+    ".config/bitwarden/data.json",
+    ".bitwarden/cache.json",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "synthetic placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) => finding.severity === "block"), file);
+  }
+});
+
+test("allows explicitly named desktop secret-store documentation templates", () => {
+  const report = inspectProposedChanges([
+    { file: ".gnupg/private-keys-v1.d/README.example", after: "documentation only" },
+    { file: ".password-store/README.template", after: "Describe local password-store usage" },
+    { file: ".local/share/keyrings/README.sample", after: "No keyring data" },
+    { file: ".config/keepassxc/config.example", after: "database_path: example.kdbx" },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
