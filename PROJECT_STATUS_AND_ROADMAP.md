@@ -743,6 +743,14 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 72. Milestone 68 — Azure Storage connection-string detection edge-case coverage
 
-**Implementation in progress.** Add synthetic regression tests for the existing Azure Storage connection-string detector. Cover HTTP/HTTPS protocol matching, case-insensitive matching, account-name and account-key minimum lengths, accepted key characters, longer values, and safe near misses for malformed separators, unsupported protocol, short account names/keys, whitespace, and placeholders. Keep production detector behavior unchanged and use synthetic values only.
+**Completed and merged on 2026-10-14** in [PR #101](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/101), merge commit `967aaa223e632fef4131fcb42d03b1254b841679`. Added synthetic tests for HTTP/HTTPS, case-insensitive matching, the 40-character account-key boundary, accepted key characters, longer keys, and malformed/short near misses. Production detector behavior was unchanged.
+
+Validation on the final PR head passed: CI and CodeQL.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
+
+## 73. Milestone 69 — Azure shared-access-signature (SAS) detection edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing Azure SAS detector, covering a sufficiently long `sig` value with `se`, `sp`, and `sv` fields, case-insensitive query keys, parameter order, short/missing signatures, missing required fields, and documentation placeholders. Keep production detector behavior unchanged and use synthetic values only.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, CodeQL, and JavaScript/TypeScript analysis must pass on the final PR head before merge.

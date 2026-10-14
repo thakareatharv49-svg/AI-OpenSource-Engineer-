@@ -1662,3 +1662,36 @@ test("allows Azure Storage connection-string near misses and short documentation
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+test("blocks Azure shared-access-signature credentials with a sufficiently long signature", () => {
+  const samples = [
+    "https://account.blob.core.windows.net/container?sv=2023-01-01&se=2030-01-01T00%3A00%3A00Z&sp=rl&sig=" + "a".repeat(24),
+    "https://account.blob.core.windows.net/container?SV=2024-01-01&SE=2031-01-01&SP=r&SIG=" + "Ab9+/=".repeat(5),
+    "https://storage.example/container?sp=w&sig=" + "b".repeat(32) + "&sv=2025-01-01",
+  ];
+  for (const value of samples) {
+    const report = inspectProposedChanges([{ file: "src/storage-client.ts", after: `const resourceUrl = "${value}";` }]);
+    assert.equal(report.safeToCommit, false, "Azure SAS credentials must be blocked");
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" &&
+      finding.reason === "Azure shared-access-signature credential detected"
+    ), value.slice(0, 72));
+  }
+});
+
+test("allows Azure SAS near misses and documentation placeholders", () => {
+  const samples = [
+    "https://account.blob.core.windows.net/container?sv=2023-01-01&se=2030-01-01&sp=r&sig=" + "a".repeat(19),
+    "https://account.blob.core.windows.net/container?sv=2023-01-01&se=2030-01-01&sig=" + "a".repeat(19),
+    "https://account.blob.core.windows.net/container?sv=2023-01-01&se=2030-01-01&sp=r",
+    "https://account.blob.core.windows.net/container?sv=2023-01-01&se=2030-01-01&sig=your-signature-here",
+    "Azure SAS URLs commonly contain sv, se, sp, and sig query parameters.",
+    "https://account.blob.core.windows.net/container?sv=2023-01-01\n&sig=" + "a".repeat(19),
+  ];
+  const report = inspectProposedChanges([{
+    file: "docs/azure-sas-examples.md",
+    after: samples.join("\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
