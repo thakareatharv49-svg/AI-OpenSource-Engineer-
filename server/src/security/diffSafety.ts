@@ -129,6 +129,8 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
     /(?:^|\/)legacy_credentials(?:\/|$)/i.test(normalized) ||
     // Downloaded Google OAuth client-secret files can be renamed or copied outside the SDK tree.
     /(?:^|\/)client_secret[^/]*\.json$/i.test(normalized) ||
+    // Service identity key exports can be copied outside the cloud CLI's managed directories.
+    /(?:^|\/)(?:azureauth|azure[-_]?credentials?|service[-_]?principal|serviceprincipal|sp[-_]?credentials?|gcp[-_]?credentials?|google[-_]?credentials?|(?:gcp|google)[-_]service[-_]?account|service[-_]?account[-_](?:key|credentials?))\.json$/i.test(normalized) ||
     /(?:^|\/)\.docker\/config\.json$/i.test(normalized) ||
     /(?:^|\/)\.config\/containers\/auth\.json$/i.test(normalized) ||
     /(?:^|\/)\.terraform\.d\/credentials\.tfrc\.json$/i.test(normalized) ||
