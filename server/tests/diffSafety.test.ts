@@ -1553,3 +1553,40 @@ test("allows Twilio API key near misses and explanatory placeholders", () => {
     assert.deepEqual(report.findings, [], content);
   }
 });
+
+
+test("detects each supported Shopify access-token prefix at the minimum length", () => {
+  for (const prefix of ["shpat_", "shpca_", "shppa_", "shpss_"]) {
+    for (const suffix of [
+      "a".repeat(20),
+      "A9b8".repeat(5),
+      "Z".repeat(80),
+    ]) {
+      const token = prefix + suffix;
+      const report = inspectProposedChanges([{ file: "src/config.ts", after: `const shopifyToken = "${token}";` }]);
+      assert.equal(report.safeToCommit, false, token);
+      assert.ok(report.findings.some((finding) =>
+        finding.severity === "block" &&
+        finding.reason === "Shopify access token pattern detected"
+      ), token);
+    }
+  }
+});
+
+test("allows Shopify access-token near misses and explanatory placeholders", () => {
+  for (const content of [
+    "shpat_" + "a".repeat(19),
+    "shpca_" + "A".repeat(19),
+    "shppa_" + "B".repeat(19),
+    "shpss_" + "C".repeat(19),
+    "shpzz_" + "a".repeat(30),
+    "shpat-" + "a".repeat(30),
+    "shpat_" + "a".repeat(10) + "-" + "b".repeat(10),
+    "shpat_placeholder",
+    "Shopify access tokens use prefixes such as shpat_ followed by an alphanumeric token.",
+  ]) {
+    const report = inspectProposedChanges([{ file: "docs/shopify-examples.md", after: content }]);
+    assert.equal(report.safeToCommit, true, content);
+    assert.deepEqual(report.findings, [], content);
+  }
+});
