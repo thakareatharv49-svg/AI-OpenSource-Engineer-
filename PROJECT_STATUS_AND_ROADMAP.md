@@ -775,6 +775,14 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 76. Milestone 72 — AWS access-key-ID pattern edge-case coverage
 
-**Implementation in progress.** Add synthetic regression tests for the existing `AKIA` plus 16 uppercase-alphanumeric character detector. Cover the exact boundary, valid mixed letters/digits, too-short and too-long values, lowercase prefix, malformed characters, and documentation placeholders. Keep production detector behavior unchanged and use synthetic values only.
+**Completed and merged on 2026-10-15** in [PR #105](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/105), merge commit `1bb3b07f6288edfd671ec88a0fc0dee5057d0ac5`. Added synthetic tests for the existing `AKIA` plus 16 uppercase-alphanumeric character detector, covering exact-shape samples, mixed letters/digits, short and long suffixes, lowercase prefix, malformed characters, and documentation/environment placeholders. Production detector behavior was unchanged.
+
+Validation on the final PR head passed: backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
+
+## 77. Milestone 73 — Google API-key pattern edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing `AIza` prefix plus at least 30 alphanumeric/underscore/hyphen characters detector. Cover the minimum boundary, mixed accepted characters, longer values, short and malformed near misses, prefix case sensitivity, and safe documentation/environment placeholders. Keep production detector behavior unchanged and use synthetic values only.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
