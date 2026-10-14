@@ -707,6 +707,14 @@ Scope: pattern detection is defense in depth, not webhook validation; tests use 
 
 ## 67. Milestone 63 — Discord webhook URL detection edge-case coverage
 
-**Implementation in progress.** Add synthetic regression tests for the existing Discord webhook URL detector, covering supported host variants, numeric webhook ID boundaries, token minimum length and accepted characters, longer token-shaped values, and harmless near misses/placeholders. Keep detector behavior unchanged and do not use real credentials.
+**Completed and merged on 2026-10-14** in [PR #95](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/95), merge commit `ad87c2d7e9b2011d0a76ebd9a3da2c4ca4e5a370`. Added synthetic regression tests for the existing Discord webhook URL detector, covering discord.com/discordapp.com host variants, 17- and 20-digit webhook IDs, the 50-character token boundary, accepted token characters, longer values, and safe near misses/placeholders. The detector itself was unchanged.
+
+Validation on the final PR head passed: backend typecheck/tests; frontend build and lint, including production dependency audit; and CodeQL JavaScript/TypeScript analysis.
+
+Scope: pattern detection is defense in depth, not webhook validation; tests use synthetic values and do not guarantee coverage of every Discord webhook format or replace secret scanning and human review.
+
+## 68. Milestone 64 — Google OAuth client-secret detection edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing `GOCSPX-` Google OAuth client-secret detector, covering the 20-character suffix boundary, supported alphanumeric/underscore/hyphen characters, longer token-shaped values, and safe near misses/explanatory placeholders. Keep detector behavior unchanged and do not use real credentials.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL must pass on the final PR head before merge.
