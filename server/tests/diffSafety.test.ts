@@ -1344,3 +1344,41 @@ test("allows GitLab token near misses and explanatory placeholders", () => {
   }
 });
 
+test("enforces GitHub access token minimum lengths across token families", () => {
+  for (const token of [
+    "ghp_" + "a".repeat(20),
+    "gho_" + "b".repeat(20),
+    "ghu_" + "c".repeat(20),
+    "ghs_" + "d".repeat(20),
+    "ghs_" + "A_9".repeat(7),
+    "ghs_" + "z".repeat(80),
+    "ghr_" + "e".repeat(20),
+    "ghr_" + "B_8".repeat(7),
+    "ghr_" + "y".repeat(80),
+  ]) {
+    const report = inspectProposedChanges([{ file: "src/config.ts", after: `const token = "${token}";` }]);
+    assert.equal(report.safeToCommit, false, token);
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" &&
+      finding.reason === "GitHub access token pattern detected"
+    ), token);
+  }
+});
+
+test("allows GitHub access token near misses and explanatory placeholders", () => {
+  for (const content of [
+    "ghp_" + "a".repeat(19),
+    "ghs_" + "b".repeat(19),
+    "ghr_" + "c".repeat(19),
+    "GHS_" + "d".repeat(40),
+    "GHR_" + "e".repeat(40),
+    "ghs-example",
+    "ghr-placeholder",
+    "GitHub Actions uses ghs_ installation-token prefixes.",
+    "GitHub runner tokens may use a ghr_ prefix.",
+  ]) {
+    const report = inspectProposedChanges([{ file: "docs/token-examples.md", after: content }]);
+    assert.equal(report.safeToCommit, true, content);
+    assert.deepEqual(report.findings, [], content);
+  }
+});

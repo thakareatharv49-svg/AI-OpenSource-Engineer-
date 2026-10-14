@@ -683,6 +683,6 @@ Scope: tests strengthen confidence in the current pattern but do not validate to
 
 ## 64. Milestone 60 — GitHub Actions token detection edge-case coverage
 
-**Planned.** Add focused synthetic regression tests for the existing GitHub access-token detector (`gh[pousr]_`), including GitHub Actions installation tokens (`ghs_`) and runner-related tokens (`ghr_`) where supported by the current pattern. Cover minimum accepted suffix length, accepted characters, longer token-shaped values, and harmless near misses/placeholders. Keep detector behavior unchanged unless tests expose a specific defect; do not use real credentials.
+**Implementation in progress** on branch `test/milestone-60-github-actions-token-edge-cases`. Add focused synthetic regression tests for the existing GitHub access-token detector (`gh[pousr]_`), including GitHub Actions installation tokens (`ghs_`) and runner-related tokens (`ghr_`). Cover minimum accepted suffix length, accepted characters, longer token-shaped values, and harmless near misses/placeholders. Keep detector behavior unchanged; do not use real credentials.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL must pass on the final PR head before merge.
