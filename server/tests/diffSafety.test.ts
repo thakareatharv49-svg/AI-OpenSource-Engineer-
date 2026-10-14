@@ -1625,3 +1625,37 @@ test("allows DigitalOcean token near misses and placeholders", () => {
     assert.deepEqual(report.findings, [], content);
   }
 });
+
+
+test("blocks Azure Storage connection strings at the account-key boundary", () => {
+  const samples = [
+    "DefaultEndpointsProtocol=https;AccountName=storageacct;AccountKey=" + "a".repeat(40),
+    "DefaultEndpointsProtocol=http;AccountName=abc;AccountKey=" + "A".repeat(40),
+    "DEFAULTENDPOINTSPROTOCOL=HTTPS;ACCOUNTNAME=prod-storage;ACCOUNTKEY=" + "Ab9+/=".repeat(10),
+    "DefaultEndpointsProtocol=https;AccountName=storageacct;AccountKey=" + "b".repeat(64),
+  ];
+  for (const sample of samples) {
+    const report = inspectProposedChanges([{ file: "src/storage-config.ts", after: `const connection = "${sample}";` }]);
+    assert.equal(report.safeToCommit, false, "Azure Storage connection string must be blocked");
+    assert.ok(report.findings.some((finding) =>
+      finding.reason === "Azure Storage connection string credential detected"
+    ), sample.slice(0, 64));
+  }
+});
+
+test("allows Azure Storage connection-string near misses and short documentation placeholders", () => {
+  const samples = [
+    "DefaultEndpointsProtocol=https;AccountName=storageacct;AccountKey=" + "a".repeat(39),
+    "DefaultEndpointsProtocol=https;AccountName=ab;AccountKey=" + "a".repeat(40),
+    "DefaultEndpointsProtocol=ftp;AccountName=storageacct;AccountKey=" + "a".repeat(40),
+    "DefaultEndpointsProtocol=https,AccountName=storageacct,AccountKey=" + "a".repeat(40),
+    "Azure connection string: DefaultEndpointsProtocol=https;AccountName=example;AccountKey=short",
+    "Azure connection string: DefaultEndpointsProtocol=https;AccountName=your-account;AccountKey=your-key-here",
+  ];
+  const report = inspectProposedChanges([{
+    file: "docs/azure-storage-auth.md",
+    after: samples.join("\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
