@@ -192,7 +192,7 @@ test("does not block short documentation placeholders for newer token formats", 
       "Use glpat-your-token-here as a placeholder in examples.",
       "The sample Hugging Face value is hf_example.",
       "https://discord.com/api/webhooks/123456789012345678/not-a-real-webhook-token",
-    ].join("\\n"),
+    ].join("\n"),
   }]);
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
@@ -257,7 +257,7 @@ test("allows short AWS credential placeholders in documentation", () => {
       "aws_secret_access_key=example",
       "aws_session_token=your-token-here",
       "aws_secret_access_key=${AWS_SECRET_ACCESS_KEY}",
-    ].join("\n"),
+    ].join("\\n"),
   }]);
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
@@ -682,7 +682,7 @@ test("blocks database CLI password files and Redis command history", () => {
 test("allows explicitly named database CLI credential documentation templates", () => {
   const report = inspectProposedChanges([
     { file: "docs/.pgpass.example", after: "hostname:port:database:username:password" },
-    { file: "fixtures/.my.cnf.template", after: "[client]\nuser=example" },
+    { file: "fixtures/.my.cnf.template", after: "[client]\\nuser=example" },
     { file: "docs/database-cli-credentials.md", after: "Keep database credentials out of source control." },
   ]);
   assert.equal(report.safeToCommit, true);
