@@ -447,8 +447,17 @@ Definition of done: review the complete diff; backend typecheck/tests, frontend 
 
 ## 38. Milestone 34 — PuTTY private-key file protection
 
-**Implementation in progress on branch `feat/milestone-34-putty-private-key-protection`.** Extend path-based proposal safety to block PuTTY `.ppk` private-key files even when they are stored outside a conventional `.ssh` directory. Add regression coverage for nested paths, case-insensitive extensions, documentation-template exemptions, public-key files, and ordinary key-handling documentation.
+**Merged in PR #66 on 2026-10-14 (merge commit `cbd69d0aedc6274ce4f2bf4f7e33fedd59a0f23d`).** Extend path-based proposal safety to block PuTTY `.ppk` private-key files even when they are stored outside a conventional `.ssh` directory. Regression coverage includes nested paths, case-insensitive extensions, documentation-template exemptions, public-key files, and ordinary key-handling documentation.
 
 Scope: filename/path-based defense in depth only. The matcher does not parse PPK contents, determine whether a key is encrypted or active, or replace secret scanning and human review. Public-key files are not blocked solely by their extension.
 
 Definition of done: review the complete diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
+
+
+## 39. Milestone 35 — Database CLI credential artifact protection
+
+**Implementation in progress on branch `feat/milestone-35-database-cli-credential-protection`.** Extend path-based proposal safety to block common database command-line credential stores and command history that may contain authentication commands: PostgreSQL password files (`.pgpass` and `pgpass.conf`), MySQL client credentials (`.my.cnf` and `.mylogin.cnf`), and Redis CLI history (`.rediscli_history`). Add regression tests for nested/user-profile paths, explicitly named documentation templates, and ordinary credential-handling documentation.
+
+Scope: filename-based defense in depth only. It does not parse database client formats, prove credentials are active, or scan repository history. Template exemptions are narrow suffix matches; human review and content scanning remain required.
+
+Definition of done: inspect the final diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
