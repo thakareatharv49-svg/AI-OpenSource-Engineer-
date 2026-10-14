@@ -1455,3 +1455,37 @@ test("allows Slack webhook URL near misses and explanatory placeholders", () => 
     assert.deepEqual(report.findings, [], content);
   }
 });
+
+
+test("enforces Discord webhook URL identifier and token minimum lengths", () => {
+  for (const url of [
+    "https://discord.com/api/webhooks/12345678901234567/" + "a".repeat(50),
+    "https://discordapp.com/api/webhooks/12345678901234567890/" + "b".repeat(50),
+    "http://discord.com/api/webhooks/12345678901234567/" + "C9._-".repeat(10),
+    "https://discordapp.com/api/webhooks/12345678901234567890/" + "Z".repeat(120),
+  ]) {
+    const report = inspectProposedChanges([{ file: "src/config.ts", after: `const webhook = "${url}";` }]);
+    assert.equal(report.safeToCommit, false, url);
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" &&
+      finding.reason === "Discord webhook URL detected"
+    ), url);
+  }
+});
+
+test("allows Discord webhook URL near misses and explanatory placeholders", () => {
+  for (const content of [
+    "https://discord.com/api/webhooks/1234567890123456/" + "a".repeat(50),
+    "https://discord.com/api/webhooks/123456789012345678901/" + "b".repeat(50),
+    "https://discord.com/api/webhooks/12345678901234567/" + "c".repeat(49),
+    "https://example.com/api/webhooks/12345678901234567/" + "d".repeat(60),
+    "https://discord.com/webhooks/12345678901234567/" + "e".repeat(60),
+    "https://discord.gg/api/webhooks/12345678901234567/" + "f".repeat(60),
+    "https://discord.com/api/webhooks/WEBHOOK_ID/WEBHOOK_TOKEN",
+    "Discord webhook example: https://discord.com/api/webhooks/ID/TOKEN",
+  ]) {
+    const report = inspectProposedChanges([{ file: "docs/webhook-examples.md", after: content }]);
+    assert.equal(report.safeToCommit, true, content);
+    assert.deepEqual(report.findings, [], content);
+  }
+});
