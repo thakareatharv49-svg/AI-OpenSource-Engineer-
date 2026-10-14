@@ -597,8 +597,18 @@ Definition of done: preserve the scope caveat and keep the checks covered by reg
 
 ## 54. Milestone 50 — Azure and Google Cloud credential artifact protection
 
-**Implementation in progress on branch `feat/milestone-50-azure-gcp-credential-protection`.** Extend cloud credential path protections to catch Google Application Default Credentials files even when copied outside the standard gcloud configuration directory. Expand regression coverage for nested Azure CLI and Google Cloud SDK authentication stores, alternate ADC locations, safe named templates, and ordinary cloud infrastructure source/documentation.
+**Merged in PR #82 on 2026-10-14 (merge commit `e3ab90f03065187e1c44b3a4f7fe3e60f460244b`).** Proposal path safety blocks Google Application Default Credentials files even when copied outside the standard gcloud configuration directory. Regression coverage includes root and nested alternate ADC locations.
 
 Scope: path-based defense in depth. It cannot detect credentials stored under arbitrary custom filenames or parse all cloud configuration formats for embedded secrets. Keep content scanning and human review in place.
+
+Validation: backend typecheck/tests, frontend build/lint including production dependency audit, and CodeQL all passed on the final PR head before merge.
+
+Definition of done: preserve the scope caveat and keep the safety checks covered by regression tests.
+
+## 55. Milestone 51 — Alternate Azure and Google Cloud credential artifact protection
+
+**Implementation in progress on branch `feat/milestone-51-alternate-azure-gcp-credentials`.** Extend filename-based detection to recognizable Azure CLI/MSAL token-cache files (`accessTokens.json`, `azureProfile.json`, and `msal_token_cache.*`) and Google Cloud SDK credential databases (`credentials.db`, `access_tokens.db`, and `legacy_credentials/`) plus downloaded Google OAuth client-secret JSON files. Add regression coverage for root/nested and alternate-location paths, explicitly named safe templates, and ordinary cloud infrastructure source/documentation.
+
+Scope: filename/path-based defense in depth. It cannot identify credentials stored under arbitrary custom names, parse all cloud config formats, or establish whether a token is live. Explicitly named `.example`, `.sample`, and `.template` artifacts remain permitted. Keep content scanning and human review in place.
 
 Definition of done: inspect the complete diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
