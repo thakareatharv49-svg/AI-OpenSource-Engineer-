@@ -562,3 +562,44 @@ test("allows explicitly named Windows and macOS credential-store documentation t
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks browser profile databases containing saved credentials and sessions", () => {
+  for (const file of [
+    "Users/alice/AppData/Local/Google/Chrome/User Data/Default/Login Data",
+    "Users/alice/AppData/Local/Google/Chrome/User Data/Default/Network/Cookies",
+    "Users/alice/AppData/Local/Microsoft/Edge/User Data/Local State",
+    "home/.config/BraveSoftware/Brave-Browser/Default/Web Data",
+    "home/.config/chromium/Default/Cookies",
+    "Users/alice/AppData/Roaming/Mozilla/Firefox/Profiles/abc.default-release/logins.json",
+    "home/.mozilla/firefox/abc.default-release/key4.db",
+    "home/.mozilla/firefox/abc.default-release/cookies.sqlite",
+    "Users/alice/Library/Safari/Cookies.binarycookies",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "synthetic placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) =>
+      finding.reason === "Sensitive infrastructure state or deployment credential artifact cannot be committed"
+    ), file);
+  }
+});
+
+test("allows explicitly named browser credential documentation templates", () => {
+  const report = inspectProposedChanges([
+    { file: "docs/Login Data.example", after: "documentation only" },
+    { file: "docs/logins.json.sample", after: "{ \"note\": \"replace locally\" }" },
+    { file: "docs/cookies.sqlite.template", after: "placeholder only" },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
+
+test("does not block ordinary application cookie and login source files", () => {
+  const report = inspectProposedChanges([
+    { file: "src/auth/login.ts", after: "export function login() { return true; }" },
+    { file: "src/http/cookies.ts", after: "export const cookieName = \"session\";" },
+    { file: "docs/browser-session-security.md", after: "Browsers store sessions locally." },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
