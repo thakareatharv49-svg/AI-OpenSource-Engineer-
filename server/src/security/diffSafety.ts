@@ -123,6 +123,12 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
     /(?:^|\/)\.config\/gcloud(?:\/|$)/i.test(normalized) ||
     // Google Application Default Credentials may be copied outside the standard gcloud config directory.
     /(?:^|\/)application_default_credentials\.json$/i.test(normalized) ||
+    // Azure CLI/MSAL and Google Cloud SDK can persist auth caches under alternate locations.
+    /(?:^|\/)(?:accessTokens\.json|azureProfile\.json|msal_token_cache(?:\.[^/]+)?)$/i.test(normalized) ||
+    /(?:^|\/)(?:credentials\.db|access_tokens\.db)$/i.test(normalized) ||
+    /(?:^|\/)legacy_credentials(?:\/|$)/i.test(normalized) ||
+    // Downloaded Google OAuth client-secret files can be renamed or copied outside the SDK tree.
+    /(?:^|\/)client_secret[^/]*\.json$/i.test(normalized) ||
     /(?:^|\/)\.docker\/config\.json$/i.test(normalized) ||
     /(?:^|\/)\.config\/containers\/auth\.json$/i.test(normalized) ||
     /(?:^|\/)\.terraform\.d\/credentials\.tfrc\.json$/i.test(normalized) ||
