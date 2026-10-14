@@ -653,6 +653,12 @@ Scope: prefix/shape-based detection is defense in depth. It does not validate to
 
 ## 60. Milestone 56 — Atlassian API token content detection
 
-**Implementation in progress** on branch `feat/milestone-56-atlassian-token-detection`. Extend proposal-content scanning to recognize Atlassian API token-shaped values beginning with the `ATATT3x` prefix and a conservative minimum suffix length. Add synthetic positive regression coverage and short documentation-placeholder cases.
+**Completed and merged on 2026-10-14** in [PR #88](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/88), merge commit `038050858587446fa6702e8075ed795cfd17c6e9`. Added proposal-content detection for Atlassian API token-shaped values beginning with `ATATT3x` and at least 40 suffix characters, plus synthetic positive regression coverage and safe short-placeholder cases. Backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL all passed on the final PR head.
 
-Scope: pattern detection is defense in depth, not token validation; it does not guarantee coverage of every Atlassian token format or replace secret scanning and human review. Validate the final PR with backend typecheck/tests, frontend build/lint and production dependency audit, and CodeQL before merging.
+Scope: pattern detection is defense in depth, not token validation; it does not guarantee coverage of every Atlassian token format or replace secret scanning and human review.
+
+## 61. Milestone 57 — Atlassian API token detection edge-case coverage
+
+**Planned.** Strengthen the same token-detection boundary with regression cases for case sensitivity, minimum-length boundaries, mixed allowed suffix characters, and longer documentation placeholders. Ensure the rule blocks only values matching the intended token shape and leaves ordinary examples and near-miss strings allowed.
+
+Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL must pass on the final PR head before merge.
