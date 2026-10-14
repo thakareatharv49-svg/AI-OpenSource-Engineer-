@@ -1250,3 +1250,32 @@ test("allows named AWS credential templates and ordinary AWS configuration", () 
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("enforces Atlassian API token shape and minimum suffix length", () => {
+  const matching = [
+    "ATATT3x" + "a".repeat(39) + "_-Z",
+    "ATATT3x" + "A".repeat(40),
+    "ATATT3x" + "a".repeat(64),
+  ];
+  for (const secret of matching) {
+    const report = inspectProposedChanges([{ file: "src/config.ts", after: `const token = "${secret}";` }]);
+    assert.equal(report.safeToCommit, false, "token-shaped value must be blocked");
+    assert.ok(report.findings.some((finding) => finding.reason === "Atlassian API token pattern detected"), secret);
+  }
+});
+
+test("allows Atlassian API token near misses and explanatory placeholders", () => {
+  const safeExamples = [
+    "ATATT3x" + "a".repeat(39),
+    "ATATT3X" + "a".repeat(48),
+    "ATATT3x-example",
+    "ATATT3x-placeholder-value-for-documentation",
+    "The ATATT3x prefix identifies Atlassian API tokens.",
+  ];
+  for (const example of safeExamples) {
+    const report = inspectProposedChanges([{ file: "docs/authentication.md", after: example }]);
+    assert.equal(report.safeToCommit, true, example);
+    assert.deepEqual(report.findings, [], example);
+  }
+});
