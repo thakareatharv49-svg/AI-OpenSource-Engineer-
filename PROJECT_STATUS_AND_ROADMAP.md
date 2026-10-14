@@ -735,6 +735,14 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 71. Milestone 67 — DigitalOcean API token detection edge-case coverage
 
-**Implementation in progress.** Add synthetic regression tests for the existing DigitalOcean detector (`dop_v1_` followed by at least 40 lowercase hexadecimal characters, case-insensitive prefix matching). Cover the 40-character boundary, longer hex values, uppercase prefix, and harmless near misses including too-short, non-hex, and placeholder text. Keep production detector behavior unchanged and use synthetic values only.
+**Completed and merged on 2026-10-14** in [PR #99](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/99), merge commit `3a03425c6bc2d984b33df1ef05047ef349924022`. Added synthetic regression tests for the existing DigitalOcean detector, covering the 40-character hexadecimal boundary, longer values, case-insensitive prefix matching, and safe near misses (too-short, non-hex, malformed separators, wrong version, and placeholders). Production detector behavior was unchanged.
 
-Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL must pass on the final PR head before merge.
+Validation on the final PR head passed: backend typecheck/tests; frontend build and lint, including production dependency audit; CodeQL; and JavaScript/TypeScript analysis.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic tests do not guarantee coverage of every DigitalOcean token format or replace secret scanning and human review.
+
+## 72. Milestone 68 — Azure Storage connection-string detection edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing Azure Storage connection-string detector. Cover HTTP/HTTPS protocol matching, case-insensitive matching, account-name and account-key minimum lengths, accepted key characters, longer values, and safe near misses for malformed separators, unsupported protocol, short account names/keys, whitespace, and placeholders. Keep production detector behavior unchanged and use synthetic values only.
+
+Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, CodeQL, and JavaScript/TypeScript analysis must pass on the final PR head before merge.
