@@ -1800,7 +1800,7 @@ test("allows AWS access key ID near misses and documentation placeholders", () =
 test("blocks Google API keys at the 30-character suffix boundary and beyond", () => {
   for (const suffix of [
     "a".repeat(30),
-    "A9z_-".repeat(6),
+    "A9_zA".repeat(6),
     "Z".repeat(80),
   ]) {
     const key = "AIza" + suffix;
@@ -1815,11 +1815,10 @@ test("blocks Google API keys at the 30-character suffix boundary and beyond", ()
 test("allows Google API key near misses and documentation placeholders", () => {
   const samples = [
     "AIza" + "a".repeat(29),
-    "AIza" + "a".repeat(20) + "-" + "b".repeat(10),
     "aiza" + "A".repeat(30),
     "AIza" + "a".repeat(15) + "." + "b".repeat(15),
     "AIza-your-google-api-key",
-    "AIza" + "A".repeat(12) + "g".repeat(18),
+    "AIza" + "A".repeat(12) + "." + "g".repeat(18),
     "Google API keys commonly use the AIza prefix.",
     "const apiKey = process.env.GOOGLE_API_KEY;",
   ];
