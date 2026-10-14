@@ -536,8 +536,19 @@ Definition of done: inspect the complete diff; backend typecheck/tests, frontend
 
 ## 48. Milestone 44 — Helm and GitOps deployment credential protection
 
-**Implementation in progress on branch feat/milestone-44-helm-gitops-credential-protection.** Extend proposal path safety to block Helm repository and OCI registry configuration files that can store reusable registry credentials (.config/helm/repositories.yaml, .config/helm/registry/config.json, and .config/helm/registry.json), plus Argo CD CLI authentication context files (.config/argocd/config and .argocd/config). Add regression coverage for nested home paths, explicitly named documentation-template exemptions, and ordinary source files.
+**Merged in PR #76 on 2026-10-14 (merge commit `91fed0bfc246a4ad7e13a4cfdc633c134b54d5b9`).** Extend proposal path safety to block Helm repository and OCI registry configuration files that can store reusable registry credentials (`.config/helm/repositories.yaml`, `.config/helm/registry/config.json`, and `.config/helm/registry.json`), plus Argo CD CLI authentication context files (`.config/argocd/config` and `.argocd/config`). Regression coverage includes nested home paths and explicitly named documentation-template exemptions.
 
-Scope: path-based defense in depth. These configuration files may contain mixed operational and authentication data; this rule does not parse or prove that credentials are present or live. Keep content scanning and human review in place.
+Scope: path-based defense in depth. These configuration files may contain mixed operational and authentication data; the matcher does not prove that credentials are present or live. Keep content scanning and human review in place.
 
-Definition of done: inspect the complete diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
+Validation: backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL all passed on the final PR head before merge.
+
+Definition of done: preserve the path-based defense-in-depth caveat and keep the safety checks covered by regression tests.
+
+
+## 49. Milestone 45 — Terraform state and CLI credential protection
+
+**Implementation in progress.** Extend proposal safety to block Terraform state artifacts that may serialize provider credentials, outputs, and sensitive resource attributes, as well as Terraform CLI credential files (`.terraformrc`, `terraform.rc`, and `credentials.tfrc.json`) and local Terraform working-directory state. Add tests for nested paths, template exemptions, and ordinary Terraform source/configuration files.
+
+Scope: path-based defense in depth. State files can contain sensitive values even when marked sensitive by Terraform, but the matcher cannot inspect remote state or prove a local file contains a live credential. Keep content scanning and human review in place.
+
+Definition of done: review the complete diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
