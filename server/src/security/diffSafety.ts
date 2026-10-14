@@ -144,7 +144,7 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
     /(?:^|\/)(?:\.mozilla\/firefox|Mozilla\/Firefox|Firefox\/Profiles)\/[^/]+\/(?:logins\.json|key[34]\.db|cookies\.sqlite|cert[89]\.db|sessionstore\.jsonlz4)$/i.test(normalized) ||
     /(?:^|\/)Library\/Safari\/Cookies\.binarycookies$/i.test(normalized) ||
     // Database GUI connection profiles can persist server names, usernames, and saved credentials.
-    /(?:^|\/)(?:MongoDB\/Compass|\.config\/MongoDB Compass|\.mongodb\/compass)\/(?:connections|connections\.json|app\.json)$/i.test(normalized) ||
+    /(?:^|\/)(?:MongoDB\/Compass|\.config\/MongoDB Compass|\.mongodb\/compass)\/(?:connections\.json|app\.json|connections)$/i.test(normalized) ||
     /(?:^|\/)(?:\.metadata\/\.plugins\/org\.jkiss\.dbeaver\.core|DBeaverData\/workspace6\/\.metadata\/\.plugins\/org\.jkiss\.dbeaver\.core)\/(?:data-sources|credentials-config)\.json$/i.test(normalized) ||
     /(?:^|\/)(?:\.mongosh_repl_history|\.mongodb_shell_history|\.mongorc\.js)$/i.test(normalized) ||
     /(?:^|\/)\.config\/mongosh\/(?:config|history)(?:\.json|\.js)?$/i.test(normalized);
