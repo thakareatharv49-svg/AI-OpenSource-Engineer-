@@ -532,3 +532,12 @@ Definition of done: inspect the complete diff; backend typecheck/tests, frontend
 Scope: regex-based structural detection is defense in depth, not a full YAML/JSON schema validator or secret-value validator. Keep explicit documentation-template exemptions, content scanning, and human review.
 
 Definition of done: inspect the complete diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
+
+
+## 48. Milestone 44 — Helm and GitOps deployment credential protection
+
+**Implementation in progress on branch feat/milestone-44-helm-gitops-credential-protection.** Extend proposal path safety to block Helm repository and OCI registry configuration files that can store reusable registry credentials (.config/helm/repositories.yaml, .config/helm/registry/config.json, and .config/helm/registry.json), plus Argo CD CLI authentication context files (.config/argocd/config and .argocd/config). Add regression coverage for nested home paths, explicitly named documentation-template exemptions, and ordinary source files.
+
+Scope: path-based defense in depth. These configuration files may contain mixed operational and authentication data; this rule does not parse or prove that credentials are present or live. Keep content scanning and human review in place.
+
+Definition of done: inspect the complete diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
