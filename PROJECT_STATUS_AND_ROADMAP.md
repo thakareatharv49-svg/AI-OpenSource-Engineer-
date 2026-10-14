@@ -438,7 +438,7 @@ Definition of done: backend typecheck/tests, frontend build/lint, production dep
 
 ## 37. Milestone 33 — Browser profile credential and session database protection
 
-**Implementation in progress on branch `feat/milestone-33-browser-session-credential-protection`.** Extend path-based proposal safety to block known Chromium-family profile databases used for saved logins, cookies, and web data; browser profile `Local State` files; Firefox profile login databases, cookies, certificate databases, and session state; and Safari cookie databases. Keep matching anchored to known browser profile layouts so ordinary application source files such as `login.ts` and `cookies.ts` remain allowed.
+**Merged in PR #65 on 2026-10-14 (merge commit `010740345d029e16f3cebd5daf3df372e140e764`).** Extend path-based proposal safety to block known Chromium-family profile databases used for saved logins, cookies, and web data; browser profile `Local State` files; Firefox profile login databases, cookies, certificate databases, and session state; and Safari cookie databases. Keep matching anchored to known browser profile layouts so ordinary application source files such as `login.ts` and `cookies.ts` remain allowed.
 
 Scope: filename/path-based defense in depth only. These checks do not parse browser databases, validate sessions, or replace content scanning and human review. Browser layouts vary by version and operating system, so this does not claim exhaustive coverage.
 
@@ -456,7 +456,7 @@ Definition of done: review the complete diff; backend typecheck/tests, frontend 
 
 ## 39. Milestone 35 — Database CLI credential artifact protection
 
-**Implementation in progress on branch `feat/milestone-35-database-cli-credential-protection`.** Extend path-based proposal safety to block common database command-line credential stores and command history that may contain authentication commands: PostgreSQL password files (`.pgpass` and `pgpass.conf`), MySQL client credentials (`.my.cnf` and `.mylogin.cnf`), and Redis CLI history (`.rediscli_history`). Add regression tests for nested/user-profile paths, explicitly named documentation templates, and ordinary credential-handling documentation.
+**Merged in PR #67 on 2026-10-14 (merge commit `cb8492f53541cb5764619ed41a701a03b7b47b9c`).** Extend path-based proposal safety to block common database command-line credential stores and command history that may contain authentication commands: PostgreSQL password files (`.pgpass` and `pgpass.conf`), MySQL client credentials (`.my.cnf` and `.mylogin.cnf`), and Redis CLI history (`.rediscli_history`). Add regression tests for nested/user-profile paths, explicitly named documentation templates, and ordinary credential-handling documentation.
 
 Scope: filename-based defense in depth only. It does not parse database client formats, prove credentials are active, or scan repository history. Template exemptions are narrow suffix matches; human review and content scanning remain required.
 
@@ -464,8 +464,17 @@ Definition of done: inspect the final diff; backend typecheck/tests, frontend bu
 
 ## 40. Milestone 36 — Database client profile and shell-history protection
 
-**Implementation in progress on branch `feat/milestone-36-database-client-profile-protection`.** Extend path-based proposal safety to block MongoDB Compass connection-profile files, DBeaver saved data-source and credential profiles, and common MongoDB shell history/configuration files. Add regression coverage for nested user/workspace paths and ensure explicitly named documentation templates and ordinary application source files remain allowed.
+**Merged in PR #68 on 2026-10-14 (merge commit `aac0464b041602be49927ce0534fe83d71eebe33`).** Extend path-based proposal safety to block MongoDB Compass connection-profile files, DBeaver saved data-source and credential profiles, and common MongoDB shell history/configuration files. Add regression coverage for nested user/workspace paths and ensure explicitly named documentation templates and ordinary application source files remain allowed.
 
 Scope: filename/path-based defense in depth only. The rules do not parse client databases, decrypt saved credentials, or guarantee coverage of every client/version. Keep content scanning and human review in place.
 
 Definition of done: inspect the final diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
+
+
+## 41. Milestone 37 — AI coding-assistant credential and session-store protection
+
+**Implementation in progress on branch `feat/milestone-37-ai-coding-assistant-credential-protection`.** Extend proposal path safety to block known local authentication/session artifacts for Claude Code, OpenAI Codex CLI, Gemini CLI, Codeium/Windsurf, Cursor, and GitHub Copilot VS Code extension storage. Add regression tests for nested home/profile paths, explicitly named documentation templates, and ordinary application source files.
+
+Scope: path-based defense in depth; layouts vary by product/version and some extension databases can contain mixed non-secret state. These rules do not parse or decrypt stores, guarantee complete coverage, or replace secret scanning and human review.
+
+Definition of done: review the final diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
