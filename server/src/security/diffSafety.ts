@@ -173,7 +173,6 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
     // Self-hosted GitHub Actions runners persist registration and private-key material locally.
     /(?:^|\/)(?:actions-runner|\.actions-runner)\/(?:\.credentials(?:_rsaparams)?|\.runner|\.service|\.credentials\.public-key)$/i.test(normalized) ||
     // Azure DevOps agents keep reusable authentication material in the agent root.
-    /(?:^|\/)(?:\.credentials|\.credentials_rsaparams|\.agent)$/i.test(normalized) ||
     /(?:^|\/)(?:\.credentials|\.credentials_rsaparams|\.agent)$/i.test(normalized);
 }
 
