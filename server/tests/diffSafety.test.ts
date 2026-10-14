@@ -1057,3 +1057,36 @@ test("allows named Vault, Consul, and Nomad documentation templates and ordinary
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks Ansible Vault password files and Packer variable files", () => {
+  for (const file of [
+    ".vault_pass",
+    "home/alice/.vault_password",
+    "infra/.ansible-vault-password.txt",
+    "deploy/vault-password-file",
+    "ansible/ansible-vault-password-file",
+    "packer/prod.pkrvars.hcl",
+    "packer/prod.pkrvars.json",
+    "home/runner/build/production.auto.pkrvars.hcl",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "synthetic placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) =>
+      finding.reason === "Sensitive infrastructure state or deployment credential artifact cannot be committed"
+    ), file);
+  }
+});
+
+test("allows named Ansible and Packer templates and ordinary infrastructure source", () => {
+  const report = inspectProposedChanges([
+    { file: "docs/.vault_pass.example", after: "replace-with-local-password" },
+    { file: "docs/prod.pkrvars.hcl.sample", after: 'region = "example-region"' },
+    { file: "docs/prod.pkrvars.json.template", after: '{"region":"example-region"}' },
+    { file: "ansible/site.yml", after: "- hosts: all\\n  tasks: []\\n" },
+    { file: "packer/image.pkr.hcl", after: 'source "null" "example" {}' },
+    { file: "docs/ansible-vault-security.md", after: "Store vault passwords outside source control." },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
