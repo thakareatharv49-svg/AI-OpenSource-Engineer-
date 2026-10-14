@@ -767,6 +767,14 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 75. Milestone 71 — AWS session-token assignment edge-case coverage
 
-**Implementation in progress.** Add synthetic regression tests for the existing AWS `aws_session_token` assignment detector. Cover the 40-character minimum, longer values, accepted characters, case-insensitive variable names, short/malformed values, placeholders, environment references, and unrelated similarly named fields. Keep the production detector unchanged and use synthetic values only.
+**Completed and merged on 2026-10-15** in [PR #104](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/104), merge commit `cbb5844b915cefeb4deafa501a65553e80ed28f6`. Added synthetic regression tests for the existing AWS `aws_session_token` assignment detector, including the 40-character minimum, longer values, mixed accepted characters, case-insensitive variable names, short values, placeholders, environment references, and unrelated similarly named fields. Production detector behavior was unchanged.
+
+Validation on the final PR head passed: backend typecheck/tests; frontend build and lint with production dependency audit; and CodeQL JavaScript/TypeScript analysis.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
+
+## 76. Milestone 72 — AWS access-key-ID pattern edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing `AKIA` plus 16 uppercase-alphanumeric character detector. Cover the exact boundary, valid mixed letters/digits, too-short and too-long values, lowercase prefix, malformed characters, and documentation placeholders. Keep production detector behavior unchanged and use synthetic values only.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
