@@ -103,6 +103,10 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
     /(?:^|\/)\.(?:ansible[-_.]?vault[-_.]?password|vault[-_.]?password)(?:\.txt)?$/i.test(normalized) ||
     /(?:^|\/)(?:vault-password-file|ansible-vault-password-file)$/i.test(normalized) ||
     /(?:^|\/)[^/]+\.pkrvars\.(?:hcl|json)$/i.test(normalized) ||
+    // AWS CLI shared credentials and IAM Identity Center cache files can contain reusable cloud access tokens.
+    /(?:^|\/)\.aws\/(?:credentials|sso\/cache(?:\/|$)|cli\/cache(?:\/|$))(?:\/|$)/i.test(normalized) ||
+    /(?:^|\/)\.aws\/(?:sso\/cache|cli\/cache)\/[^/]+$/i.test(normalized) ||
+    /(?:^|\/)\.aws-vault(?:\/|$)/i.test(normalized) ||
     // Vault, Consul, and Nomad CLI state can persist reusable ACL tokens and auth context.
     /(?:^|\/)\.config\/(?:vault|consul|nomad)(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.vault\.d(?:\/|$)/i.test(normalized) ||
