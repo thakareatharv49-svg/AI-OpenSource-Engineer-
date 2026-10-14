@@ -155,7 +155,14 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
     /(?:^|\/)\.config\/\.?codeium\/(?:windsurf|auth|credentials)(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.codeium\/(?:windsurf|auth|credentials)(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)Code\/(?:User\/)?globalStorage\/(?:github\.copilot|github\.copilot-chat|codeium\.codeium|Anysphere\.cursor)\/(?:state\.vscdb(?:\.backup)?|.*(?:auth|token|credential|session)[^/]*\.json)$/i.test(normalized) ||
-    /(?:^|\/)\.cursor\/(?:auth\.json|credentials\.json|session\.json)$/i.test(normalized);
+    /(?:^|\/)\.cursor\/(?:auth\.json|credentials\.json|session\.json)$/i.test(normalized) ||
+    // Remote-access, tunnel, and sync clients store reusable tokens or private identity material locally.
+    /(?:^|\/)(?:\.ngrok2\/ngrok\.yml|\.config\/ngrok\/(?:ngrok\.yml|config\.yml))$/i.test(normalized) ||
+    /(?:^|\/)(?:\.cloudflared|\.config\/cloudflared)\/(?:cert\.pem|origin-cert\.pem|.*\.json)$/i.test(normalized) ||
+    /(?:^|\/)(?:\.config\/tailscale|\.local\/share\/tailscale)\/(?:tailscaled\.state|.*(?:auth|identity|key)[^/]*\.json)$/i.test(normalized) ||
+    /(?:^|\/)(?:\.tsh\/keys|\.config\/teleport\/keys)(?:\/|$)/i.test(normalized) ||
+    /(?:^|\/)\.config\/rclone\/rclone\.conf$/i.test(normalized) ||
+    /(?:^|\/)(?:\.oci\/sessions|\.config\/oci\/sessions)(?:\/|$)/i.test(normalized);
 }
 
 function isSafeRelativePath(path: string): boolean {
