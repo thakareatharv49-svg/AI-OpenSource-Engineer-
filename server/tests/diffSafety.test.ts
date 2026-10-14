@@ -1279,3 +1279,33 @@ test("allows Atlassian API token near misses and explanatory placeholders", () =
     assert.deepEqual(report.findings, [], example);
   }
 });
+
+test("enforces GitHub fine-grained token minimum length and supported characters", () => {
+  for (const token of [
+    "github_pat_" + "a".repeat(20),
+    "github_pat_" + "A_9".repeat(7),
+    "github_pat_" + "z".repeat(80),
+  ]) {
+    const report = inspectProposedChanges([{ file: "src/config.ts", after: `const token = "${token}";` }]);
+    assert.equal(report.safeToCommit, false, token);
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" &&
+      finding.reason === "GitHub fine-grained token pattern detected"
+    ), token);
+  }
+});
+
+test("allows GitHub fine-grained token near misses without a complete token shape", () => {
+  for (const content of [
+    "github_pat_" + "a".repeat(19),
+    "GITHUB_PAT_" + "a".repeat(40),
+    "The github_pat_ prefix is used for fine-grained tokens.",
+    "github_pat-example",
+    "github_pat-placeholder",
+  ]) {
+    const report = inspectProposedChanges([{ file: "docs/token-examples.md", after: content }]);
+    assert.equal(report.safeToCommit, true, content);
+    assert.deepEqual(report.findings, [], content);
+  }
+});
+

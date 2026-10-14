@@ -667,6 +667,6 @@ Scope: edge-case tests increase confidence in the current pattern but do not val
 
 ## 62. Milestone 58 — GitHub fine-grained token detection edge-case coverage
 
-**Planned.** Add focused regression tests for the existing `github_pat_` detector: minimum accepted suffix length, supported characters, longer token-shaped values, and harmless near misses/documentation placeholders. Keep the detector unchanged unless tests reveal a concrete defect; avoid using real credentials.
+**Implementation in progress** on branch `test/milestone-58-github-token-edge-cases`. Add focused regression tests for the existing `github_pat_` detector: minimum accepted suffix length, supported characters, longer token-shaped values, and harmless near misses/documentation placeholders. Keep the detector unchanged unless tests reveal a concrete defect; avoid using real credentials.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL must pass on the final PR head before merge.
