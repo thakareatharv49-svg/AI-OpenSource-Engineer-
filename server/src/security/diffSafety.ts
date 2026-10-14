@@ -107,6 +107,8 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
     /(?:^|\/)\.docker\/config\.json$/i.test(normalized) ||
     /(?:^|\/)\.config\/containers\/auth\.json$/i.test(normalized) ||
     /(?:^|\/)\.terraform\.d\/credentials\.tfrc\.json$/i.test(normalized) ||
+    // Terraform CLI credentials may be copied out of the default .terraform.d directory.
+    /(?:^|\/)credentials\.tfrc\.json$/i.test(normalized) ||
     // Helm repository and OCI registry configuration can contain reusable registry credentials.
     /(?:^|\/)\.config\/helm\/(?:repositories\.yaml|registry\/config\.json|registry\.json)$/i.test(normalized) ||
     // Argo CD CLI config persists authenticated server contexts and bearer tokens.
@@ -121,8 +123,9 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
     /(?:^|\/)\.vercel\/\.env(?:\.[^/]+)?$/i.test(normalized) ||
     /(?:^|\/)(?:\.terraformrc|terraform\.rc)$/i.test(normalized) ||
     /(?:^|\/)[^/]+\.tfvars(?:\.json)?$/i.test(normalized) ||
-    /(?:^|\/)terraform\.tfstate(?:\..*)?$/i.test(normalized) ||
-    /(?:^|\/)[^/]+\.tfplan$/i.test(normalized) ||
+    // State and saved plan files can be renamed, workspace-specific, or kept as backups.
+    /(?:^|\/)[^/]+\.tfstate(?:\..*)?$/i.test(normalized) ||
+    /(?:^|\/)[^/]+\.tfplan(?:\..*)?$/i.test(normalized) ||
     // PuTTY private-key files can be exported or copied outside the .ssh directory.
     /\.ppk$/i.test(normalized) ||
     /\.(?:p12|pfx|jks|keystore|kdbx)$/i.test(normalized) ||
