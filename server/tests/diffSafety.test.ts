@@ -1725,3 +1725,39 @@ test("allows AWS secret access key assignment near misses and placeholders", () 
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks AWS session token assignments at the 40-character boundary and beyond", () => {
+  const samples = [
+    "aws_session_token = \"" + "a".repeat(40) + "\"",
+    "AWS_SESSION_TOKEN: '" + "Ab9+/=".repeat(7) + "'",
+    "Aws_Session_Token=" + "Z".repeat(80),
+  ];
+  for (const value of samples) {
+    const report = inspectProposedChanges([{ file: "src/aws-session.ts", after: value }]);
+    assert.equal(report.safeToCommit, false, "AWS session token assignments must be blocked");
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" && finding.reason === "AWS session token assignment detected"
+    ), value.slice(0, 48));
+  }
+});
+
+test("allows AWS session token near misses, placeholders, and environment references", () => {
+  const samples = [
+    "aws_session_token = \"" + "a".repeat(39) + "\"",
+    "aws_session_token = your_session_token",
+    "aws_session_token = example-session-token",
+    "aws_session_token = changeme",
+    "aws_session_token = placeholder-session-token",
+    "aws_session_token = \"${AWS_SESSION_TOKEN}\"",
+    "aws_session_token = \"$AWS_SESSION_TOKEN\"",
+    "aws_session_id = \"" + "A".repeat(48) + "\"",
+    "AWS session tokens should be supplied by the runtime environment.",
+  ];
+  const report = inspectProposedChanges([{
+    file: "docs/aws-session-tokens.md",
+    after: samples.join("\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
