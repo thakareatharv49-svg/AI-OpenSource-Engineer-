@@ -675,6 +675,6 @@ Scope: tests strengthen confidence in the current pattern but do not validate to
 
 ## 63. Milestone 59 — GitLab token detection edge-case coverage
 
-**Planned.** Add focused regression tests for the existing GitLab personal access token (`glpat-`) and deploy/runner token (`gldt-`, `glrt-`) patterns. Cover minimum accepted lengths, supported characters, longer token-shaped strings, and harmless near misses/placeholders. Keep detector behavior unchanged unless tests expose a specific defect; use synthetic values only.
+**Implementation in progress** on branch `test/milestone-59-gitlab-token-edge-cases`. Add focused regression tests for the existing GitLab personal access token (`glpat-`) and deploy/runner token (`gldt-`, `glrt-`) patterns. Cover minimum accepted lengths, supported characters, longer token-shaped strings, and harmless near misses/placeholders. Keep detector behavior unchanged unless tests expose a specific defect; use synthetic values only.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL must pass on the final PR head before merge.
