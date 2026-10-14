@@ -792,6 +792,51 @@ test("allows explicitly named CI/CD credential templates and ordinary source", (
 });
 
 
+test("blocks Kubernetes Secret manifests regardless of filename", () => {
+  const manifests = [
+    {
+      file: "deploy/namespace-config.yaml",
+      after: "apiVersion: v1\nkind: Secret\nmetadata:\n  name: app-credentials\ntype: Opaque\nstringData:\n  API_TOKEN: synthetic-placeholder\n",
+    },
+    {
+      file: "clusters/prod/resources.json",
+      after: JSON.stringify({
+        apiVersion: "v1",
+        kind: "Secret",
+        metadata: { name: "app-credentials" },
+        data: { API_TOKEN: "cGxhY2Vob2xkZXI=" },
+      }),
+    },
+  ];
+
+  for (const change of manifests) {
+    const report = inspectProposedChanges([change]);
+    assert.equal(report.safeToCommit, false, change.file);
+    assert.ok(report.findings.some((finding) =>
+      finding.reason === "Kubernetes Secret manifests containing data or stringData cannot be committed"
+    ), change.file);
+  }
+});
+
+test("allows explicitly named Kubernetes Secret templates and ordinary manifests", () => {
+  const report = inspectProposedChanges([
+    {
+      file: "docs/kubernetes-secret.yaml.example",
+      after: "apiVersion: v1\nkind: Secret\nmetadata:\n  name: example\nstringData:\n  API_TOKEN: replace-me\n",
+    },
+    {
+      file: "deploy/app-config.yaml",
+      after: "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: app-config\ndata:\n  LOG_LEVEL: info\n",
+    },
+    {
+      file: "src/kubernetesSecrets.ts",
+      after: "export function createSecretManifest() { return { kind: 'Secret' }; }\n",
+    },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
+
 test("blocks self-hosted GitHub Actions runner credential artifacts", () => {
   for (const file of [
     "home/runner/actions-runner/.credentials",
