@@ -955,3 +955,39 @@ test("allows SecretList documentation templates and non-secret Kubernetes lists"
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks Helm repository and OCI registry credential configuration", () => {
+  for (const file of [
+    ".config/helm/repositories.yaml",
+    "home/atharv/.config/helm/repositories.yaml",
+    ".config/helm/registry/config.json",
+    "home/runner/.config/helm/registry.json",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) => finding.severity === "block"), file);
+  }
+});
+
+test("blocks Argo CD CLI authentication context files", () => {
+  for (const file of [
+    ".config/argocd/config",
+    "home/deployer/.config/argocd/config",
+    ".argocd/config",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) => finding.severity === "block"), file);
+  }
+});
+
+test("allows explicitly named Helm and Argo CD credential templates", () => {
+  const report = inspectProposedChanges([
+    { file: ".config/helm/repositories.yaml.example", after: "repositories: []\n" },
+    { file: ".config/helm/registry/config.json.sample", after: "{\"auths\":{}}" },
+    { file: ".config/argocd/config.template", after: "contexts: []\n" },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
