@@ -667,6 +667,14 @@ Scope: edge-case tests increase confidence in the current pattern but do not val
 
 ## 62. Milestone 58 — GitHub fine-grained token detection edge-case coverage
 
-**Implementation in progress** on branch `test/milestone-58-github-token-edge-cases`. Add focused regression tests for the existing `github_pat_` detector: minimum accepted suffix length, supported characters, longer token-shaped values, and harmless near misses/documentation placeholders. Keep the detector unchanged unless tests reveal a concrete defect; avoid using real credentials.
+**Completed and merged on 2026-10-14** in [PR #90](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/90), merge commit `7f454e9e9d4c311056de02808a99f0afebe86d3d`. Added synthetic regression tests for the existing `github_pat_` detector's 20-character minimum suffix, accepted alphanumeric/underscore characters, longer token-shaped values, and near misses including short values, altered prefix casing, and explanatory placeholders. The detector itself was unchanged.
+
+Validation on the final PR head passed: backend typecheck/tests; frontend build and lint, including production dependency audit; and CodeQL JavaScript/TypeScript analysis.
+
+Scope: tests strengthen confidence in the current pattern but do not validate token authenticity, cover every GitHub token format, or replace secret scanning and human review.
+
+## 63. Milestone 59 — GitLab token detection edge-case coverage
+
+**Planned.** Add focused regression tests for the existing GitLab personal access token (`glpat-`) and deploy/runner token (`gldt-`, `glrt-`) patterns. Cover minimum accepted lengths, supported characters, longer token-shaped strings, and harmless near misses/placeholders. Keep detector behavior unchanged unless tests expose a specific defect; use synthetic values only.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL must pass on the final PR head before merge.
