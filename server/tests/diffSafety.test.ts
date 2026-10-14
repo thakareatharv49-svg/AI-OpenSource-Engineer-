@@ -1761,3 +1761,37 @@ test("allows AWS session token near misses, placeholders, and environment refere
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks AWS access key IDs with the exact AKIA prefix and 16-character suffix", () => {
+  for (const suffix of [
+    "A".repeat(16),
+    "0123456789ABCDEF",
+    "A1B2C3D4E5F6G7H8",
+  ]) {
+    const key = "AKIA" + suffix;
+    const report = inspectProposedChanges([{ file: "src/aws-client.ts", after: `const accessKeyId = "${key}";` }]);
+    assert.equal(report.safeToCommit, false, "AWS access key IDs must be blocked");
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" && finding.reason === "AWS access key pattern detected"
+    ), key);
+  }
+});
+
+test("allows AWS access key ID near misses and documentation placeholders", () => {
+  const samples = [
+    "AKIA" + "A".repeat(15),
+    "AKIA" + "A".repeat(17),
+    "akia" + "A".repeat(16),
+    "AKIA" + "A".repeat(15) + "-",
+    "AKIA" + "A".repeat(12) + "g".repeat(4),
+    "AKIA followed by sixteen uppercase letters or digits is a key-ID pattern example.",
+    "aws_access_key_id = \"${AWS_ACCESS_KEY_ID}\"",
+  ];
+  const report = inspectProposedChanges([{
+    file: "docs/aws-access-key-ids.md",
+    after: samples.join("\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
