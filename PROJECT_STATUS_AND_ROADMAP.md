@@ -759,6 +759,14 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 74. Milestone 70 — AWS secret access key assignment edge-case coverage
 
-**Implementation in progress.** Add synthetic regression tests for the existing AWS `aws_secret_access_key` assignment detector. Cover exactly 40-character keys, mixed accepted characters, case-insensitive variable names, too-short values, placeholders, environment-variable references, and unrelated AWS access-key-ID assignments. Keep production detector behavior unchanged and use synthetic values only.
+**Completed and merged on 2026-10-15** in [PR #103](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/103), merge commit `dc86df9cea7756b72b12a5ea7f2f9f93d6fe6a34`. Added synthetic regression coverage for the existing AWS `aws_secret_access_key` assignment detector, including exactly 40-character values, mixed accepted characters, case-insensitive variable names, short values, placeholders, environment references, and unrelated access-key-ID assignments. Production detector behavior was unchanged.
 
-Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, CodeQL, and JavaScript/TypeScript analysis must pass on the final PR head before merge.
+Validation on the final PR head passed: backend typecheck/tests; frontend build and lint with production dependency audit; and CodeQL JavaScript/TypeScript analysis.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
+
+## 75. Milestone 71 — AWS session-token assignment edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing AWS `aws_session_token` assignment detector. Cover the 40-character minimum, longer values, accepted characters, case-insensitive variable names, short/malformed values, placeholders, environment references, and unrelated similarly named fields. Keep the production detector unchanged and use synthetic values only.
+
+Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
