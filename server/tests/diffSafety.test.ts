@@ -1695,3 +1695,33 @@ test("allows Azure SAS near misses and documentation placeholders", () => {
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks AWS secret access key assignments at the 40-character boundary", () => {
+  const samples = [
+    "aws_secret_access_key = \"" + "a".repeat(40) + "\"",
+    "AWS_SECRET_ACCESS_KEY: '" + "Ab9+/=".repeat(6) + "Ab9+/=" + "'",
+    "aws_secret_access_key=" + "Z".repeat(40),
+  ];
+  for (const value of samples) {
+    const report = inspectProposedChanges([{ file: "src/aws-config.ts", after: value }]);
+    assert.equal(report.safeToCommit, false, "AWS secret access key assignments must be blocked");
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" && finding.reason === "AWS secret access key assignment detected"
+    ), value.slice(0, 48));
+  }
+});
+
+test("allows AWS secret access key assignment near misses and placeholders", () => {
+  const samples = [
+    "aws_secret_access_key = \"" + "a".repeat(39) + "\"",
+    "aws_secret_access_key = your_secret_key_value",
+    "aws_secret_access_key = \"${AWS_SECRET_ACCESS_KEY}\"",
+    "aws_secret_access_key = \"placeholder-secret-key\"",
+    "aws_access_key_id = \"" + "A".repeat(40) + "\"",
+    "AWS secret keys should be supplied through environment variables, not committed.",
+  ];
+  const report = inspectProposedChanges([{ file: "docs/aws-credentials.md", after: samples.join("\n") }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
