@@ -1795,3 +1795,38 @@ test("allows AWS access key ID near misses and documentation placeholders", () =
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks Google API keys at the 30-character suffix boundary and beyond", () => {
+  for (const suffix of [
+    "a".repeat(30),
+    "A9z_-".repeat(6),
+    "Z".repeat(80),
+  ]) {
+    const key = "AIza" + suffix;
+    const report = inspectProposedChanges([{ file: "src/google-client.ts", after: `const apiKey = "${key}";` }]);
+    assert.equal(report.safeToCommit, false, "Google API keys must be blocked");
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" && finding.reason === "Google API key pattern detected"
+    ), key);
+  }
+});
+
+test("allows Google API key near misses and documentation placeholders", () => {
+  const samples = [
+    "AIza" + "a".repeat(29),
+    "AIza" + "a".repeat(20) + "-" + "b".repeat(10),
+    "aiza" + "A".repeat(30),
+    "AIza" + "a".repeat(15) + "." + "b".repeat(15),
+    "AIza-your-google-api-key",
+    "AIza" + "A".repeat(12) + "g".repeat(18),
+    "Google API keys commonly use the AIza prefix.",
+    "const apiKey = process.env.GOOGLE_API_KEY;",
+  ];
+  const report = inspectProposedChanges([{
+    file: "docs/google-api-keys.md",
+    after: samples.join("\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
