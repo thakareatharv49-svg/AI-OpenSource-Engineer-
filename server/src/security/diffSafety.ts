@@ -24,7 +24,7 @@ const unsafePathPatterns = [
   /(?:^|\/)\.npmrc$/i,
   /(?:^|\/)\.pypirc$/i,
   /(?:^|\/)\.netrc$/i,
-  /(?:^|\/)\.pgpass(?:\.conf)?$/i,
+  /(?:^|\/)(?:\.pgpass(?:\.conf)?|pgpass\.conf)$/i,
   /(?:^|\/)\.my\.cnf$/i,
   /(?:^|\/)\.mylogin\.cnf$/i,
   /(?:^|\/)\.rediscli_history$/i,
