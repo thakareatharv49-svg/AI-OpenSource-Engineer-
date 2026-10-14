@@ -688,3 +688,38 @@ test("allows explicitly named database CLI credential documentation templates", 
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks local AI coding-assistant credentials and extension session stores", () => {
+  for (const file of [
+    "home/alice/.claude.json",
+    "home/alice/.claude/.credentials.json",
+    "home/alice/.codex/auth.json",
+    "home/alice/.codex/credentials.json",
+    "home/alice/.gemini/oauth_creds.json",
+    "home/alice/.gemini/google_accounts.json",
+    "home/alice/.codeium/windsurf/auth.json",
+    "home/alice/.config/codeium/windsurf/credentials/token.json",
+    "Users/alice/AppData/Roaming/Code/User/globalStorage/github.copilot/state.vscdb",
+    "Users/alice/AppData/Roaming/Code/User/globalStorage/github.copilot-chat/state.vscdb",
+    "home/alice/.cursor/auth.json",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "synthetic placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) =>
+      finding.reason === "Sensitive infrastructure state or deployment credential artifact cannot be committed"
+    ), file);
+  }
+});
+
+test("allows named AI coding-assistant documentation templates and ordinary source", () => {
+  const report = inspectProposedChanges([
+    { file: "docs/.claude.json.example", after: '{"note":"documentation only"}' },
+    { file: "docs/auth.json.template", after: '{"provider":"example"}' },
+    { file: "src/ai/codex.ts", after: "export const codex = true;" },
+    { file: "src/auth/session.ts", after: "export function session() { return null; }" },
+    { file: "docs/ai-assistant-credentials.md", after: "Never commit local assistant credentials." },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
