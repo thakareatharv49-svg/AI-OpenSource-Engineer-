@@ -1309,3 +1309,38 @@ test("allows GitHub fine-grained token near misses without a complete token shap
   }
 });
 
+test("enforces GitLab personal, deploy, and runner token minimum lengths", () => {
+  for (const token of [
+    "glpat-" + "a".repeat(20),
+    "glpat-" + "A_9-".repeat(5) + "A",
+    "glpat-" + "z".repeat(80),
+    "gldt-" + "b".repeat(20),
+    "gldt-" + "B_8-".repeat(6) + "B",
+    "glrt-" + "c".repeat(20),
+    "glrt-" + "C_7-".repeat(6) + "C",
+  ]) {
+    const report = inspectProposedChanges([{ file: "src/config.ts", after: `const token = "${token}";` }]);
+    assert.equal(report.safeToCommit, false, token);
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" &&
+      /GitLab (?:personal access|deploy or runner) token pattern detected/.test(finding.reason)
+    ), token);
+  }
+});
+
+test("allows GitLab token near misses and explanatory placeholders", () => {
+  for (const content of [
+    "glpat-" + "a".repeat(19),
+    "gldt-" + "b".repeat(19),
+    "glrt-" + "c".repeat(19),
+    "GLPAT-" + "a".repeat(40),
+    "gldt-example",
+    "glrt-placeholder",
+    "GitLab uses glpat-, gldt-, and glrt- token prefixes.",
+  ]) {
+    const report = inspectProposedChanges([{ file: "docs/token-examples.md", after: content }]);
+    assert.equal(report.safeToCommit, true, content);
+    assert.deepEqual(report.findings, [], content);
+  }
+});
+
