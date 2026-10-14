@@ -1829,3 +1829,37 @@ test("allows Google API key near misses and documentation placeholders", () => {
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks OpenRouter API keys at the 20-character suffix boundary and beyond", () => {
+  for (const suffix of [
+    "a".repeat(20),
+    "A9_z-".repeat(4),
+    "Z".repeat(64),
+  ]) {
+    const key = "sk-or-v1-" + suffix;
+    const report = inspectProposedChanges([{ file: "src/openrouter-client.ts", after: `const apiKey = "${key}";` }]);
+    assert.equal(report.safeToCommit, false, "OpenRouter API keys must be blocked");
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" && finding.reason === "OpenRouter API key pattern detected"
+    ), key);
+  }
+});
+
+test("allows OpenRouter API key near misses and environment placeholders", () => {
+  const samples = [
+    "sk-or-v1-" + "a".repeat(19),
+    "sk-or-v1-" + "a".repeat(10) + "." + "b".repeat(10),
+    "SK-OR-V1-" + "a".repeat(32),
+    "sk-or-v2-" + "a".repeat(32),
+    "sk-or-v1-your-api-key",
+    "OpenRouter API keys should be loaded from environment variables.",
+    "const apiKey = process.env.OPENROUTER_API_KEY;",
+  ];
+  const report = inspectProposedChanges([{
+    file: "docs/openrouter-api-keys.md",
+    after: samples.join("\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
