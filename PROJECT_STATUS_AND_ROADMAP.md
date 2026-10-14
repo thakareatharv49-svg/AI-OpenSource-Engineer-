@@ -518,8 +518,17 @@ Definition of done: review the full diff; backend typecheck/tests, frontend buil
 
 ## 46. Milestone 42 — Kubernetes Secret manifest protection
 
-**Implementation in progress on branch `feat/milestone-42-kubernetes-secret-manifest-protection`.** Extend proposal safety beyond filenames to detect Kubernetes manifests that declare `kind: Secret` together with `data` or `stringData`, including JSON resources and files with generic names. Block these manifests by default and add regression coverage for both formats, explicitly named documentation templates, ConfigMaps, and ordinary application code.
+**Merged in PR #74 on 2026-10-14 (merge commit `e19d890c9b335e7e3e68f0cda1403a04fd1bbe41`).** Extend proposal safety beyond filenames to detect Kubernetes manifests that declare `kind: Secret` together with `data` or `stringData`, including JSON resources and files with generic names. Regression coverage includes both formats, explicitly named documentation templates, ConfigMaps, and ordinary application code.
 
 Scope: structural content detection is defense in depth, not a secret-value validator. It does not decode Kubernetes data fields, establish whether values are live, or replace secret scanning and human review. Named `.example`, `.sample`, and `.template` files remain allowed for safe documentation examples.
+
+Definition of done: inspect the complete diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
+
+
+## 47. Milestone 43 — Kubernetes SecretList manifest protection
+
+**Implementation in progress on branch `feat/milestone-43-kubernetes-secretlist-protection`.** Close a structural detection gap for Kubernetes `SecretList` resources: block YAML and JSON SecretList manifests containing `data` or `stringData` payloads, including items whose serialized representation omits an individual `kind: Secret` field. Add regression tests for generic filenames, named documentation templates, non-secret ConfigMap lists, and ordinary application source.
+
+Scope: regex-based structural detection is defense in depth, not a full YAML/JSON schema validator or secret-value validator. Keep explicit documentation-template exemptions, content scanning, and human review.
 
 Definition of done: inspect the complete diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.

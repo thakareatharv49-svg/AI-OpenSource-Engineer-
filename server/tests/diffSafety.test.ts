@@ -904,3 +904,54 @@ test("allows named self-hosted runner credential templates and normal applicatio
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks Kubernetes SecretList manifests with secret payloads regardless of filename", () => {
+  const manifests = [
+    {
+      file: "clusters/prod/objects.yaml",
+      after: "apiVersion: v1\nkind: SecretList\nitems:\n  - metadata:\n      name: service-token\n    type: Opaque\n    data:\n      token: cGxhY2Vob2xkZXI=\n",
+    },
+    {
+      file: "clusters/prod/objects.json",
+      after: JSON.stringify({
+        apiVersion: "v1",
+        kind: "SecretList",
+        items: [
+          {
+            metadata: { name: "service-token" },
+            type: "Opaque",
+            stringData: { token: "synthetic-placeholder" },
+          },
+        ],
+      }),
+    },
+  ];
+
+  for (const change of manifests) {
+    const report = inspectProposedChanges([change]);
+    assert.equal(report.safeToCommit, false, change.file);
+    assert.ok(report.findings.some((finding) =>
+      finding.reason === "Kubernetes Secret manifests containing data or stringData cannot be committed"
+    ), change.file);
+  }
+});
+
+test("allows SecretList documentation templates and non-secret Kubernetes lists", () => {
+  const report = inspectProposedChanges([
+    {
+      file: "docs/secret-list.yaml.example",
+      after: "apiVersion: v1\nkind: SecretList\nitems:\n  - data:\n      token: replace-me\n",
+    },
+    {
+      file: "deploy/config-list.yaml",
+      after: "apiVersion: v1\nkind: ConfigMapList\nitems:\n  - data:\n      LOG_LEVEL: info\n",
+    },
+    {
+      file: "src/kubernetesSecretList.ts",
+      after: "export function listSecrets() { return []; }\n",
+    },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
