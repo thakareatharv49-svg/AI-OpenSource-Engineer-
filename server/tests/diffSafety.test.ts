@@ -1108,6 +1108,35 @@ test("blocks AWS CLI credentials, IAM Identity Center tokens, and aws-vault stat
   }
 });
 
+
+test("blocks Kubernetes kubeconfig directories and local authentication context", () => {
+  for (const file of [
+    ".kube/config",
+    "home/alice/.kube/config",
+    "home/alice/.kube/config-work",
+    "home/runner/.kube/cache/discovery/cluster/server",
+    "home/alice/.kube/credentials.json",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "synthetic placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) =>
+      finding.reason === "Sensitive infrastructure state or deployment credential artifact cannot be committed"
+    ), file);
+  }
+});
+
+test("allows named kubeconfig templates and ordinary Kubernetes source", () => {
+  const report = inspectProposedChanges([
+    { file: "docs/kubeconfig.example", after: "apiVersion: v1\\nkind: Config\\ncontexts: []" },
+    { file: "docs/kubeconfig.sample", after: "apiVersion: v1\\nkind: Config\\ncontexts: []" },
+    { file: "infra/k8s/deployment.yaml", after: "apiVersion: apps/v1\\nkind: Deployment" },
+    { file: "docs/kubernetes-authentication.md", after: "Use short-lived credentials and avoid committing kubeconfig files." },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
+
+
 test("allows named AWS credential templates and ordinary AWS configuration", () => {
   const report = inspectProposedChanges([
     { file: "docs/credentials.example", after: "[default]\\naws_access_key_id = EXAMPLE\\naws_secret_access_key = EXAMPLE" },
