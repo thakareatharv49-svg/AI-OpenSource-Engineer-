@@ -715,6 +715,12 @@ Scope: pattern detection is defense in depth, not webhook validation; tests use 
 
 ## 68. Milestone 64 — Google OAuth client-secret detection edge-case coverage
 
-**Implementation in progress.** Add synthetic regression tests for the existing `GOCSPX-` Google OAuth client-secret detector, covering the 20-character suffix boundary, supported alphanumeric/underscore/hyphen characters, longer token-shaped values, and safe near misses/explanatory placeholders. Keep detector behavior unchanged and do not use real credentials.
+**Completed and merged on 2026-10-14** in [PR #96](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/96), merge commit `cc62f3af86aed04505679c71ee0c6e9922bbc7b7`. Added synthetic regression tests for the existing `GOCSPX-` Google OAuth client-secret detector, including the 20-character suffix boundary, accepted characters, longer token-shaped values, and safe near misses/placeholders. The production detector was unchanged. Backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL all passed on the final PR head.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic tests do not guarantee coverage of every Google OAuth secret format or replace secret scanning and human review.
+
+## 69. Milestone 65 — Twilio API key detection edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing `SK` plus 32-hex-character Twilio API key detector. Cover the exact 32-character suffix boundary, mixed-case hexadecimal characters, longer token-shaped values, and harmless near misses/placeholders. Keep production detector behavior unchanged and use synthetic values only.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL must pass on the final PR head before merge.
