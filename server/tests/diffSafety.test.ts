@@ -723,3 +723,38 @@ test("allows named AI coding-assistant documentation templates and ordinary sour
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks remote-access, tunnel, and sync-client authentication stores", () => {
+  for (const file of [
+    "home/alice/.ngrok2/ngrok.yml",
+    "home/alice/.config/ngrok/ngrok.yml",
+    "home/alice/.cloudflared/cert.pem",
+    "home/alice/.config/cloudflared/cert.pem",
+    "home/alice/.config/tailscale/tailscaled.state",
+    "home/alice/.local/share/tailscale/tailscaled.state",
+    "home/alice/.tsh/keys/proxy.example.com/alice",
+    "home/alice/.config/teleport/keys/profile",
+    "home/alice/.config/rclone/rclone.conf",
+    "home/alice/.oci/sessions/session.json",
+    "home/alice/.config/oci/sessions/session.json",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "synthetic placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) =>
+      finding.reason === "Sensitive infrastructure state or deployment credential artifact cannot be committed"
+    ), file);
+  }
+});
+
+test("allows explicitly named remote-access credential templates and ordinary source", () => {
+  const report = inspectProposedChanges([
+    { file: "docs/ngrok.yml.example", after: "authtoken: replace-me" },
+    { file: "docs/cert.pem.sample", after: "synthetic certificate placeholder" },
+    { file: "docs/rclone.conf.template", after: "[remote]\ntype = example" },
+    { file: "src/network/tunnel.ts", after: "export const tunnelName = 'example';" },
+    { file: "docs/remote-access-security.md", after: "Keep tunnel credentials out of source control." },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
