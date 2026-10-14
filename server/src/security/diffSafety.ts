@@ -108,9 +108,9 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
     /(?:^|\/)\.config\/containers\/auth\.json$/i.test(normalized) ||
     /(?:^|\/)\.terraform\.d\/credentials\.tfrc\.json$/i.test(normalized) ||
     // Helm repository and OCI registry configuration can contain reusable registry credentials.
-    /(?:^|\\/)\\.config\\/helm\\/(?:repositories\\.yaml|registry\\/config\\.json|registry\\.json)$/i.test(normalized) ||
+    /(?:^|\/)\.config\/helm\/(?:repositories\.yaml|registry\/config\.json|registry\.json)$/i.test(normalized) ||
     // Argo CD CLI config persists authenticated server contexts and bearer tokens.
-    /(?:^|\\/)(?:\\.config\\/argocd|\\.argocd)\\/config$/i.test(normalized) ||
+    /(?:^|\/)(?:\.config\/argocd|\.argocd)\/config$/i.test(normalized) ||
     /(?:^|\/)\.gradle\/gradle\.properties$/i.test(normalized) ||
     /(?:^|\/)\.m2\/settings\.xml$/i.test(normalized) ||
     /(?:^|\/)\.pulumi\/credentials\.json$/i.test(normalized) ||
