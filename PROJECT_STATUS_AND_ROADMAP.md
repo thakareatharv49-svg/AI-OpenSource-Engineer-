@@ -735,6 +735,14 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 71. Milestone 67 — DigitalOcean API token detection edge-case coverage
 
-**Implementation in progress.** Add synthetic regression tests for the existing DigitalOcean detector (`dop_v1_` followed by at least 40 lowercase hexadecimal characters, case-insensitive prefix matching). Cover the 40-character boundary, longer hex values, uppercase prefix, and harmless near misses including too-short, non-hex, and placeholder text. Keep production detector behavior unchanged and use synthetic values only.
+**Completed and merged on 2026-10-14** in [PR #99](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/99), merge commit `3a03425c6bc2d984b33df1ef05047ef349924022`. Added synthetic tests for the 40-character hexadecimal boundary, longer values, case-insensitive prefix handling, and safe near misses including too-short, non-hex, and placeholder text. Production detector behavior was unchanged.
+
+Validation on the final PR head passed: backend typecheck/tests; frontend build and lint, including production dependency audit; and CodeQL JavaScript/TypeScript analysis.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic tests do not guarantee coverage of every DigitalOcean token format or replace secret scanning and human review.
+
+## 72. Milestone 68 — Azure Storage connection-string detection edge-case coverage
+
+**Implementation in progress.** Add synthetic tests for the existing Azure Storage connection-string detector, covering the 40-character account-key boundary, longer supported key values, case-insensitive matching, and harmless near misses for short keys, short account names, unsupported protocols/separators, and documentation placeholders. Keep production detector behavior unchanged and use synthetic values only.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL must pass on the final PR head before merge.
