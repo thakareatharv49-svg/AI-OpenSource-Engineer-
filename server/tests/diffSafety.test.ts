@@ -991,3 +991,35 @@ test("allows explicitly named Helm and Argo CD credential templates", () => {
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks renamed Terraform state, backups, saved plans, and CLI credential files", () => {
+  for (const file of [
+    "infra/prod.tfstate",
+    "infra/prod.tfstate.backup",
+    "infra/workspaces/staging.tfstate",
+    "plans/release.tfplan",
+    "plans/release.tfplan.backup",
+    "home/alice/.terraform.d/credentials.tfrc.json",
+    "home/alice/credentials.tfrc.json",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "synthetic placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) =>
+      finding.reason === "Sensitive infrastructure state or deployment credential artifact cannot be committed"
+    ), file);
+  }
+});
+
+test("allows named Terraform artifact templates and ordinary Terraform source", () => {
+  const report = inspectProposedChanges([
+    { file: "docs/prod.tfstate.example", after: "replace with generated local state" },
+    { file: "docs/release.tfplan.sample", after: "placeholder plan" },
+    { file: "docs/credentials.tfrc.json.template", after: '{"credentials":{}}' },
+    { file: "infra/main.tf", after: 'resource "null_resource" "example" {}' },
+    { file: "infra/variables.tf", after: 'variable "region" { type = string }' },
+    { file: "docs/terraform-state-security.md", after: "Do not commit local state or saved plans." },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});

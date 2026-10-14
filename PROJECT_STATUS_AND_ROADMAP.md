@@ -547,7 +547,7 @@ Definition of done: preserve the path-based defense-in-depth caveat and keep the
 
 ## 49. Milestone 45 — Terraform state and CLI credential protection
 
-**Implementation in progress.** Extend proposal safety to block Terraform state artifacts that may serialize provider credentials, outputs, and sensitive resource attributes, as well as Terraform CLI credential files (`.terraformrc`, `terraform.rc`, and `credentials.tfrc.json`) and local Terraform working-directory state. Add tests for nested paths, template exemptions, and ordinary Terraform source/configuration files.
+**Implementation in progress on branch `feat/milestone-45-terraform-credential-protection`.** Extend proposal safety to block Terraform state artifacts even when renamed or workspace-specific, saved plan files and their backups, and Terraform CLI credential files (`.terraformrc`, `terraform.rc`, and `credentials.tfrc.json`) including credentials copied outside the default `.terraform.d` directory. Regression tests cover nested paths, renamed state and plans, documentation-template exemptions, and ordinary Terraform source/configuration files.
 
 Scope: path-based defense in depth. State files can contain sensitive values even when marked sensitive by Terraform, but the matcher cannot inspect remote state or prove a local file contains a live credential. Keep content scanning and human review in place.
 
