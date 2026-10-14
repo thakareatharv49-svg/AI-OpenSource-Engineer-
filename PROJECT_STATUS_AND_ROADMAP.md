@@ -791,6 +791,14 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 78. Milestone 74 — OpenRouter API-key pattern edge-case coverage
 
-**Implementation in progress.** Add synthetic regression tests for the existing `sk-or-v1-` detector and minimum 20-character alphanumeric suffix. Keep production behavior unchanged. Tests are being aligned with the detector's actual accepted character classes and overlapping generic AI-provider detector so assertions reflect the safety gate's observable behavior.
+**Completed and merged on 2026-10-15** in [PR #107](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/107), merge commit `117d7cea51ea58a606d7ea3c30b82ed7a5b57cf0`. Added synthetic regression coverage for the existing `sk-or-v1-` detector's 20-character alphanumeric suffix boundary and longer values, plus safe malformed values and environment placeholders. A failing near-miss fixture was removed because the broader generic AI-provider detector correctly catches its overall shape; production behavior was unchanged.
+
+Validation on the final PR head passed: backend typecheck/tests; frontend build and lint, including production dependency audit; and CodeQL JavaScript/TypeScript analysis.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
+
+## 79. Milestone 75 — Resend API-key pattern edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing `re_` detector and minimum 32-character alphanumeric suffix. Cover exact boundary, longer values, malformed/short near misses, prefix case sensitivity, and environment/documentation placeholders. Keep production detector behavior unchanged.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
