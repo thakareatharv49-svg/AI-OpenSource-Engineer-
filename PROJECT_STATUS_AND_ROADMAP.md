@@ -659,6 +659,14 @@ Scope: pattern detection is defense in depth, not token validation; it does not 
 
 ## 61. Milestone 57 — Atlassian API token detection edge-case coverage
 
-**Implementation in progress** on branch `test/milestone-57-atlassian-token-edge-cases`. Add regression tests for the exact minimum suffix length, mixed allowed suffix characters, longer token-shaped strings, case-sensitive prefix handling, and explanatory placeholders/near misses. This milestone strengthens test coverage without changing the detector itself.
+**Completed and merged on 2026-10-14** in [PR #89](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/89), merge commit `f45d86968b8ca454ce784bf37201980c9493ec60`. Added regression tests for the exact 40-character suffix boundary, accepted suffix characters, longer token-shaped values, case-sensitive prefix handling, and explanatory placeholders/near misses. The detector itself was unchanged.
+
+Validation on the final PR head passed: backend typecheck/tests; frontend build and lint, including production dependency audit; and CodeQL JavaScript/TypeScript analysis.
+
+Scope: edge-case tests increase confidence in the current pattern but do not validate token authenticity, prove coverage of all Atlassian token formats, or replace secret scanning and human review.
+
+## 62. Milestone 58 — GitHub fine-grained token detection edge-case coverage
+
+**Planned.** Add focused regression tests for the existing `github_pat_` detector: minimum accepted suffix length, supported characters, longer token-shaped values, and harmless near misses/documentation placeholders. Keep the detector unchanged unless tests reveal a concrete defect; avoid using real credentials.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL must pass on the final PR head before merge.
