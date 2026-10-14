@@ -1254,7 +1254,7 @@ test("allows named AWS credential templates and ordinary AWS configuration", () 
 
 test("enforces Atlassian API token shape and minimum suffix length", () => {
   const matching = [
-    "ATATT3x" + "a".repeat(39) + "_-Z",
+    "ATATT3x" + "a".repeat(37) + "_-Z",
     "ATATT3x" + "A".repeat(40),
     "ATATT3x" + "a".repeat(64),
   ];
