@@ -487,6 +487,43 @@ test("allows named Azure and Google Cloud credential templates and ordinary sour
   assert.deepEqual(report.findings, []);
 });
 
+test("blocks Azure service-principal and Google Cloud service-identity key exports", () => {
+  for (const file of [
+    "azureauth.json",
+    "home/alice/azure-credentials.json",
+    "workspace/secrets/azure_credentials.json",
+    "servicePrincipal.json",
+    "exports/service-principal.json",
+    "home/runner/sp_credentials.json",
+    "gcp-credentials.json",
+    "workspace/identity/google-credentials.json",
+    "downloads/gcp-service-account.json",
+    "service-account-key.json",
+    "infra/prod/service_account_key.json",
+    "secrets/service-account-credentials.json",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "synthetic placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) =>
+      finding.reason === "Sensitive infrastructure state or deployment credential artifact cannot be committed"
+    ), file);
+  }
+});
+
+test("allows named cloud service-identity templates and ordinary source", () => {
+  const report = inspectProposedChanges([
+    { file: "docs/azureauth.json.example", after: '{"clientId":"replace-me"}' },
+    { file: "docs/servicePrincipal.json.sample", after: '{"tenant":"example"}' },
+    { file: "docs/gcp-credentials.json.template", after: '{"type":"service_account"}' },
+    { file: "docs/service-account-key.json.example", after: '{"private_key":"replace-me"}' },
+    { file: "infra/azure-identity.tf", after: 'resource "azurerm_user_assigned_identity" "example" {}' },
+    { file: "infra/gcp-identity.tf", after: 'resource "google_service_account" "example" {}' },
+    { file: "docs/cloud-identity.md", after: "Prefer workload identity federation over downloaded long-lived key files." },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
+
 test("allows explicitly named cloud credential templates", () => {
   const report = inspectProposedChanges([
     { file: ".docker/config.json.example", after: '{"auths":{}}' },
