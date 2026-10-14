@@ -186,9 +186,16 @@ function isKubernetesSecretManifest(path: string, content: string): boolean {
 
   const yamlSecret = /^\s*kind\s*:\s*["']?Secret["']?\s*(?:#.*)?$/im.test(content) &&
     /^\s*(?:data|stringData)\s*:\s*(?:#.*)?$/im.test(content);
+  // SecretList items may omit their individual kind field in serialized manifests.
+  const yamlSecretList = /^\s*kind\s*:\s*["']?SecretList["']?\s*(?:#.*)?$/im.test(content) &&
+    /^\s*items\s*:\s*(?:#.*)?$/im.test(content) &&
+    /^\s*(?:data|stringData)\s*:\s*(?:#.*)?$/im.test(content);
   const jsonSecret = /["']kind["']\s*:\s*["']Secret["']/i.test(content) &&
     /["'](?:data|stringData)["']\s*:\s*\{/i.test(content);
-  return yamlSecret || jsonSecret;
+  const jsonSecretList = /["']kind["']\s*:\s*["']SecretList["']/i.test(content) &&
+    /["']items["']\s*:\s*\[/i.test(content) &&
+    /["'](?:data|stringData)["']\s*:\s*\{/i.test(content);
+  return yamlSecret || yamlSecretList || jsonSecret || jsonSecretList;
 }
 
 function isSafeRelativePath(path: string): boolean {
