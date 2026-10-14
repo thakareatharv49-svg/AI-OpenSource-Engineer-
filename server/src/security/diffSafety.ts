@@ -134,6 +134,7 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
     /(?:^|\/)(?:Google\/Chrome|Chromium|Microsoft\/Edge|BraveSoftware\/Brave-Browser|Opera Software\/Opera Stable|Vivaldi)\/(?:User Data\/)?(?:Default|Profile [0-9]+)\/(?:Login Data(?:-journal)?|Cookies(?:-journal)?|Network\/Cookies(?:-journal)?|Web Data(?:-journal)?|Login Data For Account|Account Web Data)$/i.test(normalized) ||
     /(?:^|\/)Google\/Chrome\/User Data\/Local State$/i.test(normalized) ||
     /(?:^|\/)Microsoft\/Edge\/User Data\/Local State$/i.test(normalized) ||
+    /(?:^|\/)\.config\/(?:google-chrome|chromium|microsoft-edge)\/Local State$/i.test(normalized) ||
     /(?:^|\/)(?:\.mozilla\/firefox|Mozilla\/Firefox|Firefox\/Profiles)\/[^/]+\/(?:logins\.json|key[34]\.db|cookies\.sqlite|cert[89]\.db|sessionstore\.jsonlz4)$/i.test(normalized) ||
     /(?:^|\/)Library\/Safari\/Cookies\.binarycookies$/i.test(normalized);
 }
