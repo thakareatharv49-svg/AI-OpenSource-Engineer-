@@ -647,8 +647,12 @@ Scope: prefix/shape-based detection is defense in depth, not token validation. I
 
 ## 59. Milestone 55 — Databricks personal access token content detection
 
-**Implementation in progress on branch `feat/milestone-55-npm-token-detection`.** Extend proposal content scanning to recognize Databricks personal access token-shaped strings using the `dapi` prefix followed by 32 hexadecimal characters. Add synthetic positive tests and short documentation-placeholder cases.
+**Completed and merged on 2026-10-14** in [PR #87](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/87), merge commit `3ee7402bfdc29f5890e65469e85f5a25dcfde1a6`. Added proposal-content detection for Databricks token-shaped values (`dapi` plus 32 hexadecimal characters), synthetic positive regression coverage, and safe short-placeholder cases. Backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL all passed on the final PR head.
 
 Scope: prefix/shape-based detection is defense in depth. It does not validate tokens, guarantee coverage of every token format, or replace secret scanning and human review.
 
-Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL must pass on the final PR head before merge.
+## 60. Milestone 56 — Atlassian API token content detection
+
+**Planned.** Extend proposal-content scanning to recognize Atlassian API token-shaped values beginning with the documented `ATATT3x` prefix, with a conservative minimum suffix length. Add synthetic positive regression coverage and short documentation-placeholder cases.
+
+Scope: pattern detection is defense in depth, not token validation; it does not guarantee coverage of every Atlassian token format or replace secret scanning and human review. Validate the final PR with backend typecheck/tests, frontend build/lint and production dependency audit, and CodeQL before merging.
