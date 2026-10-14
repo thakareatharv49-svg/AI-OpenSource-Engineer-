@@ -645,10 +645,10 @@ Validation on the final PR head passed: backend typecheck and tests; frontend bu
 
 Scope: prefix/shape-based detection is defense in depth, not token validation. It does not establish whether a token is live, cover every future token format, or replace secret scanning and human review.
 
-## 59. Milestone 55 — npm access token content detection
+## 59. Milestone 55 — Databricks personal access token content detection
 
-**Implementation in progress.** Extend proposal content scanning to recognize modern npm access-token strings using the `npm_` prefix and realistic token-shaped suffixes. Add synthetic positive tests and short documentation-placeholder cases.
+**Implementation in progress on branch `feat/milestone-55-npm-token-detection`.** Extend proposal content scanning to recognize Databricks personal access token-shaped strings using the `dapi` prefix followed by 32 hexadecimal characters. Add synthetic positive tests and short documentation-placeholder cases.
 
-Scope: prefix/shape-based detection is defense in depth. It does not validate tokens, guarantee coverage of legacy or future npm token formats, or replace secret scanning and human review.
+Scope: prefix/shape-based detection is defense in depth. It does not validate tokens, guarantee coverage of every token format, or replace secret scanning and human review.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL must pass on the final PR head before merge.
