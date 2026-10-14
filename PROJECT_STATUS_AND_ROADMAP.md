@@ -473,8 +473,17 @@ Definition of done: inspect the final diff; backend typecheck/tests, frontend bu
 
 ## 41. Milestone 37 — AI coding-assistant credential and session-store protection
 
-**Implementation in progress on branch `feat/milestone-37-ai-coding-assistant-credential-protection`.** Extend proposal path safety to block known local authentication/session artifacts for Claude Code, OpenAI Codex CLI, Gemini CLI, Codeium/Windsurf, Cursor, and GitHub Copilot VS Code extension storage. Add regression tests for nested home/profile paths, explicitly named documentation templates, and ordinary application source files.
+**Merged in PR #69 on 2026-10-14 (merge commit `7af8a85bd9e917bf8e883e6cbc1c697a1456d4ca`).** Extend proposal path safety to block known local authentication/session artifacts for Claude Code, OpenAI Codex CLI, Gemini CLI, Codeium/Windsurf, Cursor, and GitHub Copilot VS Code extension storage. Add regression tests for nested home/profile paths, explicitly named documentation templates, and ordinary application source files.
 
 Scope: path-based defense in depth; layouts vary by product/version and some extension databases can contain mixed non-secret state. These rules do not parse or decrypt stores, guarantee complete coverage, or replace secret scanning and human review.
 
 Definition of done: review the final diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
+
+
+## 42. Milestone 38 — Remote-access, tunnel, and sync-client authentication protection
+
+**Implementation in progress on branch `feat/milestone-38-remote-access-auth-store-protection`.** Extend path-based proposal safety to block common local authentication material used by ngrok and Cloudflare Tunnel, Tailscale, Teleport, rclone, and OCI CLI session stores. Add regression coverage for nested home paths, explicitly named documentation templates, and ordinary source files.
+
+Scope: path-based defense in depth. Client versions and operating systems may store credentials differently; these rules do not parse, decrypt, or prove that a file contains an active credential. Keep content scanning and human review in place.
+
+Definition of done: inspect the final diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
