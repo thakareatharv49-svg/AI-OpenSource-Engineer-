@@ -691,6 +691,14 @@ Scope: pattern detection is defense in depth, not token validation; tests use sy
 
 ## 65. Milestone 61 — Slack access-token detection edge-case coverage
 
-**Implementation in progress** on branch `test/milestone-61-slack-token-edge-cases`. Add synthetic regression tests for the existing Slack access-token detector (`xox[baprs]-`), covering all supported prefix families, the 10-character suffix boundary, accepted characters, longer token-shaped values, and harmless near misses/explanatory placeholders. Keep detector behavior unchanged; do not use real credentials.
+**Completed and merged on 2026-10-14** in [PR #93](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/93), merge commit `78c033769ed85b8b29ea0efe1d23a352956ba46d`. Added synthetic regression tests for the existing Slack access-token detector (`xox[baprs]-`), covering all supported prefix families, the 10-character suffix boundary, supported characters, longer token-shaped values, and harmless near misses/explanatory placeholders. The detector itself was unchanged. Two initial fixtures were corrected to reflect the detector's actual accepted character set and word-boundary behavior.
+
+Validation on the final PR head passed: backend typecheck/tests; frontend build and lint, including production dependency audit; and CodeQL JavaScript/TypeScript analysis.
+
+Scope: pattern detection is defense in depth, not token validation; tests use synthetic values and do not guarantee coverage of every Slack token format or replace secret scanning and human review.
+
+## 66. Milestone 62 — Slack webhook URL detection edge-case coverage
+
+**Implementation in progress** on branch `test/milestone-62-slack-webhook-edge-cases`. Add synthetic regression tests for the existing Slack webhook URL detector (`hooks.slack.com/services/T…/B…/…`), covering team/channel identifier minimum lengths, the 20-character secret boundary, longer URL-shaped values, supported characters, harmless near misses, and placeholders. Keep detector behavior unchanged; do not use real credentials.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL must pass on the final PR head before merge.
