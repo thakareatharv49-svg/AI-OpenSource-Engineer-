@@ -721,6 +721,14 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 69. Milestone 65 — Twilio API key detection edge-case coverage
 
-**Implementation in progress.** Add synthetic regression tests for the existing `SK` plus 32-hex-character Twilio API key detector. Cover the exact 32-character suffix boundary, mixed-case hexadecimal characters, longer token-shaped values, and harmless near misses/placeholders. Keep production detector behavior unchanged and use synthetic values only.
+**Completed and merged on 2026-10-14** in [PR #97](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/97), merge commit `c36ce43f0134807729beb1cc42c9d080361e1aad`. Added synthetic regression tests for the existing `SK` plus exactly 32 hexadecimal character detector, covering lowercase and mixed-case hex values and safe near misses/placeholders. A test initially assumed longer values would be detected; CI showed the production regex requires an exact 32-character suffix, so the longer value was moved to the safe-near-miss cases. Production detector behavior was unchanged.
+
+Validation on the final PR head passed: backend typecheck/tests; frontend build and lint, including production dependency audit; and CodeQL JavaScript/TypeScript analysis.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic tests do not guarantee coverage of every Twilio key format or replace secret scanning and human review.
+
+## 70. Milestone 66 — Shopify access-token detection edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing Shopify token detector (`shp` plus one of `at`, `ca`, `pa`, or `ss`, underscore, then at least 20 alphanumeric characters). Cover each supported prefix, minimum-length boundary, longer values, and harmless near misses/placeholders. Keep production detector behavior unchanged and use synthetic values only.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL must pass on the final PR head before merge.
