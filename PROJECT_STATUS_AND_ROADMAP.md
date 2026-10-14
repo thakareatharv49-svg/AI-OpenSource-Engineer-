@@ -461,3 +461,11 @@ Definition of done: review the complete diff; backend typecheck/tests, frontend 
 Scope: filename-based defense in depth only. It does not parse database client formats, prove credentials are active, or scan repository history. Template exemptions are narrow suffix matches; human review and content scanning remain required.
 
 Definition of done: inspect the final diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
+
+## 40. Milestone 36 — Database client profile and shell-history protection
+
+**Implementation in progress on branch `feat/milestone-36-database-client-profile-protection`.** Extend path-based proposal safety to block MongoDB Compass connection-profile files, DBeaver saved data-source and credential profiles, and common MongoDB shell history/configuration files. Add regression coverage for nested user/workspace paths and ensure explicitly named documentation templates and ordinary application source files remain allowed.
+
+Scope: filename/path-based defense in depth only. The rules do not parse client databases, decrypt saved credentials, or guarantee coverage of every client/version. Keep content scanning and human review in place.
+
+Definition of done: inspect the final diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.

@@ -597,6 +597,36 @@ test("allows explicitly named browser credential documentation templates", () =>
   assert.deepEqual(report.findings, []);
 });
 
+test("blocks database GUI connection profiles and database shell history", () => {
+  for (const file of [
+    "Users/alice/AppData/Roaming/MongoDB/Compass/connections.json",
+    "home/alice/.config/MongoDB Compass/connections.json",
+    "home/alice/.mongodb/compass/connections.json",
+    "workspace/.metadata/.plugins/org.jkiss.dbeaver.core/data-sources.json",
+    "workspace/.metadata/.plugins/org.jkiss.dbeaver.core/credentials-config.json",
+    "home/alice/.mongosh_repl_history",
+    "home/alice/.mongodb_shell_history",
+    "home/alice/.config/mongosh/config.json",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "synthetic placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) =>
+      finding.reason === "Sensitive infrastructure state or deployment credential artifact cannot be committed"
+    ), file);
+  }
+});
+
+test("allows explicitly named database client profile templates and ordinary source files", () => {
+  const report = inspectProposedChanges([
+    { file: "docs/connections.json.example", after: '{"note":"documentation only"}' },
+    { file: "docs/data-sources.json.template", after: '{"connections":[]}' },
+    { file: "src/database/connections.ts", after: "export const connections = [];" },
+    { file: "docs/database-client-security.md", after: "Do not commit saved database profiles." },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
+
 test("does not block ordinary application cookie and login source files", () => {
   const report = inspectProposedChanges([
     { file: "src/auth/login.ts", after: "export function login() { return true; }" },
