@@ -659,6 +659,6 @@ Scope: pattern detection is defense in depth, not token validation; it does not 
 
 ## 61. Milestone 57 — Atlassian API token detection edge-case coverage
 
-**Planned.** Strengthen the same token-detection boundary with regression cases for case sensitivity, minimum-length boundaries, mixed allowed suffix characters, and longer documentation placeholders. Ensure the rule blocks only values matching the intended token shape and leaves ordinary examples and near-miss strings allowed.
+**Implementation in progress** on branch `test/milestone-57-atlassian-token-edge-cases`. Add regression tests for the exact minimum suffix length, mixed allowed suffix characters, longer token-shaped strings, case-sensitive prefix handling, and explanatory placeholders/near misses. This milestone strengthens test coverage without changing the detector itself.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL must pass on the final PR head before merge.
