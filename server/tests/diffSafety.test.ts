@@ -1893,3 +1893,35 @@ test("allows Resend API key near misses and environment placeholders", () => {
   assert.deepEqual(report.findings, []);
 });
 
+test("blocks Groq API keys at the 20-character suffix boundary and beyond", () => {
+  for (const suffix of [
+    "a".repeat(20),
+    "A9zB7cD3eF5gH1jK9mN",
+    "Z".repeat(64),
+  ]) {
+    const key = "gsk_" + suffix;
+    const report = inspectProposedChanges([{ file: "src/groq-client.ts", after: `const apiKey = "${key}";` }]);
+    assert.equal(report.safeToCommit, false, "Groq API keys must be blocked");
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" && finding.reason === "Groq API key pattern detected"
+    ), key);
+  }
+});
+
+test("allows Groq API key near misses and environment placeholders", () => {
+  const samples = [
+    "gsk_" + "a".repeat(19),
+    "gsk_" + "a".repeat(10) + "." + "b".repeat(10),
+    "GSK_" + "A".repeat(20),
+    "gsk_your_api_key",
+    "Groq API keys should be loaded from environment variables.",
+    "const apiKey = process.env.GROQ_API_KEY;",
+  ];
+  const report = inspectProposedChanges([{
+    file: "docs/groq-api-keys.md",
+    after: samples.join("\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
+
