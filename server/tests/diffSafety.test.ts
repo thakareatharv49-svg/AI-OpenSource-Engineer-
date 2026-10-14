@@ -1312,12 +1312,12 @@ test("allows GitHub fine-grained token near misses without a complete token shap
 test("enforces GitLab personal, deploy, and runner token minimum lengths", () => {
   for (const token of [
     "glpat-" + "a".repeat(20),
-    "glpat-" + "A_9-".repeat(5),
+    "glpat-" + "A_9-".repeat(5) + "A",
     "glpat-" + "z".repeat(80),
     "gldt-" + "b".repeat(20),
-    "gldt-" + "B_8-".repeat(6),
+    "gldt-" + "B_8-".repeat(6) + "B",
     "glrt-" + "c".repeat(20),
-    "glrt-" + "C_7-".repeat(6),
+    "glrt-" + "C_7-".repeat(6) + "C",
   ]) {
     const report = inspectProposedChanges([{ file: "src/config.ts", after: `const token = "${token}";` }]);
     assert.equal(report.safeToCommit, false, token);
