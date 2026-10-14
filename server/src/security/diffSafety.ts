@@ -174,9 +174,7 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
     /(?:^|\/)(?:actions-runner|\.actions-runner)\/(?:\.credentials(?:_rsaparams)?|\.runner|\.service|\.credentials\.public-key)$/i.test(normalized) ||
     // Azure DevOps agents keep reusable authentication material in the agent root.
     /(?:^|\/)(?:\.credentials|\.credentials_rsaparams|\.agent)$/i.test(normalized) ||
-    // TeamCity and Bamboo agent homes can contain build-server auth configuration.
-    /(?:^|\/)(?:buildAgent\/system\/caches|\.teamcity)\/.*(?:token|credential|auth)[^/]*$/i.test(normalized) ||
-    /(?:^|\/)bamboo-agent-home\/(?:xml-data\/configuration\/.*(?:security|credential|token).*|credentials\.properties)$/i.test(normalized);
+    /(?:^|\/)(?:\.credentials|\.credentials_rsaparams|\.agent)$/i.test(normalized);
 }
 
 function isSafeRelativePath(path: string): boolean {
