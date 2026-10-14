@@ -169,7 +169,14 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
     /(?:^|\/)(?:\.buildkite-agent|buildkite-agent)\/(?:buildkite-agent\.cfg|token)$/i.test(normalized) ||
     /(?:^|\/)\.drone\/config$/i.test(normalized) ||
     /(?:^|\/)\.jenkins\/credentials\.xml$/i.test(normalized) ||
-    /(?:^|\/)\.config\/jenkins\/credentials\.xml$/i.test(normalized);
+    /(?:^|\/)\.config\/jenkins\/credentials\.xml$/i.test(normalized) ||
+    // Self-hosted GitHub Actions runners persist registration and private-key material locally.
+    /(?:^|\/)(?:actions-runner|\.actions-runner)\/(?:\.credentials(?:_rsaparams)?|\.runner|\.service|\.credentials\.public-key)$/i.test(normalized) ||
+    // Azure DevOps agents keep reusable authentication material in the agent root.
+    /(?:^|\/)(?:\.agent|\.azuredevops|azure-pipelines-agent)\/(?:\.credentials|\.credentials_rsaparams|\.agent)$/i.test(normalized) ||
+    // TeamCity and Bamboo agent homes can contain build-server auth configuration.
+    /(?:^|\/)(?:buildAgent\/system\/caches|\.teamcity)\/.*(?:token|credential|auth)[^/]*$/i.test(normalized) ||
+    /(?:^|\/)bamboo-agent-home\/(?:xml-data\/configuration\/.*(?:security|credential|token).*|credentials\.properties)$/i.test(normalized);
 }
 
 function isSafeRelativePath(path: string): boolean {
