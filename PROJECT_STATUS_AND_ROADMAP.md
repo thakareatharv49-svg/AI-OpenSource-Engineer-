@@ -624,3 +624,11 @@ Extended filename-based path protection to recognizable Azure service-principal 
 Validation on the final PR head passed: backend typecheck and tests; frontend build and lint, including production dependency audit; and CodeQL JavaScript/TypeScript analysis.
 
 Scope: filename/path-based defense in depth. It cannot identify keys saved under arbitrary custom filenames or inspect arbitrary file contents based on path alone. Explicitly named `.example`, `.sample`, and `.template` artifacts remain permitted. Prefer workload identity federation and short-lived credentials over downloaded long-lived service-account keys.
+
+## 57. Milestone 53 — HashiCorp Vault token content detection
+
+**Implementation in progress on branch `feat/milestone-53-vault-token-content-detection`.** Extend proposal content scanning to recognize HashiCorp Vault service-token (`hvs.`) and batch-token (`hvb.`) formats, including realistic-length synthetic regression values. Preserve short documentation placeholders and explicitly avoid storing live credentials in tests.
+
+Scope: prefix/shape-based detection is defense in depth, not token validation. It may miss custom or transformed token formats and must not replace secret scanning, human review, or Vault token hygiene.
+
+Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL must pass on the final PR head before merge.
