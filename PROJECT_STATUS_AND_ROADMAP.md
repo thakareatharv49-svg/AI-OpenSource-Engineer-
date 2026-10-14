@@ -429,8 +429,17 @@ Definition of done: inspect the final diff; backend typecheck/tests, frontend bu
 
 ## 36. Milestone 32 — Windows and macOS operating-system credential-store protection
 
-**Implementation in progress on branch `feat/milestone-32-windows-macos-credential-store-protection`.** Extend path-based proposal safety to block macOS Keychain directories and database files, plus Windows Credential Manager, Vault, and DPAPI user-master-key store paths under AppData. Add deterministic regression tests for nested user-profile paths and explicitly named documentation-template exemptions.
+**Merged in PR #64 on 2026-10-14 (merge commit `39b11c51d0ee9b0a34fec94d522c4aaedaac87d6`).** Extend path-based proposal safety to block macOS Keychain directories and database files, plus Windows Credential Manager, Vault, and DPAPI user-master-key store paths under AppData. Regression tests cover nested user-profile paths and explicitly named documentation-template exemptions.
 
-Scope: filename/path-based defense in depth only. The checks do not parse operating-system credential formats, establish whether artifacts are live, or replace content scanning and human review. Keep matching limited to known credential-store locations and avoid broad rules that block ordinary application files.
+Scope: filename/path-based defense in depth only. The checks do not parse operating-system credential formats, establish whether artifacts are live, or replace content scanning and human review.
 
-Definition of done: inspect the final diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
+Definition of done: backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head; merge only after all required checks pass.
+
+
+## 37. Milestone 33 — Browser profile credential and session database protection
+
+**Implementation in progress on branch `feat/milestone-33-browser-session-credential-protection`.** Extend path-based proposal safety to block known Chromium-family profile databases used for saved logins, cookies, and web data; browser profile `Local State` files; Firefox profile login databases, cookies, certificate databases, and session state; and Safari cookie databases. Keep matching anchored to known browser profile layouts so ordinary application source files such as `login.ts` and `cookies.ts` remain allowed.
+
+Scope: filename/path-based defense in depth only. These checks do not parse browser databases, validate sessions, or replace content scanning and human review. Browser layouts vary by version and operating system, so this does not claim exhaustive coverage.
+
+Definition of done: review the complete diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
