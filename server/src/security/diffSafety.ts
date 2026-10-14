@@ -116,7 +116,8 @@ function isSensitiveDeploymentArtifact(path: string): boolean {
     /(?:^|\/)\.vault-token$/i.test(normalized) ||
     /(?:^|\/)\.terraform(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.minikube(?:\/|$)/i.test(normalized) ||
-    /(?:^|\/)\.kube\/cache(?:\/|$)/i.test(normalized) ||
+    // Local kubeconfig files can embed bearer tokens, client certificates, and exec-plugin auth context.
+    /(?:^|\/)\.kube(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.config\/(?:op|1password)(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.azure(?:\/|$)/i.test(normalized) ||
     /(?:^|\/)\.config\/gcloud(?:\/|$)/i.test(normalized) ||

@@ -577,8 +577,18 @@ Definition of done: preserve the scope caveat and keep the checks covered by reg
 
 ## 52. Milestone 48 — AWS CLI and IAM Identity Center credential protection
 
-**Implementation in progress on branch `feat/milestone-48-aws-cli-credential-protection`.** Extend proposal path safety to block AWS shared credentials files, IAM Identity Center SSO token cache entries, AWS CLI role credential cache entries, and local aws-vault state. Add regression tests for nested home-directory paths, explicitly named safe templates, and ordinary AWS infrastructure source/documentation.
+**Merged in PR #80 on 2026-10-14 (merge commit `bf670294f8dc44443626b6ed5819b3118790b836`).** Proposal path safety blocks AWS shared credentials files, IAM Identity Center SSO token cache entries, AWS CLI role credential cache entries, and local aws-vault state. Regression tests cover nested home-directory paths, explicitly named safe templates, and ordinary AWS infrastructure source/documentation.
 
 Scope: filename-based defense in depth. It cannot detect credentials stored under arbitrary custom paths, parse arbitrary AWS configuration for embedded secrets, or establish token validity. Keep content scanning and human review in place.
+
+Validation: backend typecheck/tests, frontend build/lint including production dependency audit, and CodeQL passed on the final PR head before merge.
+
+Definition of done: preserve the scope caveat and keep the checks covered by regression tests.
+
+## 53. Milestone 49 — Kubernetes kubeconfig credential protection
+
+**Implementation in progress on branch `feat/milestone-49-kubeconfig-credential-protection`.** Extend proposal path safety to block the local `.kube` directory, including kubeconfig files, cluster authentication contexts, cached discovery data, client certificate references, and exec-plugin authentication state. Add regression tests for common and nested kubeconfig paths, explicitly named safe examples, and ordinary Kubernetes manifests/documentation.
+
+Scope: path-based defense in depth. It cannot detect kubeconfig files stored under arbitrary custom paths or prove that a given context contains a live credential. Keep content scanning and human review in place.
 
 Definition of done: inspect the complete diff; backend typecheck/tests, frontend build/lint, production dependency audit, and CodeQL must pass on the final PR head. Merge only after all required checks pass.
