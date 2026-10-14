@@ -1520,3 +1520,36 @@ test("allows Google OAuth client-secret near misses and explanatory placeholders
     assert.deepEqual(report.findings, [], content);
   }
 });
+
+
+test("enforces Twilio API key exact hexadecimal shape and minimum length", () => {
+  for (const token of [
+    "SK" + "a".repeat(32),
+    "SK" + "A9f0".repeat(8),
+    "SK" + "0123456789abcdefABCDEF0123456789",
+  ]) {
+    const report = inspectProposedChanges([{ file: "src/config.ts", after: `const twilioApiKey = "${token}";` }]);
+    assert.equal(report.safeToCommit, false, token);
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" &&
+      finding.reason === "Twilio API key pattern detected"
+    ), token);
+  }
+});
+
+test("allows Twilio API key near misses and explanatory placeholders", () => {
+  for (const content of [
+    "SK" + "a".repeat(31),
+    "SK" + "a".repeat(33),
+    "SK" + "b".repeat(96),
+    "sk" + "A".repeat(32),
+    "SK" + "g".repeat(32),
+    "SK" + "a".repeat(16) + "-" + "b".repeat(16),
+    "SK-placeholder",
+    "Twilio API keys can use the SK prefix followed by hexadecimal characters.",
+  ]) {
+    const report = inspectProposedChanges([{ file: "docs/twilio-examples.md", after: content }]);
+    assert.equal(report.safeToCommit, true, content);
+    assert.deepEqual(report.findings, [], content);
+  }
+});
