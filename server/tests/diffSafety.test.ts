@@ -555,9 +555,9 @@ test("blocks Windows and macOS operating-system credential-store artifacts", () 
 
 test("allows explicitly named Windows and macOS credential-store documentation templates", () => {
   const report = inspectProposedChanges([
-    { file: "docs/Keychains/login.keychain-db.example", after: "documentation only" },
-    { file: "docs/Credentials/credential.bin.sample", after: "replace with local fixture" },
-    { file: "docs/Vault/Policy.vpol.template", after: "example policy" },
+    { file: "docs/login.keychain-db.example", after: "documentation only" },
+    { file: "docs/credential.bin.sample", after: "replace with local fixture" },
+    { file: "docs/Policy.vpol.template", after: "example policy" },
   ]);
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
