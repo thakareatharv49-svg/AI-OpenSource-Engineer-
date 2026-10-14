@@ -451,6 +451,42 @@ test("blocks Google Application Default Credentials outside the standard SDK dir
 });
 
 
+test("blocks alternate Azure CLI/MSAL and Google Cloud SDK credential artifacts", () => {
+  for (const file of [
+    "accessTokens.json",
+    "home/alice/accessTokens.json",
+    "workspace/runtime/azureProfile.json",
+    "home/runner/msal_token_cache.bin",
+    "tmp/msal_token_cache.json",
+    "credentials.db",
+    "workspace/runtime/access_tokens.db",
+    "home/alice/legacy_credentials/1234567890.json",
+    "exports/client_secret_project.json",
+    "workspace/oauth/client_secret_123.apps.googleusercontent.com.json",
+  ]) {
+    const report = inspectProposedChanges([{ file, after: "synthetic placeholder content" }]);
+    assert.equal(report.safeToCommit, false, file);
+    assert.ok(report.findings.some((finding) =>
+      finding.reason === "Sensitive infrastructure state or deployment credential artifact cannot be committed"
+    ), file);
+  }
+});
+
+test("allows named Azure and Google Cloud credential templates and ordinary source", () => {
+  const report = inspectProposedChanges([
+    { file: "docs/accessTokens.json.example", after: '{"tokens":[]}' },
+    { file: "docs/azureProfile.json.sample", after: '{"subscriptions":[]}' },
+    { file: "docs/msal_token_cache.bin.template", after: "placeholder cache" },
+    { file: "docs/credentials.db.example", after: "placeholder database" },
+    { file: "docs/client_secret_project.json.template", after: '{"installed":{}}' },
+    { file: "infra/gcp-provider.tf", after: 'provider "google" { project = "example-project" }' },
+    { file: "infra/azure-provider.tf", after: 'provider "azurerm" { features {} }' },
+    { file: "docs/cloud-authentication.md", after: "Use short-lived cloud credentials and never commit local token caches." },
+  ]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
+
 test("allows explicitly named cloud credential templates", () => {
   const report = inspectProposedChanges([
     { file: ".docker/config.json.example", after: '{"auths":{}}' },
