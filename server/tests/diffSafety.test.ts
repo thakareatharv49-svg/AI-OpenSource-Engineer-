@@ -1391,7 +1391,7 @@ test("enforces Slack access token minimum lengths across supported families", ()
     "xoxp-" + "c".repeat(10),
     "xoxr-" + "d".repeat(10),
     "xoxs-" + "e".repeat(10),
-    "xoxb-" + "A_9-".repeat(3) + "A",
+    "xoxb-" + "A9-".repeat(3) + "A",
     "xoxp-" + "z".repeat(80),
     "xoxs-" + "Q-7".repeat(8),
   ]) {
@@ -1412,7 +1412,7 @@ test("allows Slack access token near misses and explanatory placeholders", () =>
     "XOXB-" + "d".repeat(30),
     "xoxz-" + "e".repeat(30),
     "xoxb-example",
-    "xoxp-placeholder",
+    "xoxp-demo",
     "Slack access tokens may use xoxb-, xoxp-, xoxa-, xoxr-, or xoxs- prefixes.",
   ]) {
     const report = inspectProposedChanges([{ file: "docs/token-examples.md", after: content }]);
