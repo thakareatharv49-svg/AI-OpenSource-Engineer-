@@ -2094,3 +2094,41 @@ test("allows Discord webhook URL near misses and documentation placeholders", ()
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks JWT-like bearer tokens at each segment boundary and beyond", () => {
+  const tokens = [
+    "eyJ" + "a".repeat(10) + "." + "b".repeat(10) + "." + "c".repeat(20),
+    "eyJ" + "A9_z-".repeat(8) + "." + "B7_y-".repeat(8) + "." + "C5_x-".repeat(8),
+    "eyJ" + "a".repeat(80) + "." + "b".repeat(80) + "." + "c".repeat(120),
+  ];
+  for (const token of tokens) {
+    const report = inspectProposedChanges([{
+      file: "src/auth-client.ts",
+      after: `const bearerToken = "${token}";`,
+    }]);
+    assert.equal(report.safeToCommit, false, "JWT-like bearer tokens must be blocked");
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" && finding.reason === "JWT-like bearer token detected"
+    ), token);
+  }
+});
+
+test("allows JWT-like token near misses and environment/documentation placeholders", () => {
+  const samples = [
+    "eyJ" + "a".repeat(9) + "." + "b".repeat(10) + "." + "c".repeat(20),
+    "eyJ" + "a".repeat(10) + "." + "b".repeat(9) + "." + "c".repeat(20),
+    "eyJ" + "a".repeat(10) + "." + "b".repeat(10) + "." + "c".repeat(19),
+    "eyJ" + "a".repeat(10) + "." + "b".repeat(10) + "." + "c".repeat(10) + "." + "d".repeat(20),
+    "EYJ" + "a".repeat(10) + "." + "b".repeat(10) + "." + "c".repeat(20),
+    "eyJheader.payload.signature",
+    "JWTs commonly contain three dot-separated segments.",
+    "const bearerToken = process.env.ACCESS_TOKEN;",
+  ];
+  const report = inspectProposedChanges([{
+    file: "docs/jwt-tokens.md",
+    after: samples.join("\\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
