@@ -2127,7 +2127,7 @@ test("allows JWT-like token near misses and environment/documentation placeholde
   ];
   const report = inspectProposedChanges([{
     file: "docs/jwt-tokens.md",
-    after: samples.join("\\n"),
+    after: samples.join("\n"),
   }]);
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
