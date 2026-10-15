@@ -145,6 +145,7 @@ function Contribution() {
     return () => { active = false; };
   }, []);
   const [approved, setApproved] = useState(false);
+  const [proposalApprovalHash, setProposalApprovalHash] = useState<string | null>(null);
   const [changesRequested, setChangesRequested] = useState(false);
 
   const [creatingPR, setCreatingPR] = useState(false);
@@ -227,6 +228,7 @@ const [forkedRepository, setForkedRepository] = useState("");
           if (typeof saved.started === "boolean") setStarted(saved.started);
           if (typeof saved.stage === "number" && Number.isInteger(saved.stage) && saved.stage >= 0 && saved.stage <= 5) setStage(saved.stage);
           if (typeof saved.approved === "boolean") setApproved(saved.approved);
+          if (typeof saved.proposalApprovalHash === "string") setProposalApprovalHash(saved.proposalApprovalHash);
           if (typeof saved.changesRequested === "boolean") setChangesRequested(saved.changesRequested);
           if (saved.selectedIssue && typeof saved.selectedIssue === "object") setSelectedIssue(saved.selectedIssue as GitHubIssue);
           if (Array.isArray(saved.issues)) setIssues(saved.issues as GitHubIssue[]);
@@ -257,7 +259,7 @@ const [forkedRepository, setForkedRepository] = useState("");
     if (!uiSnapshotRestored.current) return;
     try {
       const snapshot = {
-        version: 1, started, stage, approved, changesRequested, selectedIssue, issues, aiSelection,
+        version: 1, started, stage, approved, proposalApprovalHash, changesRequested, selectedIssue, issues, aiSelection,
         repositoryAnalysis, repositoryFiles, solutionPlan, codeProposal, codeReview, forkedRepository,
         branchName, baseBranch, commitSuccess, workflowId, workflowVersion, workflowState,
       };
@@ -266,7 +268,7 @@ const [forkedRepository, setForkedRepository] = useState("");
     } catch (error) {
       console.warn("Contribution UI state could not be saved locally:", error);
     }
-  }, [started, stage, approved, changesRequested, selectedIssue, issues, aiSelection, repositoryAnalysis,
+  }, [started, stage, approved, proposalApprovalHash, changesRequested, selectedIssue, issues, aiSelection, repositoryAnalysis,
       repositoryFiles, solutionPlan, codeProposal, codeReview, forkedRepository, branchName, baseBranch,
       commitSuccess, workflowId, workflowVersion, workflowState]);
 
@@ -502,6 +504,8 @@ const [forkedRepository, setForkedRepository] = useState("");
       await updateLifecycle("proposal_ready", "Code proposal generated");
       setCodeProposal(data.result);
       setCodeReview(null);
+      setProposalApprovalHash(null);
+      setApproved(false);
       setChangesRequested(false);
       autoRunAttempts.current.delete("review-code");
       setStage(3);
@@ -793,6 +797,38 @@ const [forkedRepository, setForkedRepository] = useState("");
       setCreatingBranch(false);
     }
   };
+  const handleApproveContribution = async () => {
+    if (!workflowId || workflowVersion === null || !selectedIssue || !codeProposal) { setForkError("The workflow, selected issue, and proposal are required before approval."); return; }
+    const sourceChanges = Array.isArray(codeProposal.changes) ? codeProposal.changes : [];
+    const changes: Array<{ filePath: string; content: string }> = [];
+    for (const raw of sourceChanges) {
+      if (!raw || typeof raw !== "object") { setForkError("The proposal contains an invalid change."); return; }
+      const item = raw as Record<string, unknown>;
+      const filePath = typeof item.file === "string" ? item.file.trim() : "";
+      let content = typeof item.after === "string" ? item.after : "";
+      const lines = content.split("\n");
+      if (lines[0]?.trim().startsWith("```")) lines.shift();
+      if (lines[lines.length - 1]?.trim() === "```") lines.pop();
+      content = lines.join("\n");
+      if (!filePath || !content.trim()) { setForkError("The proposal contains an empty or invalid file change."); return; }
+      changes.push({ filePath, content });
+    }
+    if (!changes.length) { setForkError("There are no concrete file changes to approve."); return; }
+    const commitMessage = "AI contribution: " + (selectedIssue.title || "implement proposed fix");
+    setForkError("");
+    try {
+      const response = await apiFetch(API_BASE_URL + "/api/lifecycle/" + encodeURIComponent(workflowId) + "/approve", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ expectedVersion: workflowVersion, commitMessage, changes }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Server could not record human approval.");
+      setProposalApprovalHash(data.proposalHash);
+      setWorkflowVersion(data.contribution.version); setWorkflowState(data.contribution.state);
+      localStorage.setItem("ai-ose-lifecycle-pointer", JSON.stringify({ id: data.contribution.id, version: data.contribution.version, state: data.contribution.state }));
+      setApproved(true); await handleForkRepository();
+    } catch (error) {
+      setApproved(false); setProposalApprovalHash(null);
+      setForkError(error instanceof Error ? error.message : "Could not record human approval.");
+    }
+  };
   const handleCommitFile = async () => {
     if (!branchName || !forkedRepository || !codeProposal) {
       setCommitError("A fork, branch, and reviewed code proposal are required.");
@@ -866,6 +902,8 @@ const [forkedRepository, setForkedRepository] = useState("");
           branchName,
           commitMessage: "AI contribution: " + (selectedIssue?.title ?? "implement proposed fix"),
           changes: normalizedChanges,
+          workflowId,
+          proposalHash: proposalApprovalHash,
         }),
       });
       const data = await response.json();
@@ -917,6 +955,8 @@ const [forkedRepository, setForkedRepository] = useState("");
           headBranch: forkedRepository.split("/")[0] + ":" + branchName,
           headRepository: forkedRepository.split("/")[1],
           baseBranch,
+          workflowId,
+          proposalHash: proposalApprovalHash,
           title: "AI Contribution: " + (selectedIssue?.title ?? "Proposed fix"),
           body: [
             "This pull request was prepared by AI Open Source Engineer.",
@@ -1643,10 +1683,7 @@ useEffect(() => {
                   <div className="contribution-action-buttons">
                     <button
                       className="contribution-start-button"
-                      onClick={() => {
-                        setApproved(true);
-                        void handleForkRepository();
-                      }}
+                      onClick={() => { void handleApproveContribution(); }}
                       disabled={
                         forkingRepository ||
                         !codeReview ||
