@@ -831,6 +831,14 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 83. Milestone 79 — Hugging Face access-token pattern edge-case coverage
 
-**Implementation in progress.** Add synthetic regression tests for the existing `hf_` detector's minimum 30-character alphanumeric suffix and longer values, malformed/short near misses, case sensitivity, and environment/documentation placeholders. Keep production detector behavior unchanged.
+**Completed and merged on 2026-10-15** in [PR #112](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/112), merge commit `ce1ac46fb2c023f027dd51f443f80521bf3c6a14`. Added synthetic regression tests for the existing `hf_` detector's 30-character suffix boundary and longer values, malformed/short near misses, case sensitivity, and environment/documentation placeholders. Production detector behavior was unchanged.
+
+Validation on the final PR head passed: backend typecheck/tests, frontend build and lint, and CodeQL JavaScript/TypeScript analysis.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
+
+## 84. Milestone 80 — Anthropic API-key pattern edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing `sk-ant-` detector's minimum 20-character suffix and longer values, malformed/short near misses, case sensitivity, and environment/documentation placeholders. Keep production detector behavior unchanged.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
