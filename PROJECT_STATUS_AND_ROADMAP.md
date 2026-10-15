@@ -883,6 +883,12 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 91. Milestone 87 — GitLab personal-access-token edge-case coverage
 
-**Implementation in progress.** Add synthetic regression tests for the existing `glpat-` personal-access-token detector's 20-character suffix boundary, longer token-shaped values, accepted characters, malformed/short near misses, case sensitivity, and documentation/environment placeholders. Keep production detection behavior unchanged unless tests establish a clearly documented defect.
+**Completed and merged on 2026-10-15** in [PR #122](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/122), merge commit `PENDING`. Added synthetic regression tests for the existing `glpat-` personal-access-token detector's 20-character suffix boundary, longer token-shaped values, accepted alphanumeric/underscore/hyphen characters, malformed and short near misses, case sensitivity, and documentation/environment placeholders. Production detector behavior was unchanged. Backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
+
+## 92. Milestone 88 — GitLab deploy/runner-token edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing `gldt-` and `glrt-` deploy/runner-token detectors' 20-character suffix boundaries, longer token-shaped values, accepted characters, malformed/short near misses, case sensitivity, and documentation/environment placeholders. Keep production detection behavior unchanged unless tests establish a clearly documented defect.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
