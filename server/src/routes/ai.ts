@@ -5,6 +5,7 @@ import { Router } from "express";
 import { validateGeneratedProposal } from "../security/proposalQuality.js";
 import { persistOperationalEvent } from "../security/sharedRedis.js";
 import { repositoryContextBudget, selectRelevantRepositoryFiles } from "../security/repositoryContext.js";
+import { fetchSelectedRepositoryFiles } from "../security/githubRepositoryFiles.js";
 import { validateIssueSelectionResult } from "../security/issueSelection.js";
 import { enforceProposalReviewGate, validateCodeReviewResult } from "../security/codeReview.js";
 import { validateRepositoryAnalysisResult } from "../security/repositoryAnalysis.js";
@@ -34,12 +35,7 @@ async function fetchRepositoryFiles(repository: string, token: string, issue: un
   const treeData = await treeResponse.json() as { truncated?: boolean; tree?: Array<{path:string;type:string;size?:number;sha?:string}> };
   if (!Array.isArray(treeData.tree)) throw new Error("GitHub returned an invalid repository tree.");
   const selected = selectRelevantRepositoryFiles(treeData.tree, issue);
-  const fetched = await Promise.all(selected.map(async (file) => {
-    const response = await fetch(`https://api.github.com/repos/${repository}/contents/${file.path.split("/").map(encodeURIComponent).join("/")}?ref=${encodeURIComponent(defaultBranch)}`, { headers });
-    if (!response.ok) return { path: file.path, content: "" };
-    const data = await response.json() as { encoding?: string; content?: string };
-    return { path: file.path, content: data.encoding === "base64" && typeof data.content === "string" ? Buffer.from(data.content, "base64").toString("utf-8") : "" };
-  }));
+  const fetched = await fetchSelectedRepositoryFiles(repository, defaultBranch, selected, headers);
   const bounded = repositoryContextBudget(fetched);
   return { files: bounded.files, context: { selectedFiles: bounded.files.length, contextBytes: bounded.totalBytes, truncated: treeData.truncated === true || bounded.truncated, repositoryTreeTruncated: treeData.truncated === true } };
 }
