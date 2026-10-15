@@ -2132,3 +2132,42 @@ test("allows JWT-like token near misses and environment/documentation placeholde
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks Stripe secret and restricted keys at the 16-character suffix boundary and beyond", () => {
+  const samples = [
+    "sk_live_" + "a".repeat(16),
+    "sk_test_" + "A9zB7cD3eF5gH1jK",
+    "rk_live_" + "b".repeat(16),
+    "rk_test_" + "Z".repeat(80),
+  ];
+  for (const key of samples) {
+    const report = inspectProposedChanges([{
+      file: "src/billing-client.ts",
+      after: `const stripeKey = "${key}";`,
+    }]);
+    assert.equal(report.safeToCommit, false, "Stripe keys must be blocked");
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" && finding.reason === "Stripe API key pattern detected"
+    ), key);
+  }
+});
+
+test("allows Stripe key near misses and environment/documentation placeholders", () => {
+  const samples = [
+    "sk_live_" + "a".repeat(15),
+    "sk_test_" + "a".repeat(8) + "-" + "b".repeat(8),
+    "rk_live_" + "a".repeat(15),
+    "SK_LIVE_" + "A".repeat(20),
+    "sk_stage_" + "a".repeat(20),
+    "sk_live_your_secret_key",
+    "Stripe secret keys begin with sk_live_ or sk_test_.",
+    "const stripeKey = process.env.STRIPE_SECRET_KEY;",
+  ];
+  const report = inspectProposedChanges([{
+    file: "docs/stripe-api-keys.md",
+    after: samples.join("\\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
