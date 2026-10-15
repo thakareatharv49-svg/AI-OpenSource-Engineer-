@@ -847,6 +847,12 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 85. Milestone 81 — Discord webhook URL edge-case coverage
 
-**Implementation in progress.** Add synthetic regression tests for the existing Discord webhook detector's 17–20 digit ID and 50-character token boundaries, longer valid-shaped values, malformed/short near misses, host casing, and environment/documentation placeholders. Keep production detector behavior unchanged.
+**Completed and merged on 2026-10-15** in [PR #114](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/114), merge commit `e86449a9845e5d7bdbbe55024bfebd251ef17980`. Added synthetic regression tests for the existing Discord webhook detector's 17–20 digit ID and 50-character token boundaries, longer valid-shaped values, malformed/short near misses, host casing, and environment/documentation placeholders. Production detector behavior was unchanged. Backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL all passed on the final PR head.
+
+Scope: pattern detection is defense in depth, not webhook validation; synthetic fixtures do not replace secret scanning or human review.
+
+## 86. Milestone 82 — JWT-like bearer-token edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing JWT-like token detector's three segment minimum lengths, accepted characters, longer values, malformed segment near misses, and environment/documentation placeholders. Keep production detector behavior unchanged.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
