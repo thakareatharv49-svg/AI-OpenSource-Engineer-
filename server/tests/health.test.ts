@@ -566,6 +566,20 @@ test("atomic commit retry recognizes the proposal trailer and does not create a 
     changes: changes.map(change => ({ filePath: change.filePath.trim(), content: change.content })).sort((a, b) => a.filePath.localeCompare(b.filePath)),
   })).digest("hex").slice(0, 24);
   const originalFetch = globalThis.fetch;
+  const lifecycleHeaders = { "Content-Type": "application/json", Cookie: "aose_session=" + session.id, Origin: "http://localhost:5173" };
+  const created = await originalFetch(baseUrl + "/api/lifecycle", { method: "POST", headers: lifecycleHeaders, body: JSON.stringify({ idempotencyKey: "retry-approval-" + crypto.randomUUID(), issueUrl: "https://github.com/upstream/project/issues/1", repository: "upstream/project" }) });
+  assert.equal(created.status, 201);
+  const workflow = await created.json() as { contribution: { id: string; version: number } };
+  let version = workflow.contribution.version;
+  for (const state of ["analyzing", "planning", "proposal_ready", "awaiting_approval"]) {
+    const moved = await originalFetch(baseUrl + "/api/lifecycle/" + workflow.contribution.id, { method: "PATCH", headers: lifecycleHeaders, body: JSON.stringify({ state, expectedVersion: version }) });
+    assert.equal(moved.status, 200);
+    version = ((await moved.json()) as { contribution: { version: number } }).contribution.version;
+  }
+  const approvalResponse = await originalFetch(baseUrl + "/api/lifecycle/" + workflow.contribution.id + "/approve", { method: "POST", headers: lifecycleHeaders, body: JSON.stringify({ expectedVersion: version, commitMessage, changes }) });
+  assert.equal(approvalResponse.status, 200);
+  const approval = await approvalResponse.json() as { proposalHash: string };
+  assert.equal(approval.proposalHash, key);
   const calls: string[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
@@ -585,7 +599,7 @@ test("atomic commit retry recognizes the proposal trailer and does not create a 
     const response = await originalFetch(baseUrl + "/api/github/commit-proposal", {
       method: "POST",
       headers: { "Content-Type": "application/json", Cookie: "aose_session=" + session.id },
-      body: JSON.stringify({ owner: "commit-retry-user", repo: "project-fork", branchName: "ai-fix-issue", commitMessage, changes }),
+      body: JSON.stringify({ owner: "commit-retry-user", repo: "project-fork", branchName: "ai-fix-issue", commitMessage, changes, workflowId: workflow.contribution.id, proposalHash: approval.proposalHash }),
     });
     assert.equal(response.status, 200);
     const body = await response.json() as { alreadyCommitted?: boolean; commit?: { sha?: string } };
