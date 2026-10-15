@@ -91,7 +91,6 @@ function Contribution() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Lifecycle update failed");
       workflowVersionRef.current = data.contribution.version;
-      workflowVersionRef.current = data.contribution.version;
       setWorkflowVersion(data.contribution.version);
       setWorkflowState(data.contribution.state);
       localStorage.setItem("ai-ose-lifecycle-pointer", JSON.stringify({ id: data.contribution.id, version: data.contribution.version, state: data.contribution.state }));
@@ -249,7 +248,7 @@ const [forkedRepository, setForkedRepository] = useState("");
           if (typeof saved.baseBranch === "string") setBaseBranch(saved.baseBranch);
           if (typeof saved.commitSuccess === "boolean") setCommitSuccess(saved.commitSuccess);
           if (typeof saved.workflowId === "string") setWorkflowId(saved.workflowId);
-          if (typeof saved.workflowVersion === "number") setWorkflowVersion(saved.workflowVersion);
+          if (typeof saved.workflowVersion === "number") { workflowVersionRef.current = saved.workflowVersion; setWorkflowVersion(saved.workflowVersion); }
           if (typeof saved.workflowState === "string") setWorkflowState(saved.workflowState);
         }
       }
