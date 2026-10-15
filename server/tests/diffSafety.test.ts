@@ -2089,7 +2089,7 @@ test("allows Discord webhook URL near misses and documentation placeholders", ()
   ];
   const report = inspectProposedChanges([{
     file: "docs/discord-webhooks.md",
-    after: samples.join("\\n"),
+    after: samples.join("\n"),
   }]);
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
