@@ -94,3 +94,12 @@ This section was refreshed by checking the live GitHub repository, README, roadm
 ## Next priority
 
 Resume the end-to-end audit at the remaining unverified boundaries: real OAuth/session middleware, provider-backed issue discovery and repository analysis, analysis completeness when GitHub file fetches fail, and a controlled live GitHub fork/branch/commit/PR smoke test. Keep the smoke test opt-in and isolated from upstream repositories. Avoid adding more synthetic secret-pattern milestones unless they close a concrete gap in the main contribution workflow.
+
+
+## Latest work in progress — Milestone 96 (2026-10-15)
+
+- Branch: `fix/fail-closed-repository-analysis-m96`.
+- Finding addressed from the workflow audit: `fetchRepositoryFiles` previously converted any selected-file HTTP failure or unsupported content response to `content: ""`, allowing downstream AI analysis to proceed with silently incomplete source.
+- Added `server/src/security/githubRepositoryFiles.ts` to fail closed on HTTP errors, non-file responses, unsupported encoding/missing content, and malformed base64. `server/src/routes/ai.ts` now uses this helper.
+- Added `server/tests/githubRepositoryFiles.test.ts` for successful UTF-8 decoding, failed API requests, malformed payloads, encoded nested paths, and branch selection.
+- PR/CI/merge status is pending until GitHub reports it. Do not call this live end-to-end verified: provider credentials, real GitHub repository reads, OAuth, sandbox runtime, fork/commit, and PR creation still require runtime verification.
