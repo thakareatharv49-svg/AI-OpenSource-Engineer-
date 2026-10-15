@@ -104,13 +104,9 @@ test("POST /api/github/branch rejects incomplete branch input", async () => {
 });
 
 test("PUT /api/github/file rejects incomplete file changes", async () => {
-  const response = await fetch(baseUrl + "/api/github/file", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ owner: "example", repo: "project" }),
-  });
-  assert.equal(response.status, 400);
-  assert.match((await response.json()).error, /file path.*content/i);
+  const response = await fetch(baseUrl + "/api/github/file", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+  assert.equal(response.status, 410);
+  assert.equal((await response.json()).code, "LEGACY_WRITE_DISABLED");
 });
 
 test("POST /api/github/pull-request rejects missing head repository", async () => {
@@ -156,20 +152,9 @@ test("POST /api/github/branch rejects malformed Git refs before contacting GitHu
 });
 
 test("PUT /api/github/file rejects traversal paths before contacting GitHub", async () => {
-  const response = await fetch(baseUrl + "/api/github/file", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      owner: "example",
-      repo: "project",
-      branchName: "ai-contribution-test",
-      filePath: "../README.md",
-      content: "# unsafe",
-      commitMessage: "test",
-    }),
-  });
-  assert.equal(response.status, 400);
-  assert.match((await response.json()).error, /safe repository-relative path/i);
+  const response = await fetch(baseUrl + "/api/github/file", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+  assert.equal(response.status, 410);
+  assert.equal((await response.json()).code, "LEGACY_WRITE_DISABLED");
 });
 
 test("GET /api/github/repository rejects invalid owner or repository path segments", async () => {
@@ -180,69 +165,27 @@ test("GET /api/github/repository rejects invalid owner or repository path segmen
 
 
 test("PUT /api/github/file rejects oversized commit messages", async () => {
-  const response = await fetch(baseUrl + "/api/github/file", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      owner: "example",
-      repo: "project",
-      branchName: "ai-contribution-test",
-      filePath: "README.md",
-      content: "# safe",
-      commitMessage: "x".repeat(201),
-    }),
-  });
-  assert.equal(response.status, 400);
+  const response = await fetch(baseUrl + "/api/github/file", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+  assert.equal(response.status, 410);
+  assert.equal((await response.json()).code, "LEGACY_WRITE_DISABLED");
 });
 
 test("PUT /api/github/file blocks secret-bearing content before GitHub access", async () => {
-  const response = await fetch(baseUrl + "/api/github/file", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      owner: "example",
-      repo: "project",
-      branchName: "ai-contribution-test",
-      filePath: "src/config.ts",
-      content: 'const token = "ghp_123456789012345678901234567890123456";',
-      commitMessage: "test",
-    }),
-  });
-  assert.equal(response.status, 422);
-  assert.match((await response.json()).error, /safety gate/i);
+  const response = await fetch(baseUrl + "/api/github/file", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+  assert.equal(response.status, 410);
+  assert.equal((await response.json()).code, "LEGACY_WRITE_DISABLED");
 });
 
 test("PUT /api/github/file requires manual review for workflow changes", async () => {
-  const response = await fetch(baseUrl + "/api/github/file", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      owner: "example",
-      repo: "project",
-      branchName: "ai-contribution-test",
-      filePath: ".github/workflows/ci.yml",
-      content: "name: custom workflow\n",
-      commitMessage: "test",
-    }),
-  });
-  assert.equal(response.status, 422);
+  const response = await fetch(baseUrl + "/api/github/file", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+  assert.equal(response.status, 410);
+  assert.equal((await response.json()).code, "LEGACY_WRITE_DISABLED");
 });
 
 test("PUT /api/github/file rejects credential paths before contacting GitHub", async () => {
-  const response = await fetch(baseUrl + "/api/github/file", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      owner: "example",
-      repo: "project",
-      branchName: "ai-contribution-test",
-      filePath: ".npmrc",
-      content: "//registry.npmjs.org/:_authToken=secret",
-      commitMessage: "test",
-    }),
-  });
-  assert.equal(response.status, 400);
-  assert.match((await response.json()).error, /safe repository-relative path/i);
+  const response = await fetch(baseUrl + "/api/github/file", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+  assert.equal(response.status, 410);
+  assert.equal((await response.json()).code, "LEGACY_WRITE_DISABLED");
 });
 
 test("AI endpoints throttle excessive requests before calling providers", async () => {
