@@ -164,6 +164,45 @@ test("GitHub write endpoints reject unapproved proposals and disable legacy part
   assert.equal(body.code, "HUMAN_APPROVAL_REQUIRED");
 });
 
+test("contribution lists are isolated by GitHub login", async () => {
+  const created = await request("/", {
+    method: "POST",
+    body: JSON.stringify(createBody("list-isolation-12345678", 51)),
+  }, "alice");
+  assert.equal(created.response.status, 201);
+  const id = created.body.contribution.id as string;
+
+  const aliceList = await request("/", {}, "alice");
+  assert.equal(aliceList.response.status, 200);
+  assert.ok(aliceList.body.contributions.some((item: { id: string }) => item.id === id));
+
+  const bobList = await request("/", {}, "bob");
+  assert.equal(bobList.response.status, 200);
+  assert.ok(!bobList.body.contributions.some((item: { id: string }) => item.id === id));
+});
+
+test("idempotency keys are scoped to the authenticated GitHub login", async () => {
+  const payload = createBody("per-user-idempotency-1234", 52);
+  const aliceFirst = await request("/", { method: "POST", body: JSON.stringify(payload) }, "alice");
+  const aliceRetry = await request("/", { method: "POST", body: JSON.stringify(payload) }, "alice");
+  const bobFirst = await request("/", { method: "POST", body: JSON.stringify(payload) }, "bob");
+
+  assert.equal(aliceFirst.response.status, 201);
+  assert.equal(aliceRetry.response.status, 200);
+  assert.equal(aliceRetry.body.reused, true);
+  assert.equal(aliceRetry.body.contribution.id, aliceFirst.body.contribution.id);
+  assert.equal(bobFirst.response.status, 201);
+  assert.equal(bobFirst.body.reused, false);
+  assert.notEqual(bobFirst.body.contribution.id, aliceFirst.body.contribution.id);
+
+  const aliceList = await request("/", {}, "alice");
+  const bobList = await request("/", {}, "bob");
+  assert.ok(aliceList.body.contributions.some((item: { id: string }) => item.id === aliceFirst.body.contribution.id));
+  assert.ok(!aliceList.body.contributions.some((item: { id: string }) => item.id === bobFirst.body.contribution.id));
+  assert.ok(bobList.body.contributions.some((item: { id: string }) => item.id === bobFirst.body.contribution.id));
+  assert.ok(!bobList.body.contributions.some((item: { id: string }) => item.id === aliceFirst.body.contribution.id));
+});
+
 test("lifecycle API rejects malformed transition versions and unknown states", async () => {
   const created = await request("/", {
     method: "POST",
