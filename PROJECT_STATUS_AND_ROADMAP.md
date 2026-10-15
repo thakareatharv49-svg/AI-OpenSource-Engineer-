@@ -894,3 +894,12 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
 
 Definition of done:
+
+
+## 93. Milestone 89 — GitHub fine-grained token edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing `github_pat_` fine-grained personal-access-token detector at its 20-character suffix boundary and beyond, plus malformed/short near misses, accepted characters, casing, and documentation/environment placeholders. Keep production detection behavior unchanged.
+
+Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
