@@ -502,10 +502,6 @@ router.post("/commit-proposal", async (req, res) => {
     if (!approval || approval.approvedProposalHash !== proposalIdempotencyKey || !approval.approvedAt) {
       return res.status(403).json({ error: "This exact proposal has not been approved by the signed-in user.", code: "HUMAN_APPROVAL_REQUIRED" });
     }
-    if (approval.repository.toLowerCase() !== (owner + "/" + repo).toLowerCase()) {
-      return res.status(403).json({ error: "The approval belongs to a different repository.", code: "APPROVAL_SCOPE_MISMATCH" });
-    }
-
     const forkCheck = await verifyAuthenticatedFork(token, owner, repo);
     if (!forkCheck.ok) {
       return res.status(forkCheck.status).json({ error: forkCheck.error });
@@ -649,6 +645,8 @@ router.post("/pull-request", async (req, res) => {
       headBranch,
       headRepository,
       baseBranch,
+      workflowId,
+      proposalHash,
     } = req.body;
 
     if (!isValidRepositoryPart(owner) || !isValidRepositoryPart(repo)) {
@@ -692,6 +690,15 @@ router.post("/pull-request", async (req, res) => {
       return res.status(403).json({ error: "Pull requests may only use a head branch owned by the authenticated GitHub account." });
     }
 
+    if (typeof workflowId !== "string" || typeof proposalHash !== "string" || !/^[a-f0-9]{24}$/.test(proposalHash)) {
+      return res.status(403).json({ error: "A recorded human approval is required before creating a pull request.", code: "HUMAN_APPROVAL_REQUIRED" });
+    }
+    const sessionLogin = (res.locals.githubSession as { login?: string } | null)?.login;
+    const approval = sessionLogin ? await getContribution(sessionLogin, workflowId) : null;
+    if (!approval || approval.approvedProposalHash !== proposalHash || !approval.approvedAt || approval.state !== "commit_complete" || approval.repository.toLowerCase() !== (owner + "/" + repo).toLowerCase()) {
+      return res.status(403).json({ error: "The approved workflow must match this upstream repository and have a completed commit before PR creation.", code: "APPROVAL_SCOPE_MISMATCH" });
+    }
+
     // Confirm the selected head repository is actually a fork of the requested upstream.
     const headRepositoryResponse = await fetch(
       `https://api.github.com/repos/${encodeURIComponent(headOwner)}/${encodeURIComponent(headRepository)}`,
@@ -709,6 +716,16 @@ router.post("/pull-request", async (req, res) => {
       headRepositoryData.parent?.full_name?.toLowerCase() !== `${owner}/${repo}`.toLowerCase()
     ) {
       return res.status(403).json({ error: "The pull request head repository must be a fork of the selected upstream repository." });
+    }
+
+    const headRefResponse = await fetch("https://api.github.com/repos/" + encodeURIComponent(headOwner) + "/" + encodeURIComponent(headRepository) + "/git/ref/heads/" + encodeURIComponent(headBranch.split(":").slice(1).join(":")), { headers: githubHeaders(token) });
+    if (!headRefResponse.ok) return res.status(409).json({ error: "Unable to verify the committed head branch before creating the pull request." });
+    const headRef = await headRefResponse.json() as { object?: { sha?: string } };
+    if (!headRef.object?.sha) return res.status(409).json({ error: "The selected head branch has no verifiable commit." });
+    const headCommitResponse = await fetch("https://api.github.com/repos/" + encodeURIComponent(headOwner) + "/" + encodeURIComponent(headRepository) + "/git/commits/" + encodeURIComponent(headRef.object.sha), { headers: githubHeaders(token) });
+    const headCommit = await headCommitResponse.json() as { message?: string };
+    if (!headCommitResponse.ok || typeof headCommit.message !== "string" || !headCommit.message.includes("[ai-ose-proposal:" + proposalHash + "]")) {
+      return res.status(403).json({ error: "The head branch does not contain the exact approved proposal commit.", code: "APPROVED_COMMIT_MISMATCH" });
     }
 
     const response = await fetch(
