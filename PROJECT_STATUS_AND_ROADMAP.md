@@ -896,9 +896,9 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 Definition of done:
 
 
-## 94. Milestone 90 — Hugging Face access-token edge-case coverage
+## 93. Milestone 89 — Hugging Face access-token edge-case coverage
 
-**Implementation in progress.** Added synthetic regression tests for the existing `hf_` access-token detector's 30-character suffix boundary and longer token-shaped values, malformed/short near misses, case sensitivity, and documentation/environment placeholders. Production detector behavior was unchanged. Backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
+**Completed and merged on 2026-10-15** in [PR #126](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/126), merge commit `21e401fb533efed8fdaa8dc3e683b2bed00fe448`. Added synthetic regression tests for the existing `hf_` access-token detector's 30-character suffix boundary and longer token-shaped values, malformed/short near misses, case sensitivity, and documentation/environment placeholders. Production detector behavior was unchanged.
 
 Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
 
