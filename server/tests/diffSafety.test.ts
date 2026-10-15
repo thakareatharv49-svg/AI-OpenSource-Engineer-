@@ -2431,3 +2431,40 @@ test("allows Supabase secret-key near misses and environment/documentation place
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks Google OAuth client secrets at the 20-character suffix boundary and beyond", () => {
+  for (const suffix of [
+    "a".repeat(20),
+    "A9_z-B7cD3eF5gH1jK9m",
+    "Z".repeat(100),
+  ]) {
+    const secret = "GOCSPX-" + suffix;
+    const report = inspectProposedChanges([{
+      file: "src/google-oauth.ts",
+      after: `const clientSecret = "${secret}";`,
+    }]);
+    assert.equal(report.safeToCommit, false, "Google OAuth client secrets must be blocked");
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" && finding.reason === "Google OAuth client secret pattern detected"
+    ), secret);
+  }
+});
+
+test("allows Google OAuth client-secret near misses and environment/documentation placeholders", () => {
+  const samples = [
+    "GOCSPX-" + "a".repeat(19),
+    "GOCSPX-" + "a".repeat(10) + "." + "b".repeat(10),
+    "gocspx-" + "A".repeat(20),
+    "GOCSPX-your_client_secret",
+    "GOCSPX-example_secret_value",
+    "Google OAuth client secrets use the GOCSPX- prefix.",
+    "const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;",
+  ];
+  const report = inspectProposedChanges([{
+    file: "docs/google-oauth-client-secrets.md",
+    after: samples.join("\\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
