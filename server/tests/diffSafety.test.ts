@@ -2055,3 +2055,42 @@ test("allows Anthropic API-key near misses and environment/documentation placeho
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks Discord webhook URLs at the snowflake and token-length boundaries", () => {
+  const token = "a".repeat(50);
+  const samples = [
+    "https://discord.com/api/webhooks/" + "1".repeat(17) + "/" + token,
+    "https://discordapp.com/api/webhooks/" + "1".repeat(20) + "/" + token,
+    "https://discord.com/api/webhooks/" + "1".repeat(18) + "/" + "Z".repeat(120),
+  ];
+  for (const webhook of samples) {
+    const report = inspectProposedChanges([{
+      file: "src/discord-notifier.ts",
+      after: `const webhookUrl = "${webhook}";`,
+    }]);
+    assert.equal(report.safeToCommit, false, "Discord webhook URLs must be blocked");
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" && finding.reason === "Discord webhook URL detected"
+    ), webhook);
+  }
+});
+
+test("allows Discord webhook URL near misses and documentation placeholders", () => {
+  const token = "a".repeat(50);
+  const samples = [
+    "https://discord.com/api/webhooks/" + "1".repeat(16) + "/" + token,
+    "https://discord.com/api/webhooks/" + "1".repeat(21) + "/" + token,
+    "https://discord.com/api/webhooks/" + "1".repeat(18) + "/" + "a".repeat(49),
+    "https://discord.com/api/webhooks/not-a-snowflake/" + token,
+    "HTTPS://DISCORD.COM/api/webhooks/" + "1".repeat(18) + "/" + token,
+    "Discord webhook URLs use /api/webhooks/{id}/{token}.",
+    "const webhookUrl = process.env.DISCORD_WEBHOOK_URL;",
+  ];
+  const report = inspectProposedChanges([{
+    file: "docs/discord-webhooks.md",
+    after: samples.join("\\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
