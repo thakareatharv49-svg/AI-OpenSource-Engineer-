@@ -111,7 +111,7 @@ GitHub Actions runs these frontend and backend checks on pushes and pull request
 
 ## Per-user GitHub ownership
 
-Every user's forks, branches, commits, and pull requests must use the GitHub access token from that user's own signed-in session. The OAuth app's client credentials identify the application, not the contributor. See the [per-user ownership and isolation checklist](docs/per-user-github-ownership.md) for the implementation audit and two-account acceptance tests. Multi-account live isolation remains unverified until those tests are run with separate accounts.
+Every user's forks, branches, commits, and pull requests must use the GitHub access token from that user's own signed-in session. The OAuth app's client credentials identify the application, not the contributor. See the [per-user ownership and isolation checklist](docs/per-user-github-ownership.md) for the implementation audit and two-account acceptance tests. The lifecycle integration suite also covers cross-user list/read/transition/approval isolation and per-user idempotency; see [per-user isolation regression coverage](docs/per-user-isolation-regression-tests.md). Multi-account live isolation remains unverified until the real-provider tests are run with separate accounts.
 
 ## Live integration verification
 
