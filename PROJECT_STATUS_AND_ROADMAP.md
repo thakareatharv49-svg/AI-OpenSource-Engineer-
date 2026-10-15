@@ -912,3 +912,12 @@ Definition of done: inspect the full diff; backend typecheck/tests, frontend bui
 **Verification:** backend typecheck and tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis all passed on the final PR head.
 
 Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
+
+
+## 95. Milestone 91 — Google OAuth client-secret edge-case coverage
+
+**In progress.** Added synthetic regression tests for the existing `GOCSPX-` Google OAuth client-secret detector at the 20-character suffix boundary and beyond, malformed/short near misses, case sensitivity, and documentation/environment placeholders. Production detector behavior is unchanged.
+
+**Validation gate:** backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
