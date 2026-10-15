@@ -2498,7 +2498,7 @@ test("covers GitHub fine-grained token edge cases with realistic synthetic fixtu
   ];
   const report = inspectProposedChanges([{
     file: "docs/github-fine-grained-tokens.md",
-    after: nearMisses.join("\\n"),
+    after: nearMisses.join("\n"),
   }]);
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
