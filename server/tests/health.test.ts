@@ -355,6 +355,11 @@ test("POST /api/github/commit-proposal writes every proposed file in one branch 
     }
     return jsonResponse({ message: "Unexpected mocked GitHub request: " + method + " " + url.pathname }, 500);
   }, async () => {
+    const changes = [
+      { filePath: "src/one.ts", content: "export const one = 1;\\n" },
+      { filePath: "src/two.ts", content: "export const two = 2;\\n" },
+    ];
+    const approval = await createApprovedWorkflow(changes, "Add two source files");
     const response = await originalFetchForTest(baseUrl + "/api/github/commit-proposal", {
       method: "POST",
       headers: { "Content-Type": "application/json", Cookie: testSessionCookie },
@@ -400,6 +405,11 @@ test("POST /api/github/commit-proposal leaves the branch untouched when a blob c
     if (method === "PATCH") refUpdates += 1;
     return jsonResponse({ message: "Unexpected mocked GitHub request" }, 500);
   }, async () => {
+    const changes = [
+      { filePath: "src/one.ts", content: "export const one = 1;\\n" },
+      { filePath: "src/two.ts", content: "export const two = 2;\\n" },
+    ];
+    const approval = await createApprovedWorkflow(changes, "Add two source files");
     const response = await originalFetchForTest(baseUrl + "/api/github/commit-proposal", {
       method: "POST",
       headers: { "Content-Type": "application/json", Cookie: testSessionCookie },
@@ -425,6 +435,24 @@ test("POST /api/github/commit-proposal leaves the branch untouched when a blob c
 // Preserve the real fetch for local test-server requests even while GitHub API
 // calls are mocked inside the route.
 const originalFetchForTest = globalThis.fetch.bind(globalThis);
+
+async function createApprovedWorkflow(changes: Array<{ filePath: string; content: string }>, commitMessage: string): Promise<{ workflowId: string; proposalHash: string }> {
+  const headers = { "Content-Type": "application/json", Cookie: testSessionCookie, Origin: "http://localhost:5173" };
+  const created = await originalFetchForTest(baseUrl + "/api/lifecycle", { method: "POST", headers, body: JSON.stringify({ idempotencyKey: "approved-" + crypto.randomUUID(), issueUrl: "https://github.com/upstream/demo/issues/1", repository: "upstream/demo" }) });
+  assert.equal(created.status, 201);
+  const initial = await created.json() as { contribution: { id: string; version: number } };
+  let version = initial.contribution.version;
+  for (const state of ["analyzing", "planning", "proposal_ready", "awaiting_approval"]) {
+    const moved = await originalFetchForTest(baseUrl + "/api/lifecycle/" + initial.contribution.id, { method: "PATCH", headers, body: JSON.stringify({ state, expectedVersion: version }) });
+    assert.equal(moved.status, 200);
+    version = ((await moved.json()) as { contribution: { version: number } }).contribution.version;
+  }
+  const approved = await originalFetchForTest(baseUrl + "/api/lifecycle/" + initial.contribution.id + "/approve", { method: "POST", headers, body: JSON.stringify({ expectedVersion: version, commitMessage, changes }) });
+  assert.equal(approved.status, 200);
+  const result = await approved.json() as { proposalHash: string };
+  return { workflowId: initial.contribution.id, proposalHash: result.proposalHash };
+}
+
 
 
 test("POST /api/sandbox/snapshot rejects traversal repository identifiers", async () => {
