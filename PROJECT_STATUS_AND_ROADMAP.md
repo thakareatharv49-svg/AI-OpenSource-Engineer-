@@ -823,6 +823,14 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 82. Milestone 78 — Supabase secret API-key pattern edge-case coverage
 
-**Implementation in progress.** Add synthetic regression tests for the existing `sb_secret_` detector and minimum 20-character suffix, including longer values, malformed/short near misses, case sensitivity, and environment/documentation placeholders. Keep production detector behavior unchanged.
+**Completed and merged on 2026-10-15** in [PR #111](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/111), merge commit `be3cd50b0b1883ecb095133e74874fd8eb456850`. Added synthetic tests for the existing `sb_secret_` detector's 20-character suffix boundary and longer values, plus short/malformed near misses, case sensitivity, documentation wording, and environment-variable references. Production detector behavior was unchanged.
+
+Validation on the final PR head passed: backend typecheck/tests; frontend build and lint, including production dependency audit; and CodeQL JavaScript/TypeScript analysis.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
+
+## 83. Milestone 79 — Hugging Face access-token pattern edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing `hf_` detector's minimum 30-character alphanumeric suffix and longer values, malformed/short near misses, case sensitivity, and environment/documentation placeholders. Keep production detector behavior unchanged.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
