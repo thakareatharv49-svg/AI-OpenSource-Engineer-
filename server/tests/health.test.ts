@@ -356,23 +356,14 @@ test("POST /api/github/commit-proposal writes every proposed file in one branch 
     return jsonResponse({ message: "Unexpected mocked GitHub request: " + method + " " + url.pathname }, 500);
   }, async () => {
     const changes = [
-      { filePath: "src/one.ts", content: "export const one = 1;\\n" },
-      { filePath: "src/two.ts", content: "export const two = 2;\\n" },
+      { filePath: "src/one.ts", content: "export const one = 1;\n" },
+      { filePath: "src/two.ts", content: "export const two = 2;\n" },
     ];
     const approval = await createApprovedWorkflow(changes, "Add two source files");
     const response = await originalFetchForTest(baseUrl + "/api/github/commit-proposal", {
       method: "POST",
       headers: { "Content-Type": "application/json", Cookie: testSessionCookie },
-      body: JSON.stringify({
-        owner: "contributor",
-        repo: "demo-fork",
-        branchName: "ai-contribution-test",
-        commitMessage: "Add two source files",
-        changes: [
-          { filePath: "src/one.ts", content: "export const one = 1;\n" },
-          { filePath: "src/two.ts", content: "export const two = 2;\n" },
-        ],
-      }),
+      body: JSON.stringify({ owner: "contributor", repo: "demo-fork", branchName: "ai-contribution-test", commitMessage: "Add two source files", changes, ...approval }),
     });
     assert.equal(response.status, 201);
     const data = await response.json();
@@ -406,23 +397,14 @@ test("POST /api/github/commit-proposal leaves the branch untouched when a blob c
     return jsonResponse({ message: "Unexpected mocked GitHub request" }, 500);
   }, async () => {
     const changes = [
-      { filePath: "src/one.ts", content: "export const one = 1;\\n" },
-      { filePath: "src/two.ts", content: "export const two = 2;\\n" },
+      { filePath: "src/one.ts", content: "export const one = 1;\n" },
+      { filePath: "src/two.ts", content: "export const two = 2;\n" },
     ];
     const approval = await createApprovedWorkflow(changes, "Add two source files");
     const response = await originalFetchForTest(baseUrl + "/api/github/commit-proposal", {
       method: "POST",
       headers: { "Content-Type": "application/json", Cookie: testSessionCookie },
-      body: JSON.stringify({
-        owner: "contributor",
-        repo: "demo-fork",
-        branchName: "ai-contribution-test",
-        commitMessage: "Add two source files",
-        changes: [
-          { filePath: "src/one.ts", content: "export const one = 1;\n" },
-          { filePath: "src/two.ts", content: "export const two = 2;\n" },
-        ],
-      }),
+      body: JSON.stringify({ owner: "contributor", repo: "demo-fork", branchName: "ai-contribution-test", commitMessage: "Add two source files", changes, ...approval }),
     });
     assert.equal(response.status, 503);
     const data = await response.json();
