@@ -2022,3 +2022,36 @@ test("allows Hugging Face token near misses and environment/documentation placeh
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks Anthropic API keys at the 20-character suffix boundary and beyond", () => {
+  for (const suffix of [
+    "a".repeat(20),
+    "A9zB7cD3eF5gH1jK9mN",
+    "Z".repeat(80),
+  ]) {
+    const key = "sk-ant-" + suffix;
+    const report = inspectProposedChanges([{ file: "src/anthropic-client.ts", after: `const apiKey = "${key}";` }]);
+    assert.equal(report.safeToCommit, false, "Anthropic API keys must be blocked");
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" && finding.reason === "Anthropic API key pattern detected"
+    ), key);
+  }
+});
+
+test("allows Anthropic API-key near misses and environment/documentation placeholders", () => {
+  const samples = [
+    "sk-ant-" + "a".repeat(19),
+    "sk-ant-" + "a".repeat(10) + "." + "b".repeat(10),
+    "SK-ANT-" + "A".repeat(20),
+    "sk-ant-your_api_key",
+    "Anthropic API keys use the sk-ant- prefix.",
+    "const apiKey = process.env.ANTHROPIC_API_KEY;",
+  ];
+  const report = inspectProposedChanges([{
+    file: "docs/anthropic-api-keys.md",
+    after: samples.join("\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
