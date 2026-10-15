@@ -83,15 +83,14 @@ This section was refreshed by checking the live GitHub repository, README, roadm
 - Roadmap bookkeeping needs care: the newest sections jump from 96 to 98 to 99 and use section 98 for another M92 item. Preserve historical entries; correct numbering only as a deliberate docs cleanup, not by blindly overwriting milestone history.
 - Product-direction concern confirmed by the current roadmap and safety files: M81–M93 mostly add synthetic edge-case regression coverage for secret-pattern detectors, with production detector behavior unchanged. This can be useful defense-in-depth, but it is not meaningful progress toward the full issue-to-reviewed-contribution product on its own.
 
-## Next action after this verification
+## Latest verified work — Milestones 94–95 (2026-10-15)
 
-Before starting M94, audit the current implementation against the product workflow and roadmap. Prioritize the highest-impact missing or unverified core capability (for example, an honest end-to-end workflow verification, contribution lifecycle reliability, or an isolated Docker smoke test) rather than inventing another secret-pattern milestone. Inspect the relevant implementation, existing tests, and current roadmap first. Clearly distinguish mocked tests from real provider/Docker runs. Do not claim a live authenticated end-to-end run or real Docker isolation has been verified unless it is actually exercised and observed.
+- M94 completed and merged in [PR #135](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/135), merge commit `36c4372a871040bf0fe9676f166c3e0a129ec4ad`: HTTP-level lifecycle API tests cover auth-required responses, validation, idempotency, owner scoping, valid/invalid transitions, and optimistic concurrency. Tests inject a response-local session shape and do not verify a real OAuth callback.
+- M95 completed and merged in [PR #136](https://github.com/thakareathv49-svg/AI-OpenSource-Engineer-/pull/136), merge commit `08bccc1b352fd1daf3f381a8ede0542f3b754567`: server-side approval is persisted against a deterministic proposal fingerprint; atomic commits require the authenticated user's matching approval and verify the fork's upstream; cancelled/invalid workflow states are blocked; legacy single-file writes return `410 LEGACY_WRITE_DISABLED`; PR creation stays a separate explicit action and verifies the completed workflow and approved proposal trailer on the head commit.
+- The frontend now records approval through the backend rather than relying only on React state, passes the workflow ID/fingerprint into commit and PR requests, and uses a version ref to keep sequential lifecycle transitions from reusing stale versions.
+- CI on final M95 PR head `c45a0a76bc5d5097113765d158f968ce3ed74452` passed: backend typecheck/tests, frontend build/lint/production dependency audit, and CodeQL.
+- The integration tests mock GitHub API calls. They do not prove a live OAuth callback, real fork creation, real atomic GitHub commit, or live pull-request creation. Continue to state this limitation explicitly.
 
+## Next priority
 
-## Current work — Milestone 94 (2026-10-15)
-
-- Branch: `test/milestone-94-lifecycle-api-integration`.
-- Scope: HTTP-level tests for the actual Express contribution lifecycle router, using a temporary JSON store and an injected response-local test session (not real OAuth).
-- Intended coverage: authentication-required response, request validation, idempotent create, owner-scoped read/update, invalid state transition, optimistic concurrency conflict, and malformed transition versions/states.
-- Roadmap section 100 records the milestone as in progress. Do not call it complete or merge until CI results are checked on the final PR head.
-- This adds core workflow/API verification instead of another credential-pattern fixture milestone.
+Resume the end-to-end audit at the remaining unverified boundaries: real OAuth/session middleware, provider-backed issue discovery and repository analysis, analysis completeness when GitHub file fetches fail, and a controlled live GitHub fork/branch/commit/PR smoke test. Keep the smoke test opt-in and isolated from upstream repositories. Avoid adding more synthetic secret-pattern milestones unless they close a concrete gap in the main contribution workflow.
