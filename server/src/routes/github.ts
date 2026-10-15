@@ -35,7 +35,7 @@ const githubHeaders = (token: string) => ({
 });
 
 type ForkCheck =
-  | { ok: true; login: string }
+  | { ok: true; login: string; parentFullName: string }
   | { ok: false; status: number; error: string };
 
 async function verifyAuthenticatedFork(
@@ -75,7 +75,7 @@ async function verifyAuthenticatedFork(
     return { ok: false, status: 403, error: "For safety, branch creation and file commits are restricted to a fork of an upstream repository." };
   }
 
-  return { ok: true, login: user.login };
+  return { ok: true, login: user.login, parentFullName: repository.parent.full_name };
 }
 
 /* ---------------- Get Repository Information ---------------- */
@@ -348,6 +348,12 @@ router.post("/commit-proposal", async (req, res) => {
     const forkCheck = await verifyAuthenticatedFork(token, owner, repo);
     if (!forkCheck.ok) {
       return res.status(forkCheck.status).json({ error: forkCheck.error });
+    }
+    if (approval.repository.toLowerCase() !== forkCheck.parentFullName.toLowerCase()) {
+      return res.status(403).json({ error: "The approved contribution belongs to a different upstream repository.", code: "APPROVAL_SCOPE_MISMATCH" });
+    }
+    if (!["fork_pending", "fork_ready", "branch_ready", "commit_preparing", "commit_complete"].includes(approval.state)) {
+      return res.status(409).json({ error: "This contribution workflow is not in a state that permits committing.", code: "WORKFLOW_STATE_INVALID" });
     }
 
     const headers = {
