@@ -930,5 +930,3 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 **Verification:** backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis all passed on the final PR head.
 
 Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
-
-Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
