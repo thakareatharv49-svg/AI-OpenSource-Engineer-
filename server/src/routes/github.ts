@@ -2,6 +2,7 @@ import { Router } from "express";
 import { createHash } from "node:crypto";
 import dotenv from "dotenv";
 import { inspectProposedChanges } from "../security/diffSafety.js";
+import { getContribution } from "../security/contributionLifecycle.js";
 
 dotenv.config();
 
@@ -274,7 +275,8 @@ router.post("/safety-check", (req, res) => {
 
 /* ---------------- Create or Update GitHub File ---------------- */
 
-router.put("/file", async (req, res) => {
+router.put("/file", async (_req, res) => {
+  return res.status(410).json({ error: "Direct single-file commits are disabled. Use the reviewed, human-approved atomic proposal workflow.", code: "LEGACY_WRITE_DISABLED" });
   try {
     const {
       owner,
@@ -440,7 +442,7 @@ router.put("/file", async (req, res) => {
 // branch ref once. A failure before the final ref update leaves the branch unchanged.
 router.post("/commit-proposal", async (req, res) => {
   try {
-    const { owner, repo, branchName, commitMessage, changes } = req.body ?? {};
+    const { owner, repo, branchName, commitMessage, changes, workflowId, proposalHash } = req.body ?? {};
 
     if (!isValidRepositoryPart(owner) || !isValidRepositoryPart(repo)) {
       return res.status(400).json({ error: "Invalid GitHub repository owner or name" });
@@ -489,6 +491,19 @@ router.post("/commit-proposal", async (req, res) => {
     const token = res.locals.githubSession?.accessToken as string | undefined;
     if (!token) {
       return res.status(401).json({ error: "Sign in with GitHub to continue.", code: "AUTH_REQUIRED" });
+    }
+
+    const sessionLogin = (res.locals.githubSession as { login?: string } | null)?.login;
+    if (typeof workflowId !== "string" || !workflowId || typeof proposalHash !== "string" || proposalHash !== proposalIdempotencyKey) {
+      return res.status(403).json({ error: "A matching server-recorded human approval is required before committing.", code: "HUMAN_APPROVAL_REQUIRED" });
+    }
+    if (!sessionLogin) return res.status(401).json({ error: "Authenticated GitHub identity is missing.", code: "AUTH_REQUIRED" });
+    const approval = await getContribution(sessionLogin, workflowId);
+    if (!approval || approval.approvedProposalHash !== proposalIdempotencyKey || !approval.approvedAt) {
+      return res.status(403).json({ error: "This exact proposal has not been approved by the signed-in user.", code: "HUMAN_APPROVAL_REQUIRED" });
+    }
+    if (approval.repository.toLowerCase() !== (owner + "/" + repo).toLowerCase()) {
+      return res.status(403).json({ error: "The approval belongs to a different repository.", code: "APPROVAL_SCOPE_MISMATCH" });
     }
 
     const forkCheck = await verifyAuthenticatedFork(token, owner, repo);
