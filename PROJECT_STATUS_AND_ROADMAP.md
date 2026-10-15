@@ -853,6 +853,12 @@ Scope: pattern detection is defense in depth, not webhook validation; synthetic 
 
 ## 86. Milestone 82 — JWT-like bearer-token edge-case coverage
 
-**Implementation in progress.** Add synthetic regression tests for the existing JWT-like token detector's three segment minimum lengths, accepted characters, longer values, malformed segment near misses, and environment/documentation placeholders. Keep production detector behavior unchanged.
+**Completed and merged on 2026-10-15** in [PR #115](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/115), merge commit `185da4d8600ae4305a2101e7263f54551b3a69e7`. Added synthetic regression tests for the existing JWT-like bearer-token detector's three segment boundaries, supported characters, longer token-shaped values, malformed segment near misses, invalid separators, case sensitivity, and environment/documentation placeholders. Production detector behavior was unchanged. Backend typecheck/tests, frontend build/lint, and CodeQL all passed on the final PR head.
+
+Scope: JWT shape detection is defense in depth, not token validation; synthetic fixtures do not replace secret scanning or human review.
+
+## 87. Milestone 83 — Stripe secret-key edge-case coverage
+
+**Implementation in progress.** Inspect the existing Stripe secret-key detector and add synthetic regression tests for its accepted prefixes, minimum suffix length, longer values, malformed/short near misses, and documentation/environment placeholders. Do not change production detection behavior unless tests reveal a clearly documented defect; any production change must be separately justified.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
