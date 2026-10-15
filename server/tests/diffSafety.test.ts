@@ -2505,3 +2505,40 @@ test("allows Twilio API-key near misses and environment/documentation placeholde
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks Resend API keys at the 32-character suffix boundary and beyond", () => {
+  for (const suffix of [
+    "a".repeat(32),
+    "A9zB7cD3eF5gH1jK9mNqR2sT4uV6wX8yZ",
+    "Z".repeat(100),
+  ]) {
+    const key = "re_" + suffix;
+    const report = inspectProposedChanges([{
+      file: "src/resend-client.ts",
+      after: `const resendApiKey = "${key}";`,
+    }]);
+    assert.equal(report.safeToCommit, false, "Resend API keys must be blocked");
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" && finding.reason === "Resend API key pattern detected"
+    ), key);
+  }
+});
+
+test("allows Resend API-key near misses and environment/documentation placeholders", () => {
+  const samples = [
+    "re_" + "a".repeat(31),
+    "re_" + "a".repeat(16) + "-" + "b".repeat(16),
+    "RE_" + "A".repeat(32),
+    "re_your_resend_api_key",
+    "re_example_token_value",
+    "Resend API keys use the re_ prefix.",
+    "const resendApiKey = process.env.RESEND_API_KEY;",
+  ];
+  const report = inspectProposedChanges([{
+    file: "docs/resend-api-keys.md",
+    after: samples.join("\\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
