@@ -839,6 +839,14 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 84. Milestone 80 — Anthropic API-key pattern edge-case coverage
 
-**Implementation in progress.** Add synthetic regression tests for the existing `sk-ant-` detector's minimum 20-character suffix and longer values, malformed/short near misses, case sensitivity, and environment/documentation placeholders. Keep production detector behavior unchanged.
+**Completed and merged on 2026-10-15** in [PR #113](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/113), merge commit `f8f9fcdeb4a0410dd8e83ef0d7d8c7226a419363`. Added synthetic regression tests for the existing `sk-ant-` detector's 20-character suffix boundary and longer values, malformed/short near misses, case sensitivity, and environment/documentation placeholders. A failing mixed-case fixture was corrected to meet the detector's minimum suffix length. Production detector behavior was unchanged.
+
+Validation on the final PR head passed: backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
+
+## 85. Milestone 81 — Discord webhook URL edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing Discord webhook detector's 17–20 digit ID and 50-character token boundaries, longer valid-shaped values, malformed/short near misses, host casing, and environment/documentation placeholders. Keep production detector behavior unchanged.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
