@@ -2272,7 +2272,7 @@ test("allows SendGrid API-key near misses and environment/documentation placehol
     "SG." + "a".repeat(16) + "." + "b".repeat(15) + ".",
     "SendGrid API keys use the SG.<public-key>.<secret-key> shape.",
     "const apiKey = process.env.SENDGRID_API_KEY;",
-    "SG.your_sendgrid_key.your_sendgrid_secret",
+    "SG.your_key.your_secret",
   ];
   const report = inspectProposedChanges([{
     file: "docs/sendgrid-api-keys.md",
