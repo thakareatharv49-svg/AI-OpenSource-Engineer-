@@ -2207,3 +2207,39 @@ test("allows npm token near misses and environment/documentation placeholders", 
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks PyPI upload tokens at the 30-character suffix boundary and beyond", () => {
+  for (const suffix of [
+    "a".repeat(30),
+    "A9_z-B7cD3eF5gH1jK9mNqR2sT4uV6wX",
+    "Z".repeat(100),
+  ]) {
+    const token = "pypi-" + suffix;
+    const report = inspectProposedChanges([{
+      file: "src/pypi-publisher.ts",
+      after: `const uploadToken = "${token}";`,
+    }]);
+    assert.equal(report.safeToCommit, false, "PyPI upload tokens must be blocked");
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" && finding.reason === "PyPI upload token pattern detected"
+    ), token);
+  }
+});
+
+test("allows PyPI token near misses and environment/documentation placeholders", () => {
+  const samples = [
+    "pypi-" + "a".repeat(29),
+    "pypi-" + "a".repeat(15) + "." + "b".repeat(15),
+    "PYPI-" + "A".repeat(30),
+    "pypi-your_upload_token",
+    "PyPI upload tokens use the pypi- prefix.",
+    "const uploadToken = process.env.PYPI_TOKEN;",
+  ];
+  const report = inspectProposedChanges([{
+    file: "docs/pypi-upload-tokens.md",
+    after: samples.join("\\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});

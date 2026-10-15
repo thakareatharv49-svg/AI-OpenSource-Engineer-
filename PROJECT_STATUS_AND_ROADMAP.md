@@ -871,6 +871,12 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 89. Milestone 85 — PyPI upload-token edge-case coverage
 
-**Implementation in progress.** Add synthetic regression tests for the existing `pypi-` upload-token detector's 30-character suffix boundary, longer token-shaped values, accepted alphanumeric/underscore/hyphen characters, malformed and short near misses, case sensitivity, and documentation/environment placeholders. Keep production detection behavior unchanged unless tests establish a clearly documented defect.
+**Completed and merged on 2026-10-15** in [PR #118](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/118), merge commit `PENDING`. Added synthetic regression tests for the existing `pypi-` upload-token detector's 30-character suffix boundary, longer token-shaped values, accepted alphanumeric/underscore/hyphen characters, malformed and short near misses, case sensitivity, and documentation/environment placeholders. Production detector behavior was unchanged. Backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis passed on the final PR head.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
+
+## 90. Milestone 86 — SendGrid API-key edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing `SG.` SendGrid API-key detector's two 16-character segment boundaries, longer token-shaped values, accepted characters, malformed/short near misses, case sensitivity, and documentation/environment placeholders. Keep production detection behavior unchanged unless tests establish a clearly documented defect.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
