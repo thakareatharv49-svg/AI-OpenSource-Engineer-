@@ -2316,3 +2316,45 @@ test("allows GitLab personal-token near misses and environment/documentation pla
   assert.deepEqual(report.findings, []);
 });
 
+test("blocks GitLab deploy and runner tokens at the 20-character suffix boundary and beyond", () => {
+  for (const prefix of ["gldt-", "glrt-"]) {
+    for (const suffix of [
+      "a".repeat(20),
+      "A9_z-B7cD3eF5gH1jK9m",
+      "Z".repeat(100),
+    ]) {
+      const token = prefix + suffix;
+      const report = inspectProposedChanges([{
+        file: "src/gitlab-runner-client.ts",
+        after: `const gitlabToken = "${token}";`,
+      }]);
+      assert.equal(report.safeToCommit, false, "GitLab deploy and runner tokens must be blocked");
+      assert.ok(report.findings.some((finding) =>
+        finding.severity === "block" && finding.reason === "GitLab deploy or runner token pattern detected"
+      ), token);
+    }
+  }
+});
+
+test("allows GitLab deploy and runner token near misses and environment/documentation placeholders", () => {
+  const samples = [
+    "gldt-" + "a".repeat(19),
+    "glrt-" + "a".repeat(19),
+    "gldt-" + "a".repeat(10) + "." + "b".repeat(10),
+    "glrt-" + "a".repeat(10) + "." + "b".repeat(10),
+    "GLDT-" + "A".repeat(20),
+    "GLRT-" + "A".repeat(20),
+    "gldt-your_deploy_token",
+    "glrt-your_runner_token",
+    "GitLab deploy tokens use the gldt- prefix.",
+    "GitLab runner tokens use the glrt- prefix.",
+    "const deployToken = process.env.GITLAB_DEPLOY_TOKEN;",
+    "const runnerToken = process.env.GITLAB_RUNNER_TOKEN;",
+  ];
+  const report = inspectProposedChanges([{
+    file: "docs/gitlab-deploy-runner-tokens.md",
+    after: samples.join("\\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
