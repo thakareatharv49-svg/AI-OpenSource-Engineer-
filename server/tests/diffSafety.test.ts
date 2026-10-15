@@ -2468,3 +2468,38 @@ test("allows Google OAuth client-secret near misses and environment/documentatio
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("covers GitHub fine-grained token edge cases with realistic synthetic fixtures", () => {
+  const tokenSamples = [
+    "github_pat_" + "a".repeat(20),
+    "github_pat_" + "A_9".repeat(7),
+    "github_pat_" + "Z".repeat(120),
+  ];
+  for (const token of tokenSamples) {
+    const report = inspectProposedChanges([{
+      file: "src/github-client.ts",
+      after: `const githubToken = "${token}";`,
+    }]);
+    assert.equal(report.safeToCommit, false, token);
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" &&
+      finding.reason === "GitHub fine-grained token pattern detected"
+    ), token);
+  }
+
+  const nearMisses = [
+    "github_pat_" + "a".repeat(19),
+    "github_pat_" + "a".repeat(10) + "." + "b".repeat(10),
+    "GITHUB_PAT_" + "A".repeat(30),
+    "github_pat_your_token",
+    "The github_pat_ prefix identifies fine-grained tokens.",
+    "const githubToken = process.env.GITHUB_TOKEN;",
+  ];
+  const report = inspectProposedChanges([{
+    file: "docs/github-fine-grained-tokens.md",
+    after: nearMisses.join("\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
