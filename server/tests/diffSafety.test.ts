@@ -2027,7 +2027,7 @@ test("allows Hugging Face token near misses and environment/documentation placeh
 test("blocks Anthropic API keys at the 20-character suffix boundary and beyond", () => {
   for (const suffix of [
     "a".repeat(20),
-    "A9zB7cD3eF5gH1jK9mN",
+    "A9zB7cD3eF5gH1jK9mN0",
     "Z".repeat(80),
   ]) {
     const key = "sk-ant-" + suffix;
