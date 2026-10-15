@@ -86,3 +86,12 @@ This section was refreshed by checking the live GitHub repository, README, roadm
 ## Next action after this verification
 
 Before starting M94, audit the current implementation against the product workflow and roadmap. Prioritize the highest-impact missing or unverified core capability (for example, an honest end-to-end workflow verification, contribution lifecycle reliability, or an isolated Docker smoke test) rather than inventing another secret-pattern milestone. Inspect the relevant implementation, existing tests, and current roadmap first. Clearly distinguish mocked tests from real provider/Docker runs. Do not claim a live authenticated end-to-end run or real Docker isolation has been verified unless it is actually exercised and observed.
+
+
+## Current work — Milestone 94 (2026-10-15)
+
+- Branch: `test/milestone-94-lifecycle-api-integration`.
+- Scope: HTTP-level tests for the actual Express contribution lifecycle router, using a temporary JSON store and an injected response-local test session (not real OAuth).
+- Intended coverage: authentication-required response, request validation, idempotent create, owner-scoped read/update, invalid state transition, optimistic concurrency conflict, and malformed transition versions/states.
+- Roadmap section 100 records the milestone as in progress. Do not call it complete or merge until CI results are checked on the final PR head.
+- This adds core workflow/API verification instead of another credential-pattern fixture milestone.
