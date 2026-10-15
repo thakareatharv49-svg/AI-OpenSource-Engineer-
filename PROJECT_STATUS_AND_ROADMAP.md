@@ -883,7 +883,7 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 91. Milestone 87 — GitLab personal-access-token edge-case coverage
 
-**Completed and merged on 2026-10-15** in [PR #122](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/122), merge commit `PENDING`. Added synthetic regression tests for the existing `glpat-` personal-access-token detector's 20-character suffix boundary, longer token-shaped values, accepted alphanumeric/underscore/hyphen characters, malformed and short near misses, case sensitivity, and documentation/environment placeholders. Production detector behavior was unchanged. Backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
+**Completed and merged on 2026-10-15** in [PR #122](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/122), merge commit `b054faacb968ac98c09da205e2ee434852b817d4`. Added synthetic regression tests for the existing `glpat-` personal-access-token detector's 20-character suffix boundary, longer token-shaped values, accepted alphanumeric/underscore/hyphen characters, malformed and short near misses, case sensitivity, and documentation/environment placeholders. Production detector behavior was unchanged. Backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
 
 Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
 
