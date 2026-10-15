@@ -877,7 +877,7 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 90. Milestone 86 — SendGrid API-key edge-case coverage
 
-**Completed and merged on 2026-10-15** in [PR #119](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/121), merge commit `PENDING`. Added synthetic regression tests for the existing `SG.` SendGrid API-key detector's two 16-character segment boundaries, longer token-shaped values, accepted alphanumeric/underscore/hyphen characters, malformed and short near misses, case sensitivity, and documentation/environment placeholders. Production detector behavior was unchanged. Backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
+**Completed and merged on 2026-10-15** in [PR #119](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/121), merge commit `82c31abe56bec14c20c935daf482c94502b8b1d3`. Added synthetic regression tests for the existing `SG.` SendGrid API-key detector's two 16-character segment boundaries, longer token-shaped values, accepted alphanumeric/underscore/hyphen characters, malformed and short near misses, case sensitivity, and documentation/environment placeholders. Production detector behavior was unchanged. Backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
 
 Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
 
