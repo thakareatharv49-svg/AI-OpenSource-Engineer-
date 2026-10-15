@@ -932,10 +932,19 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
 
 
-## 96. Milestone 92 — GitHub fine-grained token edge-case coverage
+## 98. Milestone 92 — GitHub fine-grained token edge-case coverage
 
-**Implementation in progress.** Add synthetic regression coverage for the existing `github_pat_` detector at the 20-character suffix boundary and beyond, accepted characters, malformed/short near misses, case sensitivity, and documentation/environment placeholders. Keep production detection behavior unchanged.
+**Completed and merged on 2026-10-15** in [PR #132](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/132), merge commit `09362e1b79e58e0b6e059b7ede920bb9134a68c4`. Added synthetic regression coverage for valid-shaped `github_pat_` values at the 20-character suffix boundary and beyond, accepted characters, short/malformed near misses, casing, and documentation/environment placeholders. Production detector behavior was unchanged.
 
-**Validation gate:** backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
+**Verification:** backend typecheck/tests, frontend build/lint, and CodeQL all passed on the final PR head.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
+
+
+## 99. Milestone 93 — Resend API-key edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing `re_` Resend API-key detector at its 32-character suffix boundary and beyond, including malformed/short near misses, unsupported characters and casing, and documentation/environment placeholders. Production detector behavior remains unchanged.
+
+**Definition of done:** inspect the complete diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
 
 Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
