@@ -125,6 +125,28 @@ test("lifecycle API enforces valid transitions and optimistic concurrency over H
   assert.equal(stale.response.status, 409);
 });
 
+test("human approval is recorded server-side against the exact proposal fingerprint", async () => {
+  const created = await request("/", { method: "POST", body: JSON.stringify(createBody("human-approval-12345678", 46)) }, "alice");
+  const id = created.body.contribution.id as string;
+  const changes = [{ filePath: "src/fix.ts", content: "export const fixed = true;\n" }];
+  const approvalBody = { expectedVersion: 1, commitMessage: "AI contribution: fix issue", changes };
+  const premature = await request(`/${id}/approve`, { method: "POST", body: JSON.stringify(approvalBody) }, "alice");
+  assert.equal(premature.response.status, 409);
+  let version = 1;
+  for (const state of ["analyzing", "planning", "proposal_ready", "awaiting_approval"]) {
+    const moved = await request(`/${id}`, { method: "PATCH", body: JSON.stringify({ state, expectedVersion: version }) }, "alice");
+    assert.equal(moved.response.status, 200);
+    version = moved.body.contribution.version;
+  }
+  const approved = await request(`/${id}/approve`, { method: "POST", body: JSON.stringify({ ...approvalBody, expectedVersion: version }) }, "alice");
+  assert.equal(approved.response.status, 200);
+  assert.match(approved.body.proposalHash, /^[a-f0-9]{24}$/);
+  assert.equal(approved.body.contribution.approvedProposalHash, approved.body.proposalHash);
+  assert.equal(approved.body.contribution.state, "fork_pending");
+  const wrongUser = await request(`/${id}/approve`, { method: "POST", body: JSON.stringify({ ...approvalBody, expectedVersion: approved.body.contribution.version }) }, "bob");
+  assert.equal(wrongUser.response.status, 404);
+});
+
 test("lifecycle API rejects malformed transition versions and unknown states", async () => {
   const created = await request("/", {
     method: "POST",
