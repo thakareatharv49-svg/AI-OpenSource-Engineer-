@@ -807,6 +807,14 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 80. Milestone 76 — Groq API-key pattern edge-case coverage
 
-**Implementation in progress.** Add synthetic regression tests for the existing `gsk_` detector and minimum 20-character alphanumeric suffix, including longer values, malformed/short near misses, case sensitivity, and environment/documentation placeholders. Keep production detector behavior unchanged.
+**Completed and merged on 2026-10-15** in [PR #109](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/109), merge commit `a74625e5f15d781dffb68d251ea67f4546e0f2ff`. Added synthetic regression tests for the existing `gsk_` detector's 20-character suffix boundary, longer values, malformed/short near misses, case sensitivity, and environment/documentation placeholders. A boundary fixture was corrected to use exactly 20 characters; production detector behavior was unchanged.
+
+Validation on the final PR head passed: backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
+
+## 81. Milestone 77 — Replicate API-token pattern edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing `r8_` detector and minimum 32-character alphanumeric suffix, including longer values, malformed/short near misses, case sensitivity, and environment/documentation placeholders. Keep production detector behavior unchanged.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
