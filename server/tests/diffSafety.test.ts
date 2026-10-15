@@ -2394,3 +2394,40 @@ test("allows Hugging Face token near misses and environment/documentation placeh
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks Supabase secret API keys at the 20-character suffix boundary and beyond", () => {
+  for (const suffix of [
+    "a".repeat(20),
+    "A9_z-B7cD3eF5gH1jK9m",
+    "Z".repeat(100),
+  ]) {
+    const key = "sb_secret_" + suffix;
+    const report = inspectProposedChanges([{
+      file: "src/supabase-admin.ts",
+      after: `const supabaseSecretKey = "${key}";`,
+    }]);
+    assert.equal(report.safeToCommit, false, "Supabase secret API keys must be blocked");
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" && finding.reason === "Supabase secret API key pattern detected"
+    ), key);
+  }
+});
+
+test("allows Supabase secret-key near misses and environment/documentation placeholders", () => {
+  const samples = [
+    "sb_secret_" + "a".repeat(19),
+    "sb_secret_" + "a".repeat(10) + "." + "b".repeat(10),
+    "SB_SECRET_" + "A".repeat(20),
+    "sb_secret_your_secret_key",
+    "sb_secret_example_value",
+    "Supabase secret API keys use the sb_secret_ prefix.",
+    "const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;",
+  ];
+  const report = inspectProposedChanges([{
+    file: "docs/supabase-secret-api-keys.md",
+    after: samples.join("\\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
