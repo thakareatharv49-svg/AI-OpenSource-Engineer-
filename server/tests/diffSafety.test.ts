@@ -2284,7 +2284,7 @@ test("allows SendGrid key near misses and environment/documentation placeholders
 test("blocks GitLab personal access tokens at the 20-character suffix boundary and beyond", () => {
   for (const suffix of [
     "a".repeat(20),
-    "A_9".repeat(7),
+    "A9_z-B7cD3eF5gH1jK9m",
     "Z".repeat(100),
   ]) {
     const token = "glpat-" + suffix;
@@ -2363,7 +2363,7 @@ test("allows GitLab deploy and runner token near misses and environment/document
 test("blocks GitHub fine-grained personal access tokens at the 20-character suffix boundary and beyond", () => {
   for (const suffix of [
     "a".repeat(20),
-    "A9_z-B7cD3eF5gH1jK9m",
+    "A_9".repeat(7),
     "Z".repeat(120),
   ]) {
     const token = "github_pat_" + suffix;
