@@ -2468,3 +2468,40 @@ test("allows Google OAuth client-secret near misses and environment/documentatio
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks Twilio API keys with exactly 32 hexadecimal characters", () => {
+  for (const suffix of [
+    "0123456789abcdef0123456789abcdef",
+    "ABCDEF0123456789abcdef0123456789",
+    "F".repeat(32),
+  ]) {
+    const key = "SK" + suffix;
+    const report = inspectProposedChanges([{
+      file: "src/twilio-client.ts",
+      after: `const twilioApiKey = "${key}";`,
+    }]);
+    assert.equal(report.safeToCommit, false, "Twilio API keys must be blocked");
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" && finding.reason === "Twilio API key pattern detected"
+    ), key);
+  }
+});
+
+test("allows Twilio API-key near misses and environment/documentation placeholders", () => {
+  const samples = [
+    "SK" + "a".repeat(31),
+    "SK" + "a".repeat(33),
+    "sk" + "A".repeat(32),
+    "SK" + "g".repeat(32),
+    "SK_your_twilio_api_key",
+    "Twilio API keys use the SK prefix followed by 32 hexadecimal characters.",
+    "const twilioApiKey = process.env.TWILIO_API_KEY;",
+  ];
+  const report = inspectProposedChanges([{
+    file: "docs/twilio-api-keys.md",
+    after: samples.join("\\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
