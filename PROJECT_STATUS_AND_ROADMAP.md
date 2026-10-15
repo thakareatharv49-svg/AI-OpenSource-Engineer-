@@ -925,8 +925,10 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 96. Milestone 92 — Twilio API-key edge-case coverage
 
-**In progress.** Added synthetic regression tests for the existing Twilio `SK` + 32-hex-character API-key detector, including valid-shaped keys, too-short/too-long values, non-hex characters, unsupported prefix casing, and documentation/environment placeholders. Production detector behavior is unchanged.
+**Completed and merged on 2026-10-15** in [PR #131](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/131), merge commit `2618f1fa90158a828210639e88bf437728a6ff00`. Added synthetic regression tests for the existing Twilio `SK` + 32-hex-character API-key detector, including valid-shaped keys, too-short/too-long values, non-hex characters, unsupported prefix casing, and documentation/environment placeholders. Production detector behavior remains unchanged.
 
-**Validation gate:** backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
+**Verification:** backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis all passed on the final PR head.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
 
 Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
