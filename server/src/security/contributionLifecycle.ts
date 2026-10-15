@@ -14,6 +14,7 @@ export type ContributionRecord = {
   id: string; user: string; idempotencyKey: string; issueUrl: string; repository: string;
   state: ContributionState; version: number; createdAt: string; updatedAt: string;
   retryCount: number; lastError: string | null; events: LifecycleEvent[];
+  approvedProposalHash?: string | null; approvedAt?: string | null;
 };
 type StoreData = { version: 1; records: ContributionRecord[] };
 const MAX_RECORDS = 500;
@@ -159,6 +160,28 @@ export async function transitionContribution(input: { user: string; id: string; 
     return result.value;
   });
 }
+
+export async function approveContribution(input: { user: string; id: string; expectedVersion: number; proposalHash: string }): Promise<ContributionRecord> {
+  const mutate = (data: StoreData): { changed: boolean; value: ContributionRecord } => {
+    const record = data.records.find(r => r.id === input.id && r.user.toLowerCase() === input.user.toLowerCase());
+    if (!record) throw Object.assign(new Error("Contribution workflow not found."), { statusCode: 404 });
+    if (record.version !== input.expectedVersion) throw Object.assign(new Error("Contribution changed since it was loaded. Refresh before approving."), { statusCode: 409, currentVersion: record.version });
+    if (record.state !== "awaiting_approval") throw Object.assign(new Error("Human approval is only allowed after the AI review has completed and the workflow is awaiting approval."), { statusCode: 409, currentState: record.state });
+    if (!/^[a-f0-9]{24}$/.test(input.proposalHash)) throw Object.assign(new Error("A valid proposal fingerprint is required."), { statusCode: 400 });
+    record.approvedProposalHash = input.proposalHash;
+    record.approvedAt = new Date().toISOString();
+    addEvent(record, "fork_pending", "Human approved the exact proposal fingerprint");
+    return { changed: true, value: record };
+  };
+  if (sharedRedisConfigured()) return mutateSharedStore(mutate);
+  return serialized(async () => {
+    const data = await readStore();
+    const result = mutate(data);
+    await writeStore(data);
+    return result.value;
+  });
+}
+
 export async function clearContributionStoreForTests(): Promise<void> {
   if (sharedRedisConfigured()) {
     await redisCommand(["DEL", REDIS_STORE_KEY]);

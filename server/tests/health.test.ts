@@ -104,13 +104,9 @@ test("POST /api/github/branch rejects incomplete branch input", async () => {
 });
 
 test("PUT /api/github/file rejects incomplete file changes", async () => {
-  const response = await fetch(baseUrl + "/api/github/file", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ owner: "example", repo: "project" }),
-  });
-  assert.equal(response.status, 400);
-  assert.match((await response.json()).error, /file path.*content/i);
+  const response = await fetch(baseUrl + "/api/github/file", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+  assert.equal(response.status, 410);
+  assert.equal((await response.json()).code, "LEGACY_WRITE_DISABLED");
 });
 
 test("POST /api/github/pull-request rejects missing head repository", async () => {
@@ -156,20 +152,9 @@ test("POST /api/github/branch rejects malformed Git refs before contacting GitHu
 });
 
 test("PUT /api/github/file rejects traversal paths before contacting GitHub", async () => {
-  const response = await fetch(baseUrl + "/api/github/file", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      owner: "example",
-      repo: "project",
-      branchName: "ai-contribution-test",
-      filePath: "../README.md",
-      content: "# unsafe",
-      commitMessage: "test",
-    }),
-  });
-  assert.equal(response.status, 400);
-  assert.match((await response.json()).error, /safe repository-relative path/i);
+  const response = await fetch(baseUrl + "/api/github/file", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+  assert.equal(response.status, 410);
+  assert.equal((await response.json()).code, "LEGACY_WRITE_DISABLED");
 });
 
 test("GET /api/github/repository rejects invalid owner or repository path segments", async () => {
@@ -180,69 +165,27 @@ test("GET /api/github/repository rejects invalid owner or repository path segmen
 
 
 test("PUT /api/github/file rejects oversized commit messages", async () => {
-  const response = await fetch(baseUrl + "/api/github/file", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      owner: "example",
-      repo: "project",
-      branchName: "ai-contribution-test",
-      filePath: "README.md",
-      content: "# safe",
-      commitMessage: "x".repeat(201),
-    }),
-  });
-  assert.equal(response.status, 400);
+  const response = await fetch(baseUrl + "/api/github/file", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+  assert.equal(response.status, 410);
+  assert.equal((await response.json()).code, "LEGACY_WRITE_DISABLED");
 });
 
 test("PUT /api/github/file blocks secret-bearing content before GitHub access", async () => {
-  const response = await fetch(baseUrl + "/api/github/file", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      owner: "example",
-      repo: "project",
-      branchName: "ai-contribution-test",
-      filePath: "src/config.ts",
-      content: 'const token = "ghp_123456789012345678901234567890123456";',
-      commitMessage: "test",
-    }),
-  });
-  assert.equal(response.status, 422);
-  assert.match((await response.json()).error, /safety gate/i);
+  const response = await fetch(baseUrl + "/api/github/file", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+  assert.equal(response.status, 410);
+  assert.equal((await response.json()).code, "LEGACY_WRITE_DISABLED");
 });
 
 test("PUT /api/github/file requires manual review for workflow changes", async () => {
-  const response = await fetch(baseUrl + "/api/github/file", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      owner: "example",
-      repo: "project",
-      branchName: "ai-contribution-test",
-      filePath: ".github/workflows/ci.yml",
-      content: "name: custom workflow\n",
-      commitMessage: "test",
-    }),
-  });
-  assert.equal(response.status, 422);
+  const response = await fetch(baseUrl + "/api/github/file", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+  assert.equal(response.status, 410);
+  assert.equal((await response.json()).code, "LEGACY_WRITE_DISABLED");
 });
 
 test("PUT /api/github/file rejects credential paths before contacting GitHub", async () => {
-  const response = await fetch(baseUrl + "/api/github/file", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      owner: "example",
-      repo: "project",
-      branchName: "ai-contribution-test",
-      filePath: ".npmrc",
-      content: "//registry.npmjs.org/:_authToken=secret",
-      commitMessage: "test",
-    }),
-  });
-  assert.equal(response.status, 400);
-  assert.match((await response.json()).error, /safe repository-relative path/i);
+  const response = await fetch(baseUrl + "/api/github/file", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+  assert.equal(response.status, 410);
+  assert.equal((await response.json()).code, "LEGACY_WRITE_DISABLED");
 });
 
 test("AI endpoints throttle excessive requests before calling providers", async () => {
@@ -412,19 +355,15 @@ test("POST /api/github/commit-proposal writes every proposed file in one branch 
     }
     return jsonResponse({ message: "Unexpected mocked GitHub request: " + method + " " + url.pathname }, 500);
   }, async () => {
+    const changes = [
+      { filePath: "src/one.ts", content: "export const one = 1;\n" },
+      { filePath: "src/two.ts", content: "export const two = 2;\n" },
+    ];
+    const approval = await createApprovedWorkflow(changes, "Add two source files");
     const response = await originalFetchForTest(baseUrl + "/api/github/commit-proposal", {
       method: "POST",
       headers: { "Content-Type": "application/json", Cookie: testSessionCookie },
-      body: JSON.stringify({
-        owner: "contributor",
-        repo: "demo-fork",
-        branchName: "ai-contribution-test",
-        commitMessage: "Add two source files",
-        changes: [
-          { filePath: "src/one.ts", content: "export const one = 1;\n" },
-          { filePath: "src/two.ts", content: "export const two = 2;\n" },
-        ],
-      }),
+      body: JSON.stringify({ owner: "contributor", repo: "demo-fork", branchName: "ai-contribution-test", commitMessage: "Add two source files", changes, ...approval }),
     });
     assert.equal(response.status, 201);
     const data = await response.json();
@@ -457,19 +396,15 @@ test("POST /api/github/commit-proposal leaves the branch untouched when a blob c
     if (method === "PATCH") refUpdates += 1;
     return jsonResponse({ message: "Unexpected mocked GitHub request" }, 500);
   }, async () => {
+    const changes = [
+      { filePath: "src/one.ts", content: "export const one = 1;\n" },
+      { filePath: "src/two.ts", content: "export const two = 2;\n" },
+    ];
+    const approval = await createApprovedWorkflow(changes, "Add two source files");
     const response = await originalFetchForTest(baseUrl + "/api/github/commit-proposal", {
       method: "POST",
       headers: { "Content-Type": "application/json", Cookie: testSessionCookie },
-      body: JSON.stringify({
-        owner: "contributor",
-        repo: "demo-fork",
-        branchName: "ai-contribution-test",
-        commitMessage: "Add two source files",
-        changes: [
-          { filePath: "src/one.ts", content: "export const one = 1;\n" },
-          { filePath: "src/two.ts", content: "export const two = 2;\n" },
-        ],
-      }),
+      body: JSON.stringify({ owner: "contributor", repo: "demo-fork", branchName: "ai-contribution-test", commitMessage: "Add two source files", changes, ...approval }),
     });
     assert.equal(response.status, 503);
     const data = await response.json();
@@ -482,6 +417,24 @@ test("POST /api/github/commit-proposal leaves the branch untouched when a blob c
 // Preserve the real fetch for local test-server requests even while GitHub API
 // calls are mocked inside the route.
 const originalFetchForTest = globalThis.fetch.bind(globalThis);
+
+async function createApprovedWorkflow(changes: Array<{ filePath: string; content: string }>, commitMessage: string): Promise<{ workflowId: string; proposalHash: string }> {
+  const headers = { "Content-Type": "application/json", Cookie: testSessionCookie, Origin: "http://localhost:5173" };
+  const created = await originalFetchForTest(baseUrl + "/api/lifecycle", { method: "POST", headers, body: JSON.stringify({ idempotencyKey: "approved-" + crypto.randomUUID(), issueUrl: "https://github.com/upstream/demo/issues/1", repository: "upstream/demo" }) });
+  assert.equal(created.status, 201);
+  const initial = await created.json() as { contribution: { id: string; version: number } };
+  let version = initial.contribution.version;
+  for (const state of ["analyzing", "planning", "proposal_ready", "awaiting_approval"]) {
+    const moved = await originalFetchForTest(baseUrl + "/api/lifecycle/" + initial.contribution.id, { method: "PATCH", headers, body: JSON.stringify({ state, expectedVersion: version }) });
+    assert.equal(moved.status, 200);
+    version = ((await moved.json()) as { contribution: { version: number } }).contribution.version;
+  }
+  const approved = await originalFetchForTest(baseUrl + "/api/lifecycle/" + initial.contribution.id + "/approve", { method: "POST", headers, body: JSON.stringify({ expectedVersion: version, commitMessage, changes }) });
+  assert.equal(approved.status, 200);
+  const result = await approved.json() as { proposalHash: string };
+  return { workflowId: initial.contribution.id, proposalHash: result.proposalHash };
+}
+
 
 
 test("POST /api/sandbox/snapshot rejects traversal repository identifiers", async () => {
@@ -613,6 +566,20 @@ test("atomic commit retry recognizes the proposal trailer and does not create a 
     changes: changes.map(change => ({ filePath: change.filePath.trim(), content: change.content })).sort((a, b) => a.filePath.localeCompare(b.filePath)),
   })).digest("hex").slice(0, 24);
   const originalFetch = globalThis.fetch;
+  const lifecycleHeaders = { "Content-Type": "application/json", Cookie: "aose_session=" + session.id, Origin: "http://localhost:5173" };
+  const created = await originalFetch(baseUrl + "/api/lifecycle", { method: "POST", headers: lifecycleHeaders, body: JSON.stringify({ idempotencyKey: "retry-approval-" + crypto.randomUUID(), issueUrl: "https://github.com/upstream/project/issues/1", repository: "upstream/project" }) });
+  assert.equal(created.status, 201);
+  const workflow = await created.json() as { contribution: { id: string; version: number } };
+  let version = workflow.contribution.version;
+  for (const state of ["analyzing", "planning", "proposal_ready", "awaiting_approval"]) {
+    const moved = await originalFetch(baseUrl + "/api/lifecycle/" + workflow.contribution.id, { method: "PATCH", headers: lifecycleHeaders, body: JSON.stringify({ state, expectedVersion: version }) });
+    assert.equal(moved.status, 200);
+    version = ((await moved.json()) as { contribution: { version: number } }).contribution.version;
+  }
+  const approvalResponse = await originalFetch(baseUrl + "/api/lifecycle/" + workflow.contribution.id + "/approve", { method: "POST", headers: lifecycleHeaders, body: JSON.stringify({ expectedVersion: version, commitMessage, changes }) });
+  assert.equal(approvalResponse.status, 200);
+  const approval = await approvalResponse.json() as { proposalHash: string };
+  assert.equal(approval.proposalHash, key);
   const calls: string[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
@@ -632,7 +599,7 @@ test("atomic commit retry recognizes the proposal trailer and does not create a 
     const response = await originalFetch(baseUrl + "/api/github/commit-proposal", {
       method: "POST",
       headers: { "Content-Type": "application/json", Cookie: "aose_session=" + session.id },
-      body: JSON.stringify({ owner: "commit-retry-user", repo: "project-fork", branchName: "ai-fix-issue", commitMessage, changes }),
+      body: JSON.stringify({ owner: "commit-retry-user", repo: "project-fork", branchName: "ai-fix-issue", commitMessage, changes, workflowId: workflow.contribution.id, proposalHash: approval.proposalHash }),
     });
     assert.equal(response.status, 200);
     const body = await response.json() as { alreadyCommitted?: boolean; commit?: { sha?: string } };

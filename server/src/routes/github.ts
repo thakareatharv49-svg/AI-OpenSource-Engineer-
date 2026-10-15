@@ -2,6 +2,7 @@ import { Router } from "express";
 import { createHash } from "node:crypto";
 import dotenv from "dotenv";
 import { inspectProposedChanges } from "../security/diffSafety.js";
+import { getContribution } from "../security/contributionLifecycle.js";
 
 dotenv.config();
 
@@ -34,7 +35,7 @@ const githubHeaders = (token: string) => ({
 });
 
 type ForkCheck =
-  | { ok: true; login: string }
+  | { ok: true; login: string; parentFullName: string }
   | { ok: false; status: number; error: string };
 
 async function verifyAuthenticatedFork(
@@ -74,7 +75,7 @@ async function verifyAuthenticatedFork(
     return { ok: false, status: 403, error: "For safety, branch creation and file commits are restricted to a fork of an upstream repository." };
   }
 
-  return { ok: true, login: user.login };
+  return { ok: true, login: user.login, parentFullName: repository.parent.full_name };
 }
 
 /* ---------------- Get Repository Information ---------------- */
@@ -274,173 +275,17 @@ router.post("/safety-check", (req, res) => {
 
 /* ---------------- Create or Update GitHub File ---------------- */
 
-router.put("/file", async (req, res) => {
-  try {
-    const {
-      owner,
-      repo,
-      branchName,
-      filePath,
-      content,
-      commitMessage,
-    } = req.body;
-
-    if (
-      !owner ||
-      !repo ||
-      !branchName ||
-      typeof filePath !== "string" ||
-      !filePath ||
-      typeof content !== "string" ||
-      typeof commitMessage !== "string" ||
-      !commitMessage.trim() ||
-      commitMessage.length > 200
-    ) {
-      return res.status(400).json({
-        error:
-          "Owner, repository, branch, file path, content, and commit message are required",
-      });
-    }
-
-    if (!isValidRepositoryPart(owner) || !isValidRepositoryPart(repo)) {
-      return res.status(400).json({
-        error: "Invalid GitHub repository owner or name",
-      });
-    }
-    if (!isValidGitRef(branchName)) {
-      return res.status(400).json({
-        error: "Branch name must be a valid Git ref",
-      });
-    }
-
-    const pathSegments = String(filePath).split("/");
-    const unsafePath =
-      filePath.startsWith("/") ||
-      filePath.includes("\\") ||
-      pathSegments.some((segment: string) => !segment || segment === "." || segment === "..") ||
-      pathSegments.some((segment: string) =>
-        /^\.env(?:\.|$)/i.test(segment) ||
-        /^\.npmrc$/i.test(segment) ||
-        /^\.pypirc$/i.test(segment) ||
-        /^\.netrc$/i.test(segment) ||
-        /^\.ssh$/i.test(segment) ||
-        /^\.aws$/i.test(segment) ||
-        /^(?:secrets?|credentials?)$/i.test(segment)
-      ) ||
-      /(^|\/)(?:id_rsa|id_ed25519|id_ecdsa|private_key|credentials\.json)$/i.test(filePath) ||
-      /[?#\u0000-\u001f]/.test(filePath);
-
-    if (unsafePath) {
-      return res.status(400).json({
-        error: "File path must be a safe repository-relative path",
-      });
-    }
-
-    if (Buffer.byteLength(String(content), "utf8") > 200_000) {
-      return res.status(413).json({
-        error: "File content exceeds the 200 KB limit",
-      });
-    }
-
-    // Enforce the same safety gate server-side so callers cannot bypass the UI.
-    const safetyReport = inspectProposedChanges([{ filePath, content }]);
-    if (!safetyReport.safeToCommit) {
-      return res.status(422).json({
-        error: "File change blocked by the safety gate",
-        safetyReport,
-      });
-    }
-
-    const token = res.locals.githubSession?.accessToken as string | undefined;
-    if (!token) {
-      return res.status(401).json({ error: "Sign in with GitHub to continue.", code: "AUTH_REQUIRED" });
-    }
-
-    const forkCheck = await verifyAuthenticatedFork(token, owner, repo);
-    if (!forkCheck.ok) {
-      return res.status(forkCheck.status).json({ error: forkCheck.error });
-    }
-
-    const headers = {
-      Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${token}`,
-      "User-Agent": "AI-OpenSource-Engineer",
-      "Content-Type": "application/json",
-    };
-
-    const encodedPath = pathSegments.map((segment: string) => encodeURIComponent(segment)).join("/");
-    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
-
-    // Check whether the file already exists
-    const existingResponse = await fetch(
-      `${apiUrl}?ref=${encodeURIComponent(branchName)}`,
-      { headers }
-    );
-
-    let existingSha: string | undefined;
-
-    if (existingResponse.ok) {
-      const existingData = await existingResponse.json();
-      existingSha = existingData.sha;
-    } else if (existingResponse.status !== 404) {
-      const errorData = await existingResponse.json();
-
-      return res.status(existingResponse.status).json({
-        error: errorData.message || "Failed to check existing file",
-      });
-    }
-
-    // Create or update the file
-    const fileResponse = await fetch(apiUrl, {
-      method: "PUT",
-      headers,
-      body: JSON.stringify({
-        message: commitMessage,
-        content: Buffer.from(content, "utf-8").toString("base64"),
-        branch: branchName,
-        ...(existingSha ? { sha: existingSha } : {}),
-      }),
-    });
-
-    const fileData = await fileResponse.json();
-
-    if (!fileResponse.ok) {
-      return res.status(fileResponse.status).json({
-        error: fileData.message || "Failed to commit file",
-      });
-    }
-
-    return res.status(existingSha ? 200 : 201).json({
-      message: existingSha
-        ? "File updated successfully"
-        : "File created successfully",
-      commit: {
-        sha: fileData.commit?.sha,
-        htmlUrl: fileData.commit?.html_url,
-      },
-      file: {
-        path: filePath,
-        branch: branchName,
-      },
-    });
-  } catch (error) {
-    console.error("File commit error:", error);
-
-    return res.status(500).json({
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to commit GitHub file",
-    });
-  }
+router.put("/file", (_req, res) => {
+  return res.status(410).json({ error: "Direct single-file commits are disabled. Use the reviewed, human-approved atomic proposal workflow.", code: "LEGACY_WRITE_DISABLED" });
 });
+
 /* ---------------- Atomic Proposal Commit ---------------- */
 
 // Validate the whole proposal, build a single Git tree/commit, then advance the
 // branch ref once. A failure before the final ref update leaves the branch unchanged.
 router.post("/commit-proposal", async (req, res) => {
   try {
-    const { owner, repo, branchName, commitMessage, changes } = req.body ?? {};
+    const { owner, repo, branchName, commitMessage, changes, workflowId, proposalHash } = req.body ?? {};
 
     if (!isValidRepositoryPart(owner) || !isValidRepositoryPart(repo)) {
       return res.status(400).json({ error: "Invalid GitHub repository owner or name" });
@@ -491,9 +336,24 @@ router.post("/commit-proposal", async (req, res) => {
       return res.status(401).json({ error: "Sign in with GitHub to continue.", code: "AUTH_REQUIRED" });
     }
 
+    const sessionLogin = (res.locals.githubSession as { login?: string } | null)?.login;
+    if (typeof workflowId !== "string" || !workflowId || typeof proposalHash !== "string" || proposalHash !== proposalIdempotencyKey) {
+      return res.status(403).json({ error: "A matching server-recorded human approval is required before committing.", code: "HUMAN_APPROVAL_REQUIRED" });
+    }
+    if (!sessionLogin) return res.status(401).json({ error: "Authenticated GitHub identity is missing.", code: "AUTH_REQUIRED" });
+    const approval = await getContribution(sessionLogin, workflowId);
+    if (!approval || approval.approvedProposalHash !== proposalIdempotencyKey || !approval.approvedAt) {
+      return res.status(403).json({ error: "This exact proposal has not been approved by the signed-in user.", code: "HUMAN_APPROVAL_REQUIRED" });
+    }
     const forkCheck = await verifyAuthenticatedFork(token, owner, repo);
     if (!forkCheck.ok) {
       return res.status(forkCheck.status).json({ error: forkCheck.error });
+    }
+    if (approval.repository.toLowerCase() !== forkCheck.parentFullName.toLowerCase()) {
+      return res.status(403).json({ error: "The approved contribution belongs to a different upstream repository.", code: "APPROVAL_SCOPE_MISMATCH" });
+    }
+    if (!["fork_pending", "fork_ready", "branch_ready", "commit_preparing", "commit_complete"].includes(approval.state)) {
+      return res.status(409).json({ error: "This contribution workflow is not in a state that permits committing.", code: "WORKFLOW_STATE_INVALID" });
     }
 
     const headers = {
@@ -634,6 +494,8 @@ router.post("/pull-request", async (req, res) => {
       headBranch,
       headRepository,
       baseBranch,
+      workflowId,
+      proposalHash,
     } = req.body;
 
     if (!isValidRepositoryPart(owner) || !isValidRepositoryPart(repo)) {
@@ -677,6 +539,15 @@ router.post("/pull-request", async (req, res) => {
       return res.status(403).json({ error: "Pull requests may only use a head branch owned by the authenticated GitHub account." });
     }
 
+    if (typeof workflowId !== "string" || typeof proposalHash !== "string" || !/^[a-f0-9]{24}$/.test(proposalHash)) {
+      return res.status(403).json({ error: "A recorded human approval is required before creating a pull request.", code: "HUMAN_APPROVAL_REQUIRED" });
+    }
+    const sessionLogin = (res.locals.githubSession as { login?: string } | null)?.login;
+    const approval = sessionLogin ? await getContribution(sessionLogin, workflowId) : null;
+    if (!approval || approval.approvedProposalHash !== proposalHash || !approval.approvedAt || approval.state !== "commit_complete" || approval.repository.toLowerCase() !== (owner + "/" + repo).toLowerCase()) {
+      return res.status(403).json({ error: "The approved workflow must match this upstream repository and have a completed commit before PR creation.", code: "APPROVAL_SCOPE_MISMATCH" });
+    }
+
     // Confirm the selected head repository is actually a fork of the requested upstream.
     const headRepositoryResponse = await fetch(
       `https://api.github.com/repos/${encodeURIComponent(headOwner)}/${encodeURIComponent(headRepository)}`,
@@ -694,6 +565,16 @@ router.post("/pull-request", async (req, res) => {
       headRepositoryData.parent?.full_name?.toLowerCase() !== `${owner}/${repo}`.toLowerCase()
     ) {
       return res.status(403).json({ error: "The pull request head repository must be a fork of the selected upstream repository." });
+    }
+
+    const headRefResponse = await fetch("https://api.github.com/repos/" + encodeURIComponent(headOwner) + "/" + encodeURIComponent(headRepository) + "/git/ref/heads/" + encodeURIComponent(headBranch.split(":").slice(1).join(":")), { headers: githubHeaders(token) });
+    if (!headRefResponse.ok) return res.status(409).json({ error: "Unable to verify the committed head branch before creating the pull request." });
+    const headRef = await headRefResponse.json() as { object?: { sha?: string } };
+    if (!headRef.object?.sha) return res.status(409).json({ error: "The selected head branch has no verifiable commit." });
+    const headCommitResponse = await fetch("https://api.github.com/repos/" + encodeURIComponent(headOwner) + "/" + encodeURIComponent(headRepository) + "/git/commits/" + encodeURIComponent(headRef.object.sha), { headers: githubHeaders(token) });
+    const headCommit = await headCommitResponse.json() as { message?: string };
+    if (!headCommitResponse.ok || typeof headCommit.message !== "string" || !headCommit.message.includes("[ai-ose-proposal:" + proposalHash + "]")) {
+      return res.status(403).json({ error: "The head branch does not contain the exact approved proposal commit.", code: "APPROVED_COMMIT_MISMATCH" });
     }
 
     const response = await fetch(
