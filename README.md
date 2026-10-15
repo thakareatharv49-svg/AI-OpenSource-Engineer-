@@ -109,6 +109,10 @@ GitHub Actions runs these frontend and backend checks on pushes and pull request
 - Keep secrets in local environment files or GitHub secret storage. Never commit real keys or paste them into issues or generated proposals.
 - The first version reads a bounded set of repository source files. Large repositories may need more targeted file retrieval before a proposal is reliable.
 
+## Live integration verification
+
+Use the [OAuth and contribution live-verification runbook](docs/oauth-and-contribution-live-verification.md) to test sign-in, session handling, source-analysis failure behavior, approval enforcement, fork commits, explicit pull-request creation, and unauthenticated rejection with a real GitHub account. Automated CI is not a substitute for this end-to-end evidence.
+
 ## Goal
 
 Help developers make real, reviewable open-source contributions while keeping human approval and pull-request creation under their control.
