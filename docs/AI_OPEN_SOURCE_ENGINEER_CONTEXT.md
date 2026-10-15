@@ -1,10 +1,29 @@
 # AI Open Source Engineer — Context Snapshot
 
-Last revised: 2026-10-15 (UTC; repository state re-verified at 12:09 UTC)
+Last revised: 2026-10-15 (18:38 UTC; refreshed after M99 merge)
 Repository: https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-
 Default branch: `main`
 
 This file is the handoff point for future ChatGPT sessions. Read this file and the current `PROJECT_STATUS_AND_ROADMAP.md` on `main` before doing more work. GitHub is the durable source of truth; do not rely on chat history alone.
+
+## Latest verified handoff — 2026-10-15 18:38 UTC
+
+This current-state block supersedes older milestone numbers and repository SHAs later in this historical context document. Always verify live GitHub state before continuing.
+
+- Repository: https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer- ; default branch: `main`.
+- Current project: AI Open Source Engineer only (not AI Software Company/Nexora or ATHNEXX).
+- Latest completed milestone: **M99 — cross-user lifecycle isolation regression tests**.
+- PR #140: https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/140 — merged 2026-10-15 18:38 UTC.
+- Merge commit: `404648cb443c7fb7e904a52a31faabc1dfe5a886`.
+- PR head: `aabb3d31b0430532055da0e4da47222f5ad6e89c`.
+- PR-head CI passed (backend typecheck/tests and frontend build/lint/dependency audit); PR-head CodeQL passed. Post-merge CI run `38787266280` was queued and CodeQL run `38787266446` was in progress at the start of this context refresh; check their final outcomes before saying post-merge verification is complete.
+- M99 added HTTP-level tests that a contribution list is scoped to the logged-in identity and idempotency keys are scoped per identity. Same-user retries reuse a workflow; a different identity gets a separate workflow. Added `docs/per-user-isolation-regression-tests.md` and a README link.
+- M97 PR #138 merged: OAuth/contribution live-verification runbook. M98 PR #139 merged at `748e45b40dc1898c16b75ea3936dd6c7a29d4f1b`: per-user GitHub ownership requirements and two-account checklist.
+- **Still unverified live:** OAuth callback and token exchange with real credentials, browser-cookie/session behavior end-to-end, and two-account fork/branch/commit/PR isolation. Synthetic session tests and CI do not prove those integrations. The application remains loopback-only; do not bypass the deployment guard.
+- Non-negotiable product boundaries: use each user's own server-side OAuth session token for their GitHub writes; never fall back to the maintainer's personal token; require human approval before committing proposal changes; PR creation is a separate explicit user action; do not claim external integrations passed unless observed.
+- Next planned work: **M100 — OAuth middleware and identity-binding regression tests**. Inspect current auth middleware, OAuth callback/session creation, token plumbing, and existing tests first. Add mocked-provider integration tests for missing/expired sessions, identity/token mismatch, sign-out invalidation, and no maintainer-token fallback. Explicitly label provider calls as mocked; live two-account verification remains separate.
+- Workflow preference: revise the current GitHub repository and roadmap first; work milestone-by-milestone; create PRs; review changes; wait for all required CI and CodeQL checks on the final PR head; fix failures; merge only when green; record exact PR/head/merge SHAs and verification boundaries. Do not ask the user to merge.
+- Source of truth: this file plus `PROJECT_STATUS_AND_ROADMAP.md`, current README, and the live GitHub PR/actions state. Historical entries below may be stale.
 
 ## Product purpose and safety boundary
 
