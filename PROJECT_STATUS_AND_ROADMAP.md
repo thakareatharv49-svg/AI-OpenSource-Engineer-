@@ -903,3 +903,10 @@ Definition of done:
 Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
+
+
+## 94. Milestone 90 — Supabase secret API-key edge-case coverage
+
+**In progress**: add synthetic regression tests for the existing `sb_secret_` detector at the 20-character suffix boundary and beyond, malformed/short near misses, case sensitivity, and documentation/environment placeholders. Production detector behavior remains unchanged.
+
+Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
