@@ -907,6 +907,8 @@ Definition of done: inspect the full diff; backend typecheck/tests, frontend bui
 
 ## 94. Milestone 90 — Supabase secret API-key edge-case coverage
 
-**In progress**: add synthetic regression tests for the existing `sb_secret_` detector at the 20-character suffix boundary and beyond, malformed/short near misses, case sensitivity, and documentation/environment placeholders. Production detector behavior remains unchanged.
+**Completed and merged on 2026-10-15** in [PR #127](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/127), merge commit `e78f405d23b31f47aa8764d112085d58b97441a0`. Added synthetic regression tests for the existing `sb_secret_` detector at the 20-character suffix boundary and beyond, malformed/short near misses, case sensitivity, and documentation/environment placeholders. Production detector behavior remains unchanged.
 
-Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
+**Verification:** backend typecheck and tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis all passed on the final PR head.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
