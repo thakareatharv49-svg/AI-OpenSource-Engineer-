@@ -930,3 +930,12 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 **Verification:** backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis all passed on the final PR head.
 
 Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
+
+
+## 96. Milestone 92 — GitHub fine-grained token edge-case coverage
+
+**Implementation in progress.** Add synthetic regression coverage for the existing `github_pat_` detector at the 20-character suffix boundary and beyond, accepted characters, malformed/short near misses, case sensitivity, and documentation/environment placeholders. Keep production detection behavior unchanged.
+
+**Validation gate:** backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
