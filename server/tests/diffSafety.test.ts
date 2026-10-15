@@ -2358,3 +2358,39 @@ test("allows GitLab deploy and runner token near misses and environment/document
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks GitHub fine-grained personal access tokens at the 20-character suffix boundary and beyond", () => {
+  for (const suffix of [
+    "a".repeat(20),
+    "A9_z-B7cD3eF5gH1jK9m",
+    "Z".repeat(120),
+  ]) {
+    const token = "github_pat_" + suffix;
+    const report = inspectProposedChanges([{
+      file: "src/github-client.ts",
+      after: `const githubToken = "${token}";`,
+    }]);
+    assert.equal(report.safeToCommit, false, "GitHub fine-grained tokens must be blocked");
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" && finding.reason === "GitHub fine-grained token pattern detected"
+    ), token);
+  }
+});
+
+test("allows GitHub fine-grained token near misses and environment/documentation placeholders", () => {
+  const samples = [
+    "github_pat_" + "a".repeat(19),
+    "github_pat_" + "a".repeat(10) + "." + "b".repeat(10),
+    "GITHUB_PAT_" + "A".repeat(30),
+    "github_pat_your_token",
+    "GitHub fine-grained personal access tokens use the github_pat_ prefix.",
+    "const githubToken = process.env.GITHUB_TOKEN;",
+  ];
+  const report = inspectProposedChanges([{
+    file: "docs/github-fine-grained-tokens.md",
+    after: samples.join("\\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
