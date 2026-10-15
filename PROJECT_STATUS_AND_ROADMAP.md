@@ -948,3 +948,10 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 **Verification:** backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis all passed on the final PR head.
 
 Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
+
+
+## 100. Milestone 94 — Contribution lifecycle API integration coverage
+
+**In progress on 2026-10-15** in [PR pending](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pulls). Adds HTTP-level regression tests against the real lifecycle router and isolated temporary persistence. Coverage includes unauthenticated requests, invalid issue URL validation, create/idempotent reuse, owner-scoped reads and transitions, invalid lifecycle transitions, optimistic-version conflicts, and malformed transition payloads. The test harness injects the router's response-local GitHub-session shape; it does **not** simulate a real OAuth callback or prove authenticated production middleware end to end.
+
+**Definition of done:** backend typecheck/tests and frontend build/lint with configured dependency audit and CodeQL must pass on the final PR head. Inspect the complete diff; fix any failures before merge. Do not claim real OAuth or shared Redis integration was exercised by these route tests.
