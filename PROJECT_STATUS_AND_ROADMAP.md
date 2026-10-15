@@ -963,4 +963,19 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 102. Milestone 96 — Fail-closed repository source retrieval
 
-**In progress in branch `fix/fail-closed-repository-analysis-m96` (2026-10-15).** Fixed a silent partial-analysis failure: selected GitHub source files that return an HTTP error or malformed/unsupported content now abort repository analysis with a file-specific error instead of being represented as empty strings. The new helper validates GitHub's file type, base64 encoding, and payload shape before decoding. Added focused tests for UTF-8 decoding, API errors, malformed payloads, nested paths, and branch pinning. CI verification and merge status will be recorded only after the PR checks complete. This still does not make the bounded repository snapshot a full clone; selected-file limits and GitHub tree truncation remain explicitly reported.
+**Completed and merged** (2026-10-15). Fixed a silent partial-analysis failure: selected GitHub source files that return an HTTP error or malformed/unsupported content now abort repository analysis with a file-specific error instead of being represented as empty strings. The new helper validates GitHub's file type, base64 encoding, and payload shape before decoding. Added focused tests for UTF-8 decoding, API errors, malformed payloads, nested paths, and branch pinning. CI verification and merge status will be recorded only after the PR checks complete. This still does not make the bounded repository snapshot a full clone; selected-file limits and GitHub tree truncation remain explicitly reported.
+
+
+## 103. Milestone 97 — OAuth and contribution live-verification runbook
+
+**Completed and merged on 2026-10-15** in [PR #138](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/138), commit `e701b36bab02afa1ab0b27118d9becd7c9044d2d`. Added a repeatable live-account checklist for OAuth, session handling, issue discovery, fail-closed source analysis, human approval, atomic fork commit, explicit PR creation, and evidence capture. CI and CodeQL passed. Real-account execution remains a separate manual verification.
+
+## 104. Milestone 98 — Per-user GitHub ownership and isolation
+
+**Completed and merged on 2026-10-15** in [PR #139](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/139), merge commit `748e45b40dc1898c16b75ea3936dd6c7a29d4f1b`. Documented the requirement that each contributor's own GitHub OAuth session authorizes forks, branches, commits, and PRs; recorded the current backend ownership checks and a two-account acceptance checklist. CI and CodeQL passed. The two-account live test has not yet been performed.
+
+## 105. Milestone 99 — Cross-user lifecycle isolation regression tests
+
+**In progress in branch `milestone-99-cross-user-regression-tests` (2026-10-15).** Added HTTP-level regression tests asserting that contribution lists are login-scoped and that idempotency keys cannot cause two users to share a workflow. Added a dedicated evidence-boundary guide and README link. Existing tests already cover cross-user read, transition, and approval rejection. The new tests and the full CI suite must pass on the final PR head before this milestone is merged.
+
+**Evidence boundary:** these integration tests inject synthetic session identities. They do not prove live OAuth, browser cookie handling, GitHub token exchange, or real fork/PR ownership. Those remain explicitly unverified until the two-account live runbook is executed.
