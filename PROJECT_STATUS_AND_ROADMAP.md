@@ -889,8 +889,15 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 92. Milestone 88 — GitLab deploy/runner-token edge-case coverage
 
-**Completed and merged on 2026-10-15** in [PR #123](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/123), merge commit `PENDING`. Added synthetic regression tests for both existing `gldt-` deploy-token and `glrt-` runner-token detectors at the 20-character suffix boundary and beyond, plus malformed/short near misses, accepted characters, case sensitivity, and documentation/environment placeholders. Production detector behavior was unchanged. Backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
+**Completed and merged on 2026-10-15** in [PR #123](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/123), merge commit `c90ca8cc6e9c73e57a16a819e0bcf7a97229ec62`. Added synthetic regression tests for both existing `gldt-` deploy-token and `glrt-` runner-token detectors at the 20-character suffix boundary and beyond, plus malformed/short near misses, accepted characters, case sensitivity, and documentation/environment placeholders. Production detector behavior was unchanged. Backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
 
 Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
 
 Definition of done:
+
+
+## 93. Milestone 89 — Hugging Face access-token edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing `hf_` access-token detector's 30-character suffix boundary and longer token-shaped values, accepted characters, malformed/short near misses, case sensitivity, and documentation/environment placeholders. Keep production detection behavior unchanged unless tests establish a clearly documented defect.
+
+Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
