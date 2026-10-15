@@ -916,7 +916,14 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 95. Milestone 91 — Google OAuth client-secret edge-case coverage
 
-**In progress.** Added synthetic regression tests for the existing `GOCSPX-` Google OAuth client-secret detector at the 20-character suffix boundary and beyond, malformed/short near misses, case sensitivity, and documentation/environment placeholders. Production detector behavior is unchanged.
+**Completed and merged on 2026-10-15** in [PR #128](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/128), merge commit `0ad2403997cfb3f0fa9c96e347a59063eb2f8e92`. Added synthetic regression tests for the existing `GOCSPX-` Google OAuth client-secret detector at the 20-character suffix boundary and beyond, malformed/short near misses, case sensitivity, and documentation/environment placeholders. Production detector behavior is unchanged. Backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis passed on the final PR head.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
+
+
+## 96. Milestone 92 — GitHub fine-grained token edge-case coverage
+
+**Implementation in progress.** Add synthetic regression coverage for the existing `github_pat_` detector at the 20-character suffix boundary and beyond, accepted characters, malformed/short near misses, case sensitivity, and documentation/environment placeholders. Keep production detection behavior unchanged.
 
 **Validation gate:** backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
 
