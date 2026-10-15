@@ -1896,7 +1896,7 @@ test("allows Resend API key near misses and environment placeholders", () => {
 test("blocks Groq API keys at the 20-character suffix boundary and beyond", () => {
   for (const suffix of [
     "a".repeat(20),
-    "A9zB7cD3eF5gH1jK9mN",
+    "A9zB7cD3eF5gH1jK9mN0",
     "Z".repeat(64),
   ]) {
     const key = "gsk_" + suffix;
