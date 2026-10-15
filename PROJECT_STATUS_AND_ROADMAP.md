@@ -930,3 +930,12 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 **Verification:** backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis all passed on the final PR head.
 
 Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
+
+
+## 97. Milestone 93 — Resend API-key edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing `re_` Resend API-key detector at its 32-character suffix boundary and beyond, including malformed/short near misses, unsupported characters and casing, and documentation/environment placeholders. Production detector behavior remains unchanged.
+
+**Definition of done:** inspect the complete diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
