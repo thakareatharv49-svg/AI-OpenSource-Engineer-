@@ -2171,3 +2171,39 @@ test("allows Stripe key near misses and environment/documentation placeholders",
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+
+test("blocks npm access tokens at the 30-character suffix boundary and beyond", () => {
+  for (const suffix of [
+    "a".repeat(30),
+    "A9zB7cD3eF5gH1jK9mNqR2sT4uV6wX",
+    "Z".repeat(100),
+  ]) {
+    const token = "npm_" + suffix;
+    const report = inspectProposedChanges([{
+      file: "src/npm-client.ts",
+      after: `const npmToken = "${token}";`,
+    }]);
+    assert.equal(report.safeToCommit, false, "npm access tokens must be blocked");
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" && finding.reason === "npm access token pattern detected"
+    ), token);
+  }
+});
+
+test("allows npm token near misses and environment/documentation placeholders", () => {
+  const samples = [
+    "npm_" + "a".repeat(29),
+    "npm_" + "a".repeat(15) + "-" + "b".repeat(15),
+    "NPM_" + "A".repeat(30),
+    "npm_your_access_token",
+    "npm tokens use the npm_ prefix.",
+    "const npmToken = process.env.NPM_TOKEN;",
+  ];
+  const report = inspectProposedChanges([{
+    file: "docs/npm-access-tokens.md",
+    after: samples.join("\\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
