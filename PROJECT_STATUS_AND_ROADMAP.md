@@ -859,6 +859,12 @@ Scope: JWT shape detection is defense in depth, not token validation; synthetic 
 
 ## 87. Milestone 83 — Stripe secret-key edge-case coverage
 
-**Implementation in progress.** Inspect the existing Stripe secret-key detector and add synthetic regression tests for its accepted prefixes, minimum suffix length, longer values, malformed/short near misses, and documentation/environment placeholders. Do not change production detection behavior unless tests reveal a clearly documented defect; any production change must be separately justified.
+**Completed and merged on 2026-10-15** in [PR #116](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/116), merge commit `30e0984529043fc34e7820f4948dbc8bdc92ca5e`. Added synthetic regression tests for the existing Stripe `sk_`/`rk_` live/test key detector, including the 16-character suffix boundary, longer values, malformed and short near misses, unsupported prefixes/casing, and documentation/environment placeholders. Production detector behavior was unchanged. Backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis all passed on the final PR head.
+
+Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
+
+## 88. Milestone 84 — npm access-token edge-case coverage
+
+**Implementation in progress.** Add synthetic regression tests for the existing `npm_` access-token detector's 30-character suffix boundary, longer token-shaped values, malformed/short near misses, accepted character set, case sensitivity, and documentation/environment placeholders. Keep production detection behavior unchanged unless tests establish a clearly documented defect.
 
 Definition of done: inspect the full diff; backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis must pass on the final PR head before merge.
