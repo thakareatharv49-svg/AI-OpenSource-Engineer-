@@ -37,7 +37,7 @@ export async function fetchSelectedRepositoryFiles(
       throw new Error(`GitHub returned an unsupported or incomplete content payload for "${file.path}"; analysis aborted.`);
     }
 
-    const encodedContent = data.content.replace(/\\s/g, "");
+    const encodedContent = data.content.replace(/\s/g, "");
     const validBase64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
     if (encodedContent.length % 4 !== 0 || !validBase64.test(encodedContent)) {
       throw new Error(`GitHub returned malformed base64 content for "${file.path}"; analysis aborted.`);
