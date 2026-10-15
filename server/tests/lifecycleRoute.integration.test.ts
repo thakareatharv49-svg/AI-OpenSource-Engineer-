@@ -5,6 +5,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import lifecycleRouter from "../src/routes/lifecycle.js";
+import githubRouter from "../src/routes/github.js";
 
 let server: ReturnType<ReturnType<typeof express>["listen"]>;
 let baseUrl: string;
@@ -20,10 +21,11 @@ before(async () => {
   // OAuth cookie/session validation remains covered separately by the auth middleware.
   app.use((req, res, next) => {
     const login = req.header("x-test-github-login");
-    res.locals.githubSession = login ? { login } : null;
+    res.locals.githubSession = login ? { login, accessToken: "test-token" } : null;
     next();
   });
   app.use("/api/lifecycle", lifecycleRouter);
+  app.use("/api/github", githubRouter);
   server = app.listen(0, "127.0.0.1");
   await new Promise<void>((resolve, reject) => {
     server.once("listening", resolve);
@@ -145,6 +147,21 @@ test("human approval is recorded server-side against the exact proposal fingerpr
   assert.equal(approved.body.contribution.state, "fork_pending");
   const wrongUser = await request(`/${id}/approve`, { method: "POST", body: JSON.stringify({ ...approvalBody, expectedVersion: approved.body.contribution.version }) }, "bob");
   assert.equal(wrongUser.response.status, 404);
+});
+
+test("GitHub write endpoints reject unapproved proposals and disable legacy partial commits", async () => {
+  const legacy = await fetch(baseUrl.replace("/api/lifecycle", "/api/github") + "/file", {
+    method: "PUT", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ owner: "alice", repo: "fork", branchName: "main", filePath: "src/a.ts", content: "export const a = 1;", commitMessage: "legacy" }),
+  });
+  assert.equal(legacy.status, 410);
+  const unapproved = await fetch(baseUrl.replace("/api/lifecycle", "/api/github") + "/commit-proposal", {
+    method: "POST", headers: { "content-type": "application/json", "x-test-github-login": "alice" },
+    body: JSON.stringify({ owner: "alice", repo: "fork", branchName: "main", commitMessage: "test", changes: [{ filePath: "src/a.ts", content: "export const a = 1;" }] }),
+  });
+  assert.equal(unapproved.status, 403);
+  const body = await unapproved.json() as Record<string, unknown>;
+  assert.equal(body.code, "HUMAN_APPROVAL_REQUIRED");
 });
 
 test("lifecycle API rejects malformed transition versions and unknown states", async () => {
