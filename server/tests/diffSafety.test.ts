@@ -2358,3 +2358,39 @@ test("allows GitLab deploy and runner token near misses and environment/document
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+test("blocks Hugging Face access tokens at the 30-character suffix boundary and beyond", () => {
+  for (const suffix of [
+    "a".repeat(30),
+    "A9zB7cD3eF5gH1jK9mNqR2sT4uV6wX",
+    "Z".repeat(100),
+  ]) {
+    const token = "hf_" + suffix;
+    const report = inspectProposedChanges([{
+      file: "src/hugging-face-client.ts",
+      after: `const accessToken = "${token}";`,
+    }]);
+    assert.equal(report.safeToCommit, false, "Hugging Face access tokens must be blocked");
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" && finding.reason === "Hugging Face access token pattern detected"
+    ), token);
+  }
+});
+
+test("allows Hugging Face token near misses and environment/documentation placeholders", () => {
+  const samples = [
+    "hf_" + "a".repeat(29),
+    "hf_" + "a".repeat(15) + "-" + "b".repeat(15),
+    "HF_" + "A".repeat(30),
+    "hf_your_access_token",
+    "hf_example_token_value",
+    "Hugging Face access tokens use the hf_ prefix.",
+    "const accessToken = process.env.HUGGING_FACE_TOKEN;",
+  ];
+  const report = inspectProposedChanges([{
+    file: "docs/hugging-face-access-tokens.md",
+    after: samples.join("\\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
