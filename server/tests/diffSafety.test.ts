@@ -2383,7 +2383,7 @@ test("allows GitHub fine-grained token near misses and environment/documentation
     "github_pat_" + "a".repeat(19),
     "github_pat_" + "a".repeat(10) + "." + "b".repeat(10),
     "GITHUB_PAT_" + "A".repeat(30),
-    "github_pat_your_personal_access_token",
+    "github_pat_your_token",
     "GitHub fine-grained personal access tokens use the github_pat_ prefix.",
     "const githubToken = process.env.GITHUB_TOKEN;",
   ];
