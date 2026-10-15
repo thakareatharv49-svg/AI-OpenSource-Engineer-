@@ -2281,3 +2281,38 @@ test("allows SendGrid key near misses and environment/documentation placeholders
   assert.deepEqual(report.findings, []);
 });
 
+test("blocks GitLab personal access tokens at the 20-character suffix boundary and beyond", () => {
+  for (const suffix of [
+    "a".repeat(20),
+    "A9_z-B7cD3eF5gH1jK9m",
+    "Z".repeat(100),
+  ]) {
+    const token = "glpat-" + suffix;
+    const report = inspectProposedChanges([{
+      file: "src/gitlab-client.ts",
+      after: `const personalAccessToken = "${token}";`,
+    }]);
+    assert.equal(report.safeToCommit, false, "GitLab personal access tokens must be blocked");
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" && finding.reason === "GitLab personal access token pattern detected"
+    ), token);
+  }
+});
+
+test("allows GitLab personal-token near misses and environment/documentation placeholders", () => {
+  const samples = [
+    "glpat-" + "a".repeat(19),
+    "glpat-" + "a".repeat(10) + "." + "b".repeat(10),
+    "GLPAT-" + "A".repeat(20),
+    "glpat-your_personal_access_token",
+    "GitLab personal access tokens use the glpat- prefix.",
+    "const gitlabToken = process.env.GITLAB_TOKEN;",
+  ];
+  const report = inspectProposedChanges([{
+    file: "docs/gitlab-personal-access-tokens.md",
+    after: samples.join("\\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
+
