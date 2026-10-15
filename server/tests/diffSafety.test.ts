@@ -2243,3 +2243,41 @@ test("allows PyPI token near misses and environment/documentation placeholders",
   assert.equal(report.safeToCommit, true);
   assert.deepEqual(report.findings, []);
 });
+
+test("blocks SendGrid API keys at both 16-character segment boundaries and beyond", () => {
+  const samples = [
+    "SG." + "a".repeat(16) + "." + "b".repeat(16),
+    "SG." + "A9_z-B7cD3eF5gH1jK" + "." + "Q8_x-Y6wV4uT2sR0pN",
+    "SG." + "a".repeat(80) + "." + "Z".repeat(100),
+  ];
+  for (const key of samples) {
+    const report = inspectProposedChanges([{
+      file: "src/sendgrid-client.ts",
+      after: `const apiKey = "${key}";`,
+    }]);
+    assert.equal(report.safeToCommit, false, "SendGrid API keys must be blocked");
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" && finding.reason === "SendGrid API key pattern detected"
+    ), key);
+  }
+});
+
+test("allows SendGrid API-key near misses and environment/documentation placeholders", () => {
+  const samples = [
+    "SG." + "a".repeat(15) + "." + "b".repeat(16),
+    "SG." + "a".repeat(16) + "." + "b".repeat(15),
+    "SG." + "a".repeat(10) + "." + "b".repeat(22),
+    "SG." + "a".repeat(16) + "." + "b".repeat(8) + "." + "c".repeat(16),
+    "sg." + "a".repeat(16) + "." + "b".repeat(16),
+    "SG." + "a".repeat(16) + "." + "b".repeat(15) + ".",
+    "SendGrid API keys use the SG.<public-key>.<secret-key> shape.",
+    "const apiKey = process.env.SENDGRID_API_KEY;",
+    "SG.your_sendgrid_key.your_sendgrid_secret",
+  ];
+  const report = inspectProposedChanges([{
+    file: "docs/sendgrid-api-keys.md",
+    after: samples.join("\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
