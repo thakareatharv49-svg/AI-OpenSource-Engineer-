@@ -1,6 +1,6 @@
 # AI Open Source Engineer — Project Memory, Status, and Roadmap
 
-Last updated: 2026-10-14
+Last updated: 2026-10-15
 
 ## 1. Project purpose
 
@@ -871,7 +871,7 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 
 ## 89. Milestone 85 — PyPI upload-token edge-case coverage
 
-**Completed and merged on 2026-10-15** in [PR #118](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/118), merge commit `PENDING`. Added synthetic regression tests for the existing `pypi-` upload-token detector's 30-character suffix boundary, longer token-shaped values, accepted alphanumeric/underscore/hyphen characters, malformed and short near misses, case sensitivity, and documentation/environment placeholders. Production detector behavior was unchanged. Backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis passed on the final PR head.
+**Completed and merged on 2026-10-15** in [PR #118](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/118), merge commit `c6a82ebb98ec204ad6d4b732ea9a4ac6edd9766c`. Added synthetic regression tests for the existing `pypi-` upload-token detector's 30-character suffix boundary, longer token-shaped values, accepted alphanumeric/underscore/hyphen characters, malformed and short near misses, case sensitivity, and documentation/environment placeholders. Production detector behavior was unchanged. Backend typecheck/tests, frontend build/lint with production dependency audit, and CodeQL JavaScript/TypeScript analysis passed on the final PR head.
 
 Scope: pattern detection is defense in depth, not credential validation; synthetic fixtures do not replace secret scanning or human review.
 
