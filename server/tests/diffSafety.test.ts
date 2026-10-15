@@ -1925,3 +1925,34 @@ test("allows Groq API key near misses and environment placeholders", () => {
   assert.deepEqual(report.findings, []);
 });
 
+test("blocks Replicate API tokens at the 32-character suffix boundary and beyond", () => {
+  for (const suffix of [
+    "a".repeat(32),
+    "A9zB7cD3eF5gH1jK9mNqR2sT4uV6wX8Y",
+    "Z".repeat(80),
+  ]) {
+    const token = "r8_" + suffix;
+    const report = inspectProposedChanges([{ file: "src/replicate-client.ts", after: token }]);
+    assert.equal(report.safeToCommit, false, "Replicate API tokens must be blocked");
+    assert.ok(report.findings.some((finding) =>
+      finding.severity === "block" && finding.reason === "Replicate API token pattern detected"
+    ), token);
+  }
+});
+
+test("allows Replicate token near misses and environment/documentation placeholders", () => {
+  const samples = [
+    "r8_" + "a".repeat(31),
+    "r8_" + "a".repeat(16) + "-" + "b".repeat(16),
+    "R8_" + "A".repeat(32),
+    "r8_your_replicate_token",
+    "Replicate API tokens use the r8_ prefix followed by an alphanumeric token.",
+    "const apiToken = process.env.REPLICATE_API_TOKEN;",
+  ];
+  const report = inspectProposedChanges([{
+    file: "docs/replicate-api-tokens.md",
+    after: samples.join("\n"),
+  }]);
+  assert.equal(report.safeToCommit, true);
+  assert.deepEqual(report.findings, []);
+});
