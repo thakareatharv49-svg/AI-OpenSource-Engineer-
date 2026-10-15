@@ -77,17 +77,21 @@ function Contribution() {
   const [started, setStarted] = useState(false);
   const [workflowId, setWorkflowId] = useState<string | null>(null);
   const [workflowVersion, setWorkflowVersion] = useState<number | null>(null);
+  const workflowVersionRef = useRef<number | null>(null);
   const [workflowState, setWorkflowState] = useState<string | null>(null);
   useEffect(() => {
     if (!started) autoRunAttempts.current.clear();
   }, [started]);
   const [stage, setStage] = useState(0);
   const updateLifecycle = async (nextState: string, message: string) => {
-    if (!workflowId || workflowVersion === null) return;
+    const expectedVersion = workflowVersionRef.current;
+    if (!workflowId || expectedVersion === null) return;
     try {
-      const response = await apiFetch(`${API_BASE_URL}/api/lifecycle/${workflowId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state: nextState, expectedVersion: workflowVersion, message }) });
+      const response = await apiFetch(`${API_BASE_URL}/api/lifecycle/${workflowId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state: nextState, expectedVersion, message }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Lifecycle update failed");
+      workflowVersionRef.current = data.contribution.version;
+      workflowVersionRef.current = data.contribution.version;
       setWorkflowVersion(data.contribution.version);
       setWorkflowState(data.contribution.state);
       localStorage.setItem("ai-ose-lifecycle-pointer", JSON.stringify({ id: data.contribution.id, version: data.contribution.version, state: data.contribution.state }));
@@ -103,6 +107,7 @@ function Contribution() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to cancel contribution workflow");
+      workflowVersionRef.current = data.contribution.version;
       setWorkflowVersion(data.contribution.version);
       setWorkflowState("cancelled");
       setStarted(false);
@@ -137,6 +142,7 @@ function Contribution() {
         const data = await response.json();
         if (!active || !data.contribution) return;
         setWorkflowId(data.contribution.id);
+        workflowVersionRef.current = data.contribution.version;
         setWorkflowVersion(data.contribution.version);
         setWorkflowState(data.contribution.state);
       } catch (error) { console.warn("Could not restore saved lifecycle status:", error); }
@@ -343,6 +349,7 @@ const [forkedRepository, setForkedRepository] = useState("");
       const lifecycleData = await lifecycleResponse.json();
       if (!lifecycleResponse.ok) throw new Error(lifecycleData.error || "Could not save contribution workflow state.");
       setWorkflowId(lifecycleData.contribution.id);
+      workflowVersionRef.current = lifecycleData.contribution.version;
       setWorkflowVersion(lifecycleData.contribution.version);
       setWorkflowState(lifecycleData.contribution.state);
       try { localStorage.setItem("ai-ose-lifecycle-pointer", JSON.stringify({ id: lifecycleData.contribution.id, version: lifecycleData.contribution.version, state: lifecycleData.contribution.state })); } catch { /* lifecycle remains on the server if browser storage is unavailable */ }
@@ -672,7 +679,7 @@ const [forkedRepository, setForkedRepository] = useState("");
     }
   };
 
-  const handleForkRepository = async () => {
+  const handleForkRepository = async (approvalAlreadyMovedWorkflow = false) => {
   if (!selectedIssue) {
     setForkError("No issue selected.");
     return;
@@ -680,7 +687,7 @@ const [forkedRepository, setForkedRepository] = useState("");
 
   setForkingRepository(true);
   setForkError("");
-  await updateLifecycle("fork_pending", "Fork operation started");
+  if (!approvalAlreadyMovedWorkflow) await updateLifecycle("fork_pending", "Fork operation started");
 
   try {
     const repository = getRepositoryName(selectedIssue.url);
@@ -821,9 +828,10 @@ const [forkedRepository, setForkedRepository] = useState("");
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Server could not record human approval.");
       setProposalApprovalHash(data.proposalHash);
+      workflowVersionRef.current = data.contribution.version;
       setWorkflowVersion(data.contribution.version); setWorkflowState(data.contribution.state);
       localStorage.setItem("ai-ose-lifecycle-pointer", JSON.stringify({ id: data.contribution.id, version: data.contribution.version, state: data.contribution.state }));
-      setApproved(true); await handleForkRepository();
+      setApproved(true); await handleForkRepository(true);
     } catch (error) {
       setApproved(false); setProposalApprovalHash(null);
       setForkError(error instanceof Error ? error.message : "Could not record human approval.");
