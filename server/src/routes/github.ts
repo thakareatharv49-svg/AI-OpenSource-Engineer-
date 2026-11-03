@@ -566,7 +566,7 @@ router.post("/pull-request", async (req, res) => {
         approval.repository.toLowerCase() !== canonicalUpstream.toLowerCase()) {
       return res.status(403).json({ error: "The requested PR target does not match the canonical original issue repository.", code: "UPSTREAM_IDENTITY_MISMATCH" });
     }
-    if (typeof baseBranch !== "string" || !baseBranch.trim() || baseBranch.length > 240) {
+    if (!isValidGitRef(baseBranch)) {
       return res.status(400).json({ error: "A valid upstream base branch is required." });
     }
 
@@ -624,6 +624,12 @@ router.post("/pull-request", async (req, res) => {
       return res.status(response.status).json({
         error: data.message || "Failed to create pull request",
       });
+    }
+
+    // Validate the minimum PR identity fields before persisting or requesting review.
+    if (!Number.isInteger(data.number) || data.number < 1 || typeof data.html_url !== "string" ||
+        typeof data.state !== "string" || typeof data.created_at !== "string") {
+      return res.status(502).json({ error: "GitHub returned an incomplete pull request response. Inspect the upstream repository before retrying.", code: "PULL_REQUEST_RESPONSE_INVALID" });
     }
 
     // Verify GitHub's returned PR really targets the canonical upstream and the authenticated fork.
