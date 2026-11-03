@@ -990,3 +990,8 @@ Before starting, inspect current auth middleware, OAuth callback/session creatio
 ## 107. Project completion survey — 2026-11-03
 
 A current survey of implemented capabilities, evidence boundaries, remaining work, acceptance tasks, and time estimates is maintained in [docs/PROJECT_COMPLETION_AUDIT_2026-11-03.md](docs/PROJECT_COMPLETION_AUDIT_2026-11-03.md). This is a planning audit, not a claim that live integrations are complete. It records 7 remaining workstreams and 18 acceptance tasks, with a 5–8 working-day estimate for a live-verified local MVP and 15–25+ working days for a hosted production-ready service, subject to real OAuth credentials, two GitHub accounts, CI, and provider availability. Dependency PRs #142–#144 require investigation; do not merge while their required CI is failing.
+
+
+### CI health follow-up — 2026-11-03
+
+After the context-refresh merge, main CI run [#41564884075](https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/actions/runs/41564884075) failed in both dependency-audit jobs. Backend reports high `body-parser` GHSA-27r3-jxmh-p828 and moderate `qs` GHSA-6pq8-jhm2-2vcw; frontend reports 14 vulnerabilities (12 moderate, 2 high), including minimatch, Vite, and Zod advisories. Dependabot PR #144 also fails npm install because TypeScript 7.0.2 conflicts with typescript-eslint's `<6.1.0` peer range. See the completion audit for exact evidence and next steps. Repair the dependency baseline before starting M100; do not suppress audit failures or force incompatible upgrades.
