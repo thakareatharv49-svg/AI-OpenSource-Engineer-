@@ -2,7 +2,7 @@ import { Router } from "express";
 import { createHash } from "node:crypto";
 import dotenv from "dotenv";
 import { inspectProposedChanges } from "../security/diffSafety.js";
-import { getContribution } from "../security/contributionLifecycle.js";
+import { getContribution, recordPullRequestOutcome } from "../security/contributionLifecycle.js";
 
 dotenv.config();
 
@@ -548,6 +548,28 @@ router.post("/pull-request", async (req, res) => {
       return res.status(403).json({ error: "The approved workflow must match this upstream repository and have a completed commit before PR creation.", code: "APPROVAL_SCOPE_MISMATCH" });
     }
 
+    // Resolve canonical upstream metadata from GitHub; never trust caller-supplied casing/identity.
+    const upstreamResponse = await fetch(
+      `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`,
+      { headers: githubHeaders(token) }
+    );
+    if (!upstreamResponse.ok) {
+      return res.status(404).json({ error: "Unable to verify the original upstream repository." });
+    }
+    const upstreamData = await upstreamResponse.json() as {
+      full_name?: string; owner?: { login?: string }; default_branch?: string;
+    };
+    const canonicalUpstream = upstreamData.full_name;
+    const upstreamOwnerLogin = upstreamData.owner?.login;
+    if (!canonicalUpstream || !upstreamOwnerLogin ||
+        canonicalUpstream.toLowerCase() !== `${owner}/${repo}`.toLowerCase() ||
+        approval.repository.toLowerCase() !== canonicalUpstream.toLowerCase()) {
+      return res.status(403).json({ error: "The requested PR target does not match the canonical original issue repository.", code: "UPSTREAM_IDENTITY_MISMATCH" });
+    }
+    if (typeof baseBranch !== "string" || !baseBranch.trim() || baseBranch.length > 240) {
+      return res.status(400).json({ error: "A valid upstream base branch is required." });
+    }
+
     // Confirm the selected head repository is actually a fork of the requested upstream.
     const headRepositoryResponse = await fetch(
       `https://api.github.com/repos/${encodeURIComponent(headOwner)}/${encodeURIComponent(headRepository)}`,
@@ -604,16 +626,55 @@ router.post("/pull-request", async (req, res) => {
       });
     }
 
+    // Verify GitHub's returned PR really targets the canonical upstream and the authenticated fork.
+    if (data.base?.repo?.full_name?.toLowerCase() !== canonicalUpstream.toLowerCase() ||
+        data.head?.repo?.full_name?.toLowerCase() !== `${headOwner}/${headRepository}`.toLowerCase() ||
+        data.user?.login?.toLowerCase() !== authenticatedUser.login.toLowerCase()) {
+      return res.status(502).json({ error: "GitHub created a pull request, but its returned head/base/author identity did not match the verified request. Inspect GitHub before retrying.", code: "PULL_REQUEST_IDENTITY_MISMATCH", pullRequestUrl: data.html_url ?? null });
+    }
+
+    let reviewerRequest: { reviewer: string; status: "requested" | "skipped_contributor_is_owner" | "failed"; requestedAt: string | null; reason?: string };
+    if (upstreamOwnerLogin.toLowerCase() === authenticatedUser.login.toLowerCase()) {
+      reviewerRequest = { reviewer: upstreamOwnerLogin, status: "skipped_contributor_is_owner", requestedAt: null };
+    } else {
+      const reviewResponse = await fetch(
+        `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls/${data.number}/requested_reviewers`,
+        { method: "POST", headers: { ...githubHeaders(token), "Content-Type": "application/json" },
+          body: JSON.stringify({ reviewers: [upstreamOwnerLogin] }) }
+      );
+      const reviewData = await reviewResponse.json().catch(() => ({})) as { message?: string; requested_reviewers?: Array<{ login?: string }> };
+      const confirmed = reviewResponse.ok && Array.isArray(reviewData.requested_reviewers) &&
+        reviewData.requested_reviewers.some(reviewer => reviewer.login?.toLowerCase() === upstreamOwnerLogin.toLowerCase());
+      reviewerRequest = confirmed
+        ? { reviewer: upstreamOwnerLogin, status: "requested", requestedAt: new Date().toISOString() }
+        : { reviewer: upstreamOwnerLogin, status: "failed", requestedAt: null, reason: reviewData.message || `GitHub returned HTTP ${reviewResponse.status} without confirming the requested reviewer.` };
+    }
+
+    try {
+      await recordPullRequestOutcome({
+        user: sessionLogin!, id: workflowId,
+        pullRequest: { number: data.number, url: data.html_url, state: data.state,
+          head: data.head?.label ?? headBranch, base: data.base?.label ?? baseBranch, createdAt: data.created_at ?? new Date().toISOString() },
+        reviewerRequest,
+      });
+    } catch (persistError) {
+      return res.status(201).json({
+        message: "Pull request created, but its lifecycle record could not be updated. Do not retry PR creation until you inspect the existing PR.",
+        code: "PULL_REQUEST_CREATED_RECORDING_FAILED",
+        pullRequest: { number: data.number, title: data.title, state: data.state, htmlUrl: data.html_url, headBranch: data.head?.ref, baseBranch: data.base?.ref },
+        reviewerRequest,
+        recordingError: persistError instanceof Error ? persistError.message : "Unknown persistence error",
+      });
+    }
+
     return res.status(201).json({
-      message: "Pull request created successfully",
-      pullRequest: {
-        number: data.number,
-        title: data.title,
-        state: data.state,
-        htmlUrl: data.html_url,
-        headBranch: data.head?.ref,
-        baseBranch: data.base?.ref,
-      },
+      message: reviewerRequest.status === "requested"
+        ? "Pull request created and upstream owner review request confirmed by GitHub."
+        : reviewerRequest.status === "skipped_contributor_is_owner"
+          ? "Pull request created. No self-review was requested because the contributor is the upstream owner."
+          : "Pull request created, but GitHub did not confirm the upstream owner review request.",
+      pullRequest: { number: data.number, title: data.title, state: data.state, htmlUrl: data.html_url, headBranch: data.head?.ref, baseBranch: data.base?.ref },
+      reviewerRequest,
     });
   } catch (error) {
     console.error("Pull request creation error:", error);
