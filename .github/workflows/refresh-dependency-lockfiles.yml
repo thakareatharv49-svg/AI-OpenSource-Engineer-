@@ -1,0 +1,55 @@
+name: Refresh dependency lockfiles
+
+on:
+  push:
+    branches:
+      - chore/security-audit-remediation-2026-11-03
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dependency-lockfile-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    name: Regenerate and audit dependency lockfiles
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      - name: Repair frontend lockfile without forced upgrades
+        working-directory: client
+        run: |
+          npm audit fix --package-lock-only
+          npm audit
+
+      - name: Repair backend lockfile without forced upgrades
+        working-directory: server
+        run: |
+          npm audit fix --package-lock-only
+          npm audit
+
+      - name: Commit regenerated lockfiles
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add client/package-lock.json server/package-lock.json
+          if git diff --cached --quiet; then
+            echo "Dependency lockfiles already match the audited manifests."
+          else
+            git commit -m "fix(deps): regenerate audited dependency lockfiles"
+            git push
+          fi
