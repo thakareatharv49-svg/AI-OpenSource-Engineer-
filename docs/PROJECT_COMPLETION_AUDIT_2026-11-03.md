@@ -107,3 +107,16 @@ Real OAuth and two-account verification require usable OAuth credentials and two
 - Treat issue/repository content and model output as untrusted; never execute external code in the API process.
 - Never merge a PR until required CI and CodeQL pass on its final head.
 - Keep live-provider checks and synthetic/mocked CI evidence clearly separated.
+
+
+## Additional critical CI finding — 2026-11-03
+
+The post-merge CI run on context-refresh merge SHA `2e5a58f0988585229c1f5ccfe39b89fda803ecad` failed in **both** dependency-audit steps. This is a main-branch health issue, not a failure in the documentation diff:
+
+- Backend audit: 2 vulnerabilities — high-severity `body-parser` (GHSA-27r3-jxmh-p828) and moderate `qs` (GHSA-6pq8-jhm2-2vcw). The report says `npm audit fix` is available.
+- Frontend audit: 14 vulnerabilities (12 moderate, 2 high), including `minimatch` (GHSA-g3hv-75wg-m249), Vite 8.0.0–8.1.5 advisories (including GHSA-9jrq-w75r-8gcw), and `zod` (GHSA-mrhx-c7xc-m3w5). The report indicates ordinary fixes for some packages and a breaking-change `--force` suggestion for the minimatch dependency chain; do not run force updates blindly.
+- Dependabot PR #142's frontend-independent backend audit job fails on the same backend `body-parser`/`qs` findings. PR #143's frontend audit fails on the frontend dependency set. PR #144 fails `npm ci` with ERESOLVE because its proposed TypeScript 7.0.2 conflicts with `typescript-eslint@8.71.2` peer requirement `typescript >=4.8.4 <6.1.0`.
+- The corresponding CodeQL runs for #142–#144 succeeded; that does not replace dependency audit or successful install/build checks.
+- Documentation PR #145 is open; its CI and CodeQL were queued when last checked. Do not merge until checks on its final head are green. Because main CI is currently red, resolve the underlying dependency baseline first, then re-check #145.
+
+**Immediate priority is now dependency/CI repair before M100.** Update compatible direct/transitive versions and lockfiles, avoid suppressing audit findings or using `--force` without compatibility review, then rerun install, audit, build/lint, backend typecheck/tests, and CodeQL.
