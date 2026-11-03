@@ -1,0 +1,38 @@
+name: Purge Actions caches
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type DELETE_ALL_CACHES to confirm removal of every Actions cache in this repository
+        required: true
+        type: string
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: purge-actions-caches
+  cancel-in-progress: false
+
+jobs:
+  purge:
+    name: Delete repository Actions caches
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: ${{ inputs.confirmation == 'DELETE_ALL_CACHES' }}
+    steps:
+      - name: Delete all Actions caches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh cache delete --all --repo "$GH_REPO" --confirm
+          echo "All repository Actions caches were requested for deletion." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Reject missing confirmation
+        if: ${{ inputs.confirmation != 'DELETE_ALL_CACHES' }}
+        run: |
+          echo "Confirmation did not match. No caches were deleted." >> "$GITHUB_STEP_SUMMARY"
+          exit 1
