@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { API_BASE_URL } from "../../lib/api";
 
@@ -10,8 +11,8 @@ type Contribution = {
   events?: Array<{ at: string; message: string; to: string }>;
 };
 
-const card: React.CSSProperties = { background: "#111c2e", border: "1px solid #29384e", borderRadius: 14, padding: 18, color: "#e5e7eb" };
-const muted: React.CSSProperties = { color: "#9ca3af", fontSize: 13 };
+const card: CSSProperties = { background: "#111c2e", border: "1px solid #29384e", borderRadius: 14, padding: 18, color: "#e5e7eb" };
+const muted: CSSProperties = { color: "#9ca3af", fontSize: 13 };
 
 export default function MyContributions() {
   const [items, setItems] = useState<Contribution[]>([]);
