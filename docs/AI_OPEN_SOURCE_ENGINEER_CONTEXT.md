@@ -134,3 +134,8 @@ Resume the end-to-end audit at the remaining unverified boundaries: real OAuth/s
 - The complete current status, remaining acceptance tasks, and effort estimates are in [Project Completion Audit](PROJECT_COMPLETION_AUDIT_2026-11-03.md).
 - Estimated effort: 5–8 working days for a live-verified local MVP; 10–15 working days for a release candidate; 15–25+ working days for a hosted production-ready service. These are estimates, not a fixed deadline.
 
+
+
+## CI blocker found — 2026-11-03
+
+Main CI on merge SHA `2e5a58f0988585229c1f5ccfe39b89fda803ecad` failed both dependency audit steps. Backend: high `body-parser` GHSA-27r3-jxmh-p828 and moderate `qs` GHSA-6pq8-jhm2-2vcw. Frontend: 14 vulnerabilities (12 moderate, 2 high), including minimatch, Vite, and Zod. Dependabot #144 has an install-time peer conflict: TypeScript 7.0.2 versus typescript-eslint 8.71.2 requiring TypeScript <6.1.0. See [completion audit](PROJECT_COMPLETION_AUDIT_2026-11-03.md). **Resolve CI/dependency baseline before M100.** Do not force upgrades or merge while CI fails.
