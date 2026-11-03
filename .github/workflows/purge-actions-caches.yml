@@ -21,9 +21,9 @@ jobs:
     name: Delete repository Actions caches
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    if: ${{ inputs.confirmation == 'DELETE_ALL_CACHES' }}
     steps:
       - name: Delete all Actions caches
+        if: ${{ inputs.confirmation == 'DELETE_ALL_CACHES' }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
