@@ -202,8 +202,18 @@ export async function recordPullRequestOutcome(input: {
     const record = data.records.find(r => r.id === input.id && r.user.toLowerCase() === input.user.toLowerCase());
     if (!record) throw Object.assign(new Error("Contribution workflow not found."), { statusCode: 404 });
     if (record.state !== "commit_complete") throw Object.assign(new Error("A pull request can only be recorded after the approved commit is complete."), { statusCode: 409 });
-    if (record.pullRequest && record.pullRequest.number !== input.pullRequest.number) {
+    if (record.pullRequest && (
+      record.pullRequest.number !== input.pullRequest.number ||
+      record.pullRequest.url !== input.pullRequest.url
+    )) {
       throw Object.assign(new Error("A different pull request is already recorded for this contribution."), { statusCode: 409 });
+    }
+    const sameReviewerOutcome = record.reviewerRequest?.reviewer.toLowerCase() === input.reviewerRequest.reviewer.toLowerCase()
+      && record.reviewerRequest?.status === input.reviewerRequest.status
+      && record.reviewerRequest?.requestedAt === input.reviewerRequest.requestedAt
+      && record.reviewerRequest?.reason === input.reviewerRequest.reason;
+    if (record.pullRequest && sameReviewerOutcome) {
+      return { changed: false, value: record };
     }
     record.pullRequest = input.pullRequest;
     record.reviewerRequest = {
