@@ -62,6 +62,7 @@ export default function AuthStatus() {
         <>
           {user.avatarUrl && <img src={user.avatarUrl} alt="" width={28} height={28} style={{ borderRadius: "50%" }} />}
           <span>Signed in as <strong>{user.login}</strong></span>
+          <a href="/my-contributions" style={{ color: "#93c5fd", textDecoration: "none" }}>My Contributions</a>
           <button onClick={() => void logout()} style={{ padding: "7px 12px", borderRadius: 8, border: "1px solid #475569", background: "transparent", color: "inherit", cursor: "pointer" }}>Sign out</button>
         </>
       )}

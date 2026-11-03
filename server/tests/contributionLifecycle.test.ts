@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { clearContributionStoreForTests, createContribution, getContribution, listContributions, transitionContribution } from "../src/security/contributionLifecycle.js";
+import { approveContribution, clearContributionStoreForTests, createContribution, getContribution, listContributions, recordPullRequestOutcome, transitionContribution } from "../src/security/contributionLifecycle.js";
 let tempDir: string;
 const previousPath = process.env.CONTRIBUTION_STATE_PATH;
 before(async () => {
@@ -90,4 +90,46 @@ test("contribution state survives a separate Node process restart", async () => 
   assert.equal(restored.state, "analyzing");
   assert.equal(restored.version, record.version + 1);
   assert.ok(restored.events.length >= 2);
+});
+
+
+test("records pull request outcomes once and keeps them scoped to the contribution owner", async () => {
+  let { record } = await createContribution({ ...input, idempotencyKey: "pr-outcome-12345678" });
+  for (const to of ["analyzing", "planning", "proposal_ready", "awaiting_approval"] as const) {
+    record = await transitionContribution({ user: input.user, id: record.id, to, expectedVersion: record.version });
+  }
+  record = await approveContribution({ user: input.user, id: record.id, expectedVersion: record.version, proposalHash: "a".repeat(24) });
+  for (const to of ["fork_ready", "branch_ready", "commit_preparing", "commit_complete"] as const) {
+    record = await transitionContribution({ user: input.user, id: record.id, to, expectedVersion: record.version });
+  }
+  const outcome = {
+    number: 42,
+    url: "https://github.com/example/project/pull/42",
+    state: "open",
+    head: "contributor:feature",
+    base: "main",
+    createdAt: new Date().toISOString(),
+  };
+  const reviewer = { reviewer: "example", status: "requested" as const, requestedAt: new Date().toISOString() };
+  const saved = await recordPullRequestOutcome({ user: input.user, id: record.id, pullRequest: outcome, reviewerRequest: reviewer });
+  assert.equal(saved.pullRequest?.number, 42);
+  assert.equal(saved.reviewerRequest?.status, "requested");
+  const eventCount = saved.events.length;
+  const version = saved.version;
+  const repeated = await recordPullRequestOutcome({ user: input.user, id: record.id, pullRequest: outcome, reviewerRequest: reviewer });
+  assert.equal(repeated.version, version);
+  assert.equal(repeated.events.length, eventCount);
+  await assert.rejects(
+    recordPullRequestOutcome({ user: "another-user", id: record.id, pullRequest: outcome, reviewerRequest: reviewer }),
+    /not found/
+  );
+  await assert.rejects(
+    recordPullRequestOutcome({
+      user: input.user,
+      id: record.id,
+      pullRequest: { ...outcome, number: 43, url: "https://github.com/example/project/pull/43" },
+      reviewerRequest: reviewer,
+    }),
+    /different pull request/
+  );
 });

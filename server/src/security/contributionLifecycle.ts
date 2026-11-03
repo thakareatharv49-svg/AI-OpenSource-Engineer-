@@ -15,6 +15,8 @@ export type ContributionRecord = {
   state: ContributionState; version: number; createdAt: string; updatedAt: string;
   retryCount: number; lastError: string | null; events: LifecycleEvent[];
   approvedProposalHash?: string | null; approvedAt?: string | null;
+  pullRequest?: { number: number; url: string; state: string; head: string; base: string; createdAt: string } | null;
+  reviewerRequest?: { reviewer: string; status: "requested" | "skipped_contributor_is_owner" | "failed"; requestedAt: string | null; reason?: string } | null;
 };
 type StoreData = { version: 1; records: ContributionRecord[] };
 const MAX_RECORDS = 500;
@@ -188,4 +190,55 @@ export async function clearContributionStoreForTests(): Promise<void> {
     return;
   }
   await serialized(async () => writeStore({ version: 1, records: [] }));
+}
+
+
+export async function recordPullRequestOutcome(input: {
+  user: string; id: string;
+  pullRequest: NonNullable<ContributionRecord["pullRequest"]>;
+  reviewerRequest: NonNullable<ContributionRecord["reviewerRequest"]>;
+}): Promise<ContributionRecord> {
+  const mutate = (data: StoreData): { changed: boolean; value: ContributionRecord } => {
+    const record = data.records.find(r => r.id === input.id && r.user.toLowerCase() === input.user.toLowerCase());
+    if (!record) throw Object.assign(new Error("Contribution workflow not found."), { statusCode: 404 });
+    if (record.state !== "commit_complete") throw Object.assign(new Error("A pull request can only be recorded after the approved commit is complete."), { statusCode: 409 });
+    if (record.pullRequest && (
+      record.pullRequest.number !== input.pullRequest.number ||
+      record.pullRequest.url !== input.pullRequest.url
+    )) {
+      throw Object.assign(new Error("A different pull request is already recorded for this contribution."), { statusCode: 409 });
+    }
+    const sameReviewerOutcome = record.reviewerRequest?.reviewer.toLowerCase() === input.reviewerRequest.reviewer.toLowerCase()
+      && record.reviewerRequest?.status === input.reviewerRequest.status
+      && record.reviewerRequest?.requestedAt === input.reviewerRequest.requestedAt
+      && record.reviewerRequest?.reason === input.reviewerRequest.reason;
+    if (record.pullRequest && sameReviewerOutcome) {
+      return { changed: false, value: record };
+    }
+    record.pullRequest = input.pullRequest;
+    record.reviewerRequest = {
+      ...input.reviewerRequest,
+      reason: input.reviewerRequest.reason ? redactMessage(input.reviewerRequest.reason).slice(0, 240) : undefined,
+    };
+    record.version += 1;
+    record.updatedAt = new Date().toISOString();
+    record.events.push({
+      at: record.updatedAt, from: record.state, to: record.state,
+      message: input.reviewerRequest.status === "requested"
+        ? `Pull request #${input.pullRequest.number} created; upstream owner review requested`
+        : input.reviewerRequest.status === "skipped_contributor_is_owner"
+          ? `Pull request #${input.pullRequest.number} created; contributor is the upstream owner, so no self-review was requested`
+          : `Pull request #${input.pullRequest.number} created; upstream owner review request failed`,
+      retryable: input.reviewerRequest.status === "failed",
+    });
+    record.events = record.events.slice(-MAX_EVENTS);
+    return { changed: true, value: record };
+  };
+  if (sharedRedisConfigured()) return mutateSharedStore(mutate);
+  return serialized(async () => {
+    const data = await readStore();
+    const result = mutate(data);
+    await writeStore(data);
+    return result.value;
+  });
 }
