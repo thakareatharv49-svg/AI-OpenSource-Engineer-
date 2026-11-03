@@ -120,3 +120,28 @@ The post-merge CI run on context-refresh merge SHA `2e5a58f0988585229c1f5ccfe39b
 - Documentation PR #145 is open; its CI and CodeQL were queued when last checked. Do not merge until checks on its final head are green. Because main CI is currently red, resolve the underlying dependency baseline first, then re-check #145.
 
 **Immediate priority is now dependency/CI repair before M100.** Update compatible direct/transitive versions and lockfiles, avoid suppressing audit findings or using `--force` without compatibility review, then rerun install, audit, build/lint, backend typecheck/tests, and CodeQL.
+
+
+## Product requirement confirmed — individual GitHub identity and contribution history
+
+The product requirement is that every user signs in with their own GitHub account and all GitHub actions initiated by the app are attributed to that account. The user's dashboard must also display the complete contribution history belonging to that authenticated account.
+
+### Existing code found during the 2026-11-03 review
+
+- `GET /api/auth/github`, callback, `GET /api/auth/me`, and logout routes exist.
+- The OAuth callback stores the user's access token in the server-side session; the browser receives a session cookie.
+- GitHub write routes use the current session token and validate the authenticated account/fork owner for write operations.
+- `GET /api/lifecycle/` lists contribution workflow records scoped to the authenticated login.
+- The current frontend has a sign-in status component and a contribution workflow screen, but the reviewed `App.tsx` only routes to landing and contribution pages. The contribution screen restores a single workflow pointer from local storage; there is no verified all-contributions dashboard/history view yet.
+
+### Additional acceptance criteria
+
+1. Add a signed-in user dashboard showing all contribution records for the authenticated GitHub login, not just the last workflow pointer stored in the browser.
+2. Each record should show upstream repository, issue, fork/repository, branch, current lifecycle state, timestamps, commit SHA/link, and pull-request number/link when available.
+3. Add filters/search for active, awaiting approval, committed, PR opened, merged, closed, failed, and cancelled contributions. Distinguish states the app can observe from GitHub's actual PR state.
+4. Add refresh/reconciliation against GitHub so external PR updates (opened, merged, closed) are reflected. Do not infer PR merged status merely from local commit completion.
+5. Preserve per-user privacy: every history query must be authenticated and server-scoped; users must never query another login's records by supplying a username.
+6. Verify with two real GitHub accounts that each account's dashboard only shows its own workflows and its GitHub profile/repositories show activity attributed to that same account.
+7. Explain that GitHub's profile contribution graph is controlled by GitHub's eligibility rules and user privacy settings. The app can create correctly attributed forks, commits and PRs, but cannot force GitHub to count every action in the contribution graph.
+
+This dashboard/history requirement is added to the remaining scope; it is not complete merely because the backend list endpoint exists.
