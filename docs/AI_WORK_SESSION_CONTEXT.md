@@ -65,3 +65,16 @@ This current-state block supersedes older milestone numbers and repository SHAs 
 
 ## Next action
 - Begin the next logical milestone (provisionally M94) only after reviewing the current main branch, existing detector patterns/tests, and roadmap to avoid duplicating already-covered detectors. Select a genuinely missing, low-risk test-coverage improvement, update the roadmap consistently, run required checks, fix failures, and merge only after green CI and CodeQL.
+
+
+## Current verified handoff — 2026-11-03
+
+The live repository was re-surveyed. Read [docs/PROJECT_COMPLETION_AUDIT_2026-11-03.md](PROJECT_COMPLETION_AUDIT_2026-11-03.md) before choosing new work.
+
+- PR #141 context refresh is merged at `2e5a58f0988585229c1f5ccfe39b89fda803ecad`; its PR-head CI and CodeQL passed.
+- M99 remains the latest completed milestone. Next planned milestone is M100: integration tests for actual auth/session middleware, missing/expired sessions, sign-out invalidation, identity/token mismatch, and prevention of maintainer-token fallback.
+- PRs #142/#143 currently fail the frontend production dependency audit; PR #144 fails frontend dependency installation. Backend jobs passed on these runs where applicable; CodeQL passed. Inspect logs/diffs before modifying or merging.
+- Main product gaps are live OAuth/browser verification, two-account GitHub ownership proof, a full real contribution smoke test, provider/repository quality testing, sandbox threat-model decision, and release/deployment scope.
+- Do not continue adding low-value secret-pattern-only milestones while end-to-end workflow gaps remain.
+- Current planning estimate: 5–8 working days for a live-verified local MVP; 15–25+ working days for a hosted production-ready service. See the audit for acceptance tasks and assumptions.
+
