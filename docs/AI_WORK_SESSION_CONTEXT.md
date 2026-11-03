@@ -78,3 +78,8 @@ The live repository was re-surveyed. Read [docs/PROJECT_COMPLETION_AUDIT_2026-11
 - Do not continue adding low-value secret-pattern-only milestones while end-to-end workflow gaps remain.
 - Current planning estimate: 5–8 working days for a live-verified local MVP; 15–25+ working days for a hosted production-ready service. See the audit for acceptance tasks and assumptions.
 
+
+
+## CI blocker found — 2026-11-03
+
+The post-merge main CI failed both frontend and backend `npm audit` steps. Backend reports vulnerable `body-parser` (high, GHSA-27r3-jxmh-p828) and `qs` (moderate, GHSA-6pq8-jhm2-2vcw); frontend reports 14 vulnerabilities including minimatch, Vite, and Zod. Dependabot #144 fails install because TypeScript 7.0.2 is incompatible with typescript-eslint 8.71.2's peer range (<6.1.0). See the completion audit for details. **Priority 0: restore green CI with reviewed compatible dependency changes before M100.** PR #145 must remain unmerged until required checks pass.
