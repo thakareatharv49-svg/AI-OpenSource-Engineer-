@@ -1016,3 +1016,28 @@ Before starting, inspect current auth middleware, OAuth callback/session creatio
 - Repository state, architecture inventory, current CI/CodeQL configuration, and branch protection visibility have been audited.
 - The current main branch has green CI and CodeQL after the strict peer dependency enforcement change.
 - Remaining blockers are explicitly limited to stale/open PR cleanup and real external-integration validation; those are not to be marked as passed based on mocked tests.
+
+
+## Part 1 follow-up verification — 2026-11-04
+
+### Latest main verification
+- PR #154 was merged as `0ebf597e82923f9858f39aa30c972d435b7d4ce7` after CI and CodeQL succeeded on its exact head SHA `f75b1b471da081913ac71ff91dd4fabbf34ca510`.
+- Post-merge CI and CodeQL were triggered on the resulting main commit; their final outcomes must be recorded from the completed runs before declaring the main baseline green.
+
+### Branch protection ruleset inspection
+- The active repository ruleset `Protect main` applies to the default branch and prevents branch deletion and non-fast-forward updates.
+- It currently requires **zero** approving reviews and has **no required status checks**. Stale-review dismissal, code-owner review, last-push approval, and required review-thread resolution are not enabled.
+- Therefore the earlier statement that detailed protection settings could not be inspected is superseded by this read-only ruleset inspection. The configuration is not yet a strong merge gate.
+- The available GitHub integration has read access to rulesets but no supported write operation for changing repository administration/ruleset configuration. An administrator must configure required CI/CodeQL checks and an appropriate approval policy.
+
+### Outstanding Part 1 dispositions
+- PR #151 remains blocked and unmerged. Its latest CI log confirms `npm ci` fails with ERESOLVE because TypeScript 7.0.2 violates `typescript-eslint@8.72.1`'s declared peer range `>=4.8.4 <6.1.0`. Do not bypass strict peer dependencies or hand-edit the lockfile; regenerate it with npm after selecting a compatible toolchain.
+- PRs #145 and #146 remain open and unmerged. They contain useful completion-audit, contribution-dashboard requirements, product requirements, and implementation-roadmap documentation. Their old heads/base commits and failed checks need a safe refresh/port and revalidation; do not discard their content or merge stale failing heads.
+- Live OAuth, real two-account isolation, production Redis, real external fork/PR/reviewer actions, and production sandbox isolation remain unverified by local/mocked tests.
+
+### Part 1 status
+- Repository/architecture/CI audit: completed.
+- Dependency cleanup: partially completed; compatible groups merged, #151 explicitly blocked.
+- Documentation PR cleanup: pending safe refresh/port of #145 and #146.
+- Branch protection: inspected; required reviews and required status checks need administrator configuration.
+- Production/live integration validation: not yet completed and must not be represented as passed.
