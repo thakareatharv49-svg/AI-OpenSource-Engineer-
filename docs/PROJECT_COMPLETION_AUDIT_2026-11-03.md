@@ -145,3 +145,15 @@ The product requirement is that every user signs in with their own GitHub accoun
 7. Explain that GitHub's profile contribution graph is controlled by GitHub's eligibility rules and user privacy settings. The app can create correctly attributed forks, commits and PRs, but cannot force GitHub to count every action in the contribution graph.
 
 This dashboard/history requirement is added to the remaining scope; it is not complete merely because the backend list endpoint exists.
+
+
+## Follow-up status correction — 2026-11-04
+
+This audit was originally surveyed against the earlier M99-era main branch. For current implementation and CI state, prefer the live `PROJECT_STATUS_AND_ROADMAP.md` engineering foundation audit and the follow-up Part 1 verification entry dated 2026-11-04. Since this audit was drafted:
+
+- Compatible dependency groups #142, #150, #153 were merged; #152 added strict peer-dependency enforcement; #154 and #155 were merged after successful checks.
+- The incompatible TypeScript 7 Dependabot PR #151 was closed without merging. A replacement PR #156 keeps TypeScript on 6.0.x and regenerates lockfiles through the repository npm workflow; PR checks are pending at the time of this note.
+- Main at `96ca8dc1639938f3e3fafe1b0883b1aa6e5bc8a0` has successful CI and CodeQL runs.
+- The active `Protect main` ruleset was inspected: it blocks deletion/non-fast-forward updates but currently requires zero approvals and no status checks. Administrative configuration remains an outstanding release safeguard.
+
+The product capability and live-integration evidence boundaries described above remain applicable; do not infer that OAuth, real two-account isolation, live contribution writes, or production hosting have been validated merely because CI is green.
