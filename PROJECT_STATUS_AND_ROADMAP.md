@@ -985,3 +985,34 @@ Scope: pattern detection is defense in depth, not credential validation; synthet
 ## 106. Next milestone — OAuth middleware and identity-binding regression tests (planned)
 
 Before starting, inspect current auth middleware, OAuth callback/session creation, GitHub API token plumbing, and existing tests to avoid duplicating coverage. Add focused integration tests around the actual authentication middleware/session contract and write-route identity binding using mocked provider exchange/API calls. Cover missing/expired session rejection, identity/token mismatch, sign-out invalidation, and prevention of any fallback to a maintainer token. Keep external GitHub OAuth exchange explicitly mocked in CI; do not label this a live OAuth test. Preserve human approval before contribution writes and separate explicit PR creation. Run backend typecheck/tests, frontend build/lint/dependency audit, and CodeQL; merge only after the final PR head is green. Separately execute the existing two-account live runbook when two real GitHub accounts and OAuth credentials are available.
+
+
+## 7. Engineering foundation audit — 2026-11-04
+
+### Verified repository state
+- Default branch: `main`.
+- The repository has separate React/Vite frontend and Express/TypeScript backend packages.
+- CI runs frontend install, production dependency audit, build, and lint; backend install, production dependency audit, typecheck, and tests.
+- CodeQL runs on pull requests and pushes to `main`, plus a scheduled weekly scan.
+- CI and CodeQL both passed on main commit `9371ac8fa54b5f8fcff94c9a4e55143507258970` after the strict peer-dependency enforcement change.
+- GitHub reports the default branch as protected. The integration cannot inspect the detailed ruleset configuration, so required status-check and review enforcement are not independently verified.
+- `.npmrc` in the frontend sets `strict-peer-deps=true`; incompatible declared peer ranges now fail dependency installation instead of being silently accepted.
+
+### Architecture and reliability findings
+- Frontend routes include landing, contribution workflow, and authenticated My Contributions.
+- Backend routes are separated for GitHub, auth, AI, sandbox, and lifecycle operations.
+- Security modules cover sessions, deployment configuration, proposal/diff safety, repository context, sandbox execution, lifecycle state, and shared Redis.
+- Automated tests cover core security/lifecycle modules and several route/integration paths. Current tests are mocked integration tests; they do not establish that real GitHub OAuth, two-account isolation, external fork writes, Docker isolation, or production Redis have been exercised end to end.
+- The server deliberately refuses non-loopback binding at present. Production hosting is therefore not ready until a separately reviewed deployment boundary and shared-store integration are implemented and validated.
+- The current dependency-lockfile refresh workflow is scoped to a one-off remediation branch; it is not a general-purpose dependency maintenance workflow and should not be relied on as an ongoing automated update mechanism.
+
+### Dependency pull-request disposition
+- Merged compatible backend development, frontend production, and backend production dependency groups after all checks on their exact heads succeeded: PRs #153, #150, and #142.
+- PR #152 added strict frontend peer dependency enforcement and was merged. Its post-merge CI and CodeQL both passed.
+- PR #151 remains unmerged: it upgrades TypeScript to 7.0.2 while the selected `typescript-eslint` dependency declares a peer range below 6.1.0. The strict peer-dependency check correctly rejects this combination. It must be regenerated with a compatible TypeScript version and a matching lockfile before merge.
+- PRs #145 and #146 have stale documentation branches whose CI dependency-audit steps fail before build/typecheck/test steps execute. Their content must be rebased or selectively ported and revalidated before merge.
+
+### Part 1 completion assessment
+- Repository state, architecture inventory, current CI/CodeQL configuration, and branch protection visibility have been audited.
+- The current main branch has green CI and CodeQL after the strict peer dependency enforcement change.
+- Remaining blockers are explicitly limited to stale/open PR cleanup and real external-integration validation; those are not to be marked as passed based on mocked tests.
