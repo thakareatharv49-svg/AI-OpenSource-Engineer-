@@ -26,7 +26,7 @@ This checklist verifies the real GitHub OAuth provider and browser callback. Moc
 3. Complete consent using the controlled test account. Confirm callback redirects to the client origin with `auth=success`.
 4. Confirm `GET /api/auth/me` returns the expected GitHub login/avatar and an expiry no more than eight hours after session creation.
 5. Confirm the session cookie is HttpOnly and SameSite-protected (and Secure over HTTPS). The access token must not be returned to the browser or stored in browser storage.
-6. Confirm the shared Redis value uses the `enc:v1` AES-256-GCM envelope and does not contain the raw access token. A missing/incorrect encryption key must fail closed.
+6. Confirm the shared Redis value uses the `enc-v1` AES-256-GCM envelope and does not contain the raw access token. A missing/incorrect encryption key must fail closed.
 6. Refresh and confirm the server-side session persists.
 7. Sign out. Confirm `POST /api/auth/logout` succeeds from a trusted origin, clears the cookie, and `GET /api/auth/me` becomes unauthenticated.
 8. Confirm the prior server-side session is invalidated and cannot be reused.
