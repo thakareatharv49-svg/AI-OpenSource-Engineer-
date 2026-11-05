@@ -15,8 +15,9 @@ This checklist verifies the real GitHub OAuth provider and browser callback. Moc
 1. Record the release commit SHA and verify its CI is green.
 2. Configure `GITHUB_OAUTH_CLIENT_ID`, `GITHUB_OAUTH_CLIENT_SECRET`, `GITHUB_OAUTH_CALLBACK_URL`, `API_PUBLIC_URL`, and exact `CLIENT_ORIGINS`.
 3. Configure HTTPS `UPSTASH_REDIS_REST_URL` and a dedicated `UPSTASH_REDIS_REST_TOKEN`.
-4. Keep `SANDBOX_ENABLED=false` and confirm the API is reachable only on loopback.
-5. Confirm `GET /api/auth/me` returns unauthenticated before login. Do not print environment values in logs.
+4. Configure a unique `SESSION_ENCRYPTION_KEY` with at least 32 characters in the secret manager; never reuse the Redis token or OAuth client secret.
+5. Keep `SANDBOX_ENABLED=false` and confirm the API is reachable only on loopback.
+6. Confirm `GET /api/auth/me` returns unauthenticated before login. Do not print environment values in logs.
 
 ## Browser login and logout
 
@@ -25,9 +26,17 @@ This checklist verifies the real GitHub OAuth provider and browser callback. Moc
 3. Complete consent using the controlled test account. Confirm callback redirects to the client origin with `auth=success`.
 4. Confirm `GET /api/auth/me` returns the expected GitHub login/avatar and an expiry no more than eight hours after session creation.
 5. Confirm the session cookie is HttpOnly and SameSite-protected (and Secure over HTTPS). The access token must not be returned to the browser or stored in browser storage.
+6. Confirm the shared Redis value uses the `enc-v1` AES-256-GCM envelope and does not contain the raw access token. A missing/incorrect encryption key must fail closed.
 6. Refresh and confirm the server-side session persists.
 7. Sign out. Confirm `POST /api/auth/logout` succeeds from a trusted origin, clears the cookie, and `GET /api/auth/me` becomes unauthenticated.
 8. Confirm the prior server-side session is invalidated and cannot be reused.
+
+## Multi-account isolation
+
+1. Sign in with two separate controlled GitHub test accounts in separate browser profiles.
+2. Confirm each `/api/auth/me` response returns only that browser's GitHub login.
+3. Confirm each account's contribution list and GitHub write operations use that account's session token and fork.
+4. Sign out from the first profile and confirm the second profile remains authenticated and usable.
 
 ## Negative and failure-path checks
 

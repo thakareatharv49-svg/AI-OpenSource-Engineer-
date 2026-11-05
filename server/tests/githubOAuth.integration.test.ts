@@ -16,7 +16,11 @@ const envKeys = [
 ] as const;
 const originalEnv = new Map(envKeys.map((key) => [key, process.env[key]]));
 const originalFetch = globalThis.fetch;
-const requestApp = (input: RequestInfo | URL, init?: RequestInit) => originalFetch(input, init);
+const requestApp = async (input: RequestInfo | URL, init?: RequestInit) => {
+  const response = await originalFetch(input, init);
+  if (response.status >= 300 && response.status < 400) await response.arrayBuffer();
+  return response;
+};
 
 before(async () => {
   for (const key of ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"]) delete process.env[key];
@@ -42,6 +46,7 @@ after(async () => {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }
+  server.closeAllConnections();
   await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
 });
 
@@ -159,4 +164,104 @@ test("OAuth callback rejects missing and oversized codes before token exchange",
   });
   assert.equal(new URL(oversized.headers.get("location") ?? "").searchParams.get("auth"), "failed");
   assert.equal(providerCalls, 0);
+});
+
+test("two GitHub accounts receive isolated sessions and logout affects only its own account", async () => {
+  globalThis.fetch = (async (input: RequestInfo | URL, init: RequestInit = {}) => {
+    const url = String(input);
+    if (url === "https://github.com/login/oauth/access_token") {
+      const body = JSON.parse(String(init.body)) as { code: string };
+      const suffix = body.code === "code-one" ? "one" : "two";
+      return new Response(JSON.stringify({ access_token: "token-" + suffix, token_type: "bearer" }), { status: 200 });
+    }
+    if (url === "https://api.github.com/user") {
+      const authorization = new Headers(init.headers).get("authorization") ?? "";
+      const suffix = authorization.endsWith("token-one") ? "one" : "two";
+      return new Response(JSON.stringify({ id: suffix === "one" ? 101 : 202, login: "account-" + suffix, avatar_url: null }), { status: 200 });
+    }
+    throw new Error("Unexpected provider request: " + url);
+  }) as typeof fetch;
+
+  async function signIn(code: string) {
+    const start = await requestApp(baseUrl + "/api/auth/github", { redirect: "manual" });
+    const state = new URL(start.headers.get("location") ?? "").searchParams.get("state") ?? "";
+    const stateCookie = cookieFrom(start.headers.get("set-cookie"), "aose_oauth_state");
+    const callback = await requestApp(baseUrl + "/api/auth/github/callback?code=" + code + "&state=" + encodeURIComponent(state), {
+      redirect: "manual", headers: { Cookie: stateCookie },
+    });
+    assert.equal(callback.status, 302);
+    return cookieFrom(callback.headers.get("set-cookie"), "aose_session");
+  }
+
+  const cookieOne = await signIn("code-one");
+  const cookieTwo = await signIn("code-two");
+  assert.notEqual(cookieOne, cookieTwo);
+
+  const [meOne, meTwo] = await Promise.all([
+    requestApp(baseUrl + "/api/auth/me", { headers: { Cookie: cookieOne } }),
+    requestApp(baseUrl + "/api/auth/me", { headers: { Cookie: cookieTwo } }),
+  ]);
+  assert.equal((await meOne.json() as { user: { login: string } }).user.login, "account-one");
+  assert.equal((await meTwo.json() as { user: { login: string } }).user.login, "account-two");
+
+  const rejectedLogout = await requestApp(baseUrl + "/api/auth/logout", {
+    method: "POST", headers: { Cookie: cookieOne, Origin: "https://attacker.example" },
+  });
+  assert.equal(rejectedLogout.status, 403);
+  assert.deepEqual(await rejectedLogout.json(), { error: "Request origin is not allowed.", code: "ORIGIN_NOT_ALLOWED" });
+  const stillAuthenticated = await requestApp(baseUrl + "/api/auth/me", { headers: { Cookie: cookieOne } });
+  assert.equal((await stillAuthenticated.json() as { authenticated: boolean }).authenticated, true);
+
+  const logoutOne = await requestApp(baseUrl + "/api/auth/logout", {
+    method: "POST", headers: { Cookie: cookieOne, Origin: "http://localhost:5173" },
+  });
+  assert.equal(logoutOne.status, 200);
+  assert.deepEqual(await logoutOne.json(), { success: true });
+  const [afterOne, afterTwo] = await Promise.all([
+    requestApp(baseUrl + "/api/auth/me", { headers: { Cookie: cookieOne } }),
+    requestApp(baseUrl + "/api/auth/me", { headers: { Cookie: cookieTwo } }),
+  ]);
+  assert.equal((await afterOne.json() as { authenticated: boolean }).authenticated, false);
+  const remaining = await afterTwo.json() as { authenticated: boolean; user: { login: string } };
+  assert.equal(remaining.authenticated, true);
+  assert.equal(remaining.user.login, "account-two");
+});
+
+test("session cookie is Secure in production and always HttpOnly with SameSite=Lax", async () => {
+  const previousNodeEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = "production";
+  try {
+    const start = await requestApp(baseUrl + "/api/auth/github", { redirect: "manual" });
+    const stateCookie = start.headers.get("set-cookie") ?? "";
+    assert.match(stateCookie, /HttpOnly/);
+    assert.match(stateCookie, /SameSite=Lax/);
+    assert.match(stateCookie, /Secure/);
+  } finally {
+    if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previousNodeEnv;
+  }
+});
+
+test("OAuth state is single-use and cannot be replayed", async () => {
+  let providerCalls = 0;
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    providerCalls += 1;
+    if (url === "https://github.com/login/oauth/access_token") {
+      return new Response(JSON.stringify({ access_token: "replay-test-token", token_type: "bearer" }), { status: 200 });
+    }
+    if (url === "https://api.github.com/user") {
+      return new Response(JSON.stringify({ id: 303, login: "replay-test-user", avatar_url: null }), { status: 200 });
+    }
+    throw new Error("Unexpected provider request: " + url);
+  }) as typeof fetch;
+  const start = await requestApp(baseUrl + "/api/auth/github", { redirect: "manual" });
+  const state = new URL(start.headers.get("location") ?? "").searchParams.get("state") ?? "";
+  const stateCookie = cookieFrom(start.headers.get("set-cookie"), "aose_oauth_state");
+  const callbackUrl = baseUrl + "/api/auth/github/callback?code=single-use-code&state=" + encodeURIComponent(state);
+  const first = await requestApp(callbackUrl, { redirect: "manual", headers: { Cookie: stateCookie } });
+  assert.equal(new URL(first.headers.get("location") ?? "").searchParams.get("auth"), "success");
+  const second = await requestApp(callbackUrl, { redirect: "manual", headers: { Cookie: stateCookie } });
+  assert.equal(new URL(second.headers.get("location") ?? "").searchParams.get("auth"), "failed");
+  assert.equal(providerCalls, 2);
 });

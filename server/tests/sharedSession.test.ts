@@ -2,20 +2,26 @@ import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 import { createGithubSession, getGithubSession, persistGithubSession, sessionCookieNameForTests } from "../src/security/session.js";
 
-const oldUrl = process.env.UPSTASH_REDIS_REST_URL;
-const oldToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+const envKeys = ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN", "SESSION_ENCRYPTION_KEY"] as const;
+const oldEnv = new Map(envKeys.map((key) => [key, process.env[key]]));
 const oldFetch = globalThis.fetch;
+
 afterEach(() => {
-  if (oldUrl === undefined) delete process.env.UPSTASH_REDIS_REST_URL;
-  else process.env.UPSTASH_REDIS_REST_URL = oldUrl;
-  if (oldToken === undefined) delete process.env.UPSTASH_REDIS_REST_TOKEN;
-  else process.env.UPSTASH_REDIS_REST_TOKEN = oldToken;
+  for (const [key, value] of oldEnv) {
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
   globalThis.fetch = oldFetch;
 });
 
-test("shared session persistence stores an expiring server-side credential record", async () => {
+function configureRedis() {
   process.env.UPSTASH_REDIS_REST_URL = "https://redis.example.test";
   process.env.UPSTASH_REDIS_REST_TOKEN = "test-token";
+  process.env.SESSION_ENCRYPTION_KEY = "test-session-encryption-key-at-least-32-chars";
+}
+
+test("shared session credentials are encrypted at rest and can be read by another process", async () => {
+  configureRedis();
   const session = createGithubSession({ login: "shared-session-test", avatarUrl: null, accessToken: "server-only-token" });
   let command: unknown[] = [];
   globalThis.fetch = (async (_input, init) => {
@@ -23,21 +29,47 @@ test("shared session persistence stores an expiring server-side credential recor
     return new Response(JSON.stringify({ result: "OK" }), { status: 200 });
   }) as typeof fetch;
   await persistGithubSession(session);
+
   assert.equal(command[0], "SET");
   assert.equal(command[1], `aose:session:${session.id}`);
-  assert.ok(String(command[2]).includes("server-only-token"));
+  const encrypted = String(command[2]);
+  assert.match(encrypted, /^enc-v1:/);
+  assert.equal(encrypted.includes("server-only-token"), false);
   assert.equal(command[3], "PX");
   assert.ok(Number(command[4]) > 0);
-});
 
-test("session reads use the shared store rather than relying on this process memory", async () => {
-  process.env.UPSTASH_REDIS_REST_URL = "https://redis.example.test";
-  process.env.UPSTASH_REDIS_REST_TOKEN = "test-token";
-  const session = {
-    id: "shared-id-not-in-local-map", login: "remote-user", avatarUrl: null,
-    accessToken: "remote-token", createdAt: Date.now(), expiresAt: Date.now() + 60000,
-  };
-  globalThis.fetch = (async () => new Response(JSON.stringify({ result: JSON.stringify(session) }), { status: 200 })) as typeof fetch;
+  globalThis.fetch = (async () => new Response(JSON.stringify({ result: encrypted }), { status: 200 })) as typeof fetch;
   const request = { headers: { cookie: `${sessionCookieNameForTests()}=${session.id}` } } as never;
   assert.deepEqual(await getGithubSession(request), session);
+});
+
+test("tampered encrypted session records are rejected and deleted", async () => {
+  configureRedis();
+  const calls: unknown[][] = [];
+  globalThis.fetch = (async (_input, init) => {
+    const command = JSON.parse(String(init?.body)) as unknown[];
+    calls.push(command);
+    if (command[0] === "GET") return new Response(JSON.stringify({ result: "enc:v1:tampered" }), { status: 200 });
+    return new Response(JSON.stringify({ result: 1 }), { status: 200 });
+  }) as typeof fetch;
+  const request = { headers: { cookie: `${sessionCookieNameForTests()}=tampered-session` } } as never;
+  assert.equal(await getGithubSession(request), null);
+  assert.equal(calls[0]?.[0], "GET");
+  assert.deepEqual(calls[1], ["DEL", "aose:session:tampered-session"]);
+});
+
+test("expired shared sessions are rejected and deleted", async () => {
+  configureRedis();
+  const session = createGithubSession({ login: "expired-user", avatarUrl: null, accessToken: "expired-token" });
+  session.expiresAt = Date.now() - 1000;
+  let encrypted = "";
+  globalThis.fetch = (async (_input, init) => {
+    const command = JSON.parse(String(init?.body)) as unknown[];
+    if (command[0] === "SET") { encrypted = String(command[2]); return new Response(JSON.stringify({ result: "OK" }), { status: 200 }); }
+    if (command[0] === "GET") return new Response(JSON.stringify({ result: encrypted }), { status: 200 });
+    return new Response(JSON.stringify({ result: 1 }), { status: 200 });
+  }) as typeof fetch;
+  await persistGithubSession(session);
+  const request = { headers: { cookie: `${sessionCookieNameForTests()}=${session.id}` } } as never;
+  assert.equal(await getGithubSession(request), null);
 });
