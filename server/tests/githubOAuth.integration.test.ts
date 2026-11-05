@@ -234,3 +234,27 @@ test("session cookie is Secure in production and always HttpOnly with SameSite=L
     else process.env.NODE_ENV = previousNodeEnv;
   }
 });
+
+test("OAuth state is single-use and cannot be replayed", async () => {
+  let providerCalls = 0;
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    providerCalls += 1;
+    if (url === "https://github.com/login/oauth/access_token") {
+      return new Response(JSON.stringify({ access_token: "replay-test-token", token_type: "bearer" }), { status: 200 });
+    }
+    if (url === "https://api.github.com/user") {
+      return new Response(JSON.stringify({ id: 303, login: "replay-test-user", avatar_url: null }), { status: 200 });
+    }
+    throw new Error("Unexpected provider request: " + url);
+  }) as typeof fetch;
+  const start = await requestApp(baseUrl + "/api/auth/github", { redirect: "manual" });
+  const state = new URL(start.headers.get("location") ?? "").searchParams.get("state") ?? "";
+  const stateCookie = cookieFrom(start.headers.get("set-cookie"), "aose_oauth_state");
+  const callbackUrl = baseUrl + "/api/auth/github/callback?code=single-use-code&state=" + encodeURIComponent(state);
+  const first = await requestApp(callbackUrl, { redirect: "manual", headers: { Cookie: stateCookie } });
+  assert.equal(new URL(first.headers.get("location") ?? "").searchParams.get("auth"), "success");
+  const second = await requestApp(callbackUrl, { redirect: "manual", headers: { Cookie: stateCookie } });
+  assert.equal(new URL(second.headers.get("location") ?? "").searchParams.get("auth"), "failed");
+  assert.equal(providerCalls, 2);
+});
