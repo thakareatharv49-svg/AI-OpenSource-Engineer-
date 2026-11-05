@@ -60,6 +60,14 @@ app.use(
     credentials: true,
   })
 );
+app.use((error: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (error instanceof Error && error.message === "Origin is not allowed by CORS") {
+    res.status(403).json({ error: "Request origin is not allowed.", code: "ORIGIN_NOT_ALLOWED" });
+    return;
+  }
+  next(error);
+});
+
 app.use(express.json({ limit: "1mb" }));
 
 app.use((_req, res, next) => {
