@@ -16,7 +16,7 @@ const envKeys = [
 ] as const;
 const originalEnv = new Map(envKeys.map((key) => [key, process.env[key]]));
 const originalFetch = globalThis.fetch;
-const requestApp = (input: RequestInfo | URL, init?: RequestInit) => originalFetch(input, init);
+const requestApp = async (input: RequestInfo | URL, init?: RequestInit) => {\n  const response = await originalFetch(input, init);\n  if (response.status >= 300 && response.status < 400) await response.arrayBuffer();\n  return response;\n};
 
 before(async () => {
   for (const key of ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"]) delete process.env[key];
@@ -42,7 +42,7 @@ after(async () => {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }
-  await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  server.closeAllConnections();\n  await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
 });
 
 afterEach(() => {
