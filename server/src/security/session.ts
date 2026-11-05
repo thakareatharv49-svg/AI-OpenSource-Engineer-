@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from "node:crypto";
 import type { NextFunction, Request, Response } from "express";
 import { redisCommand, sharedRedisConfigured } from "./sharedRedis.js";
 
@@ -17,6 +17,30 @@ const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 const sessions = new Map<string, GithubSession>();
 const oauthStates = new Map<string, number>();
+
+function sessionEncryptionKey(): Buffer {
+  const secret = process.env.SESSION_ENCRYPTION_KEY ?? "";
+  if (secret.length < 32) throw new Error("SESSION_ENCRYPTION_KEY must contain at least 32 characters when shared sessions are enabled.");
+  return createHash("sha256").update(secret, "utf8").digest();
+}
+
+function encryptSession(session: GithubSession): string {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", sessionEncryptionKey(), iv);
+  const ciphertext = Buffer.concat([cipher.update(JSON.stringify(session), "utf8"), cipher.final()]);
+  return ["enc:v1", iv.toString("base64url"), cipher.getAuthTag().toString("base64url"), ciphertext.toString("base64url")].join(":");
+}
+
+function decryptSession(value: string): GithubSession {
+  const [version, ivText, tagText, ciphertextText, extra] = value.split(":");
+  if (version !== "enc:v1" || !ivText || !tagText || !ciphertextText || extra !== undefined) {
+    throw new Error("Stored session is not encrypted with the supported format.");
+  }
+  const decipher = createDecipheriv("aes-256-gcm", sessionEncryptionKey(), Buffer.from(ivText, "base64url"));
+  decipher.setAuthTag(Buffer.from(tagText, "base64url"));
+  const plaintext = Buffer.concat([decipher.update(Buffer.from(ciphertextText, "base64url")), decipher.final()]).toString("utf8");
+  return JSON.parse(plaintext) as GithubSession;
+}
 
 function cookieValue(req: Request, name: string): string | null {
   const header = req.headers.cookie;
@@ -78,7 +102,7 @@ export function createGithubSession(input: Omit<GithubSession, "id" | "createdAt
 }
 
 export async function persistGithubSession(session: GithubSession): Promise<void> {
-  if (sharedRedisConfigured()) await redisCommand(["SET", `aose:session:${session.id}`, JSON.stringify(session), "PX", String(Math.max(1, session.expiresAt - Date.now()))]);
+  if (sharedRedisConfigured()) await redisCommand(["SET", `aose:session:${session.id}`, encryptSession(session), "PX", String(Math.max(1, session.expiresAt - Date.now()))]);
 }
 
 export async function getGithubSession(req: Request): Promise<GithubSession | null> {
@@ -88,7 +112,7 @@ export async function getGithubSession(req: Request): Promise<GithubSession | nu
     const value = await redisCommand<string | null>(["GET", `aose:session:${id}`]);
     if (!value) return null;
     try {
-      const session = JSON.parse(value) as GithubSession;
+      const session = decryptSession(value);
       if (typeof session.id !== "string" || session.id !== id || typeof session.login !== "string" ||
           typeof session.accessToken !== "string" || !Number.isFinite(session.expiresAt) || session.expiresAt <= Date.now()) {
         await redisCommand(["DEL", `aose:session:${id}`]);
