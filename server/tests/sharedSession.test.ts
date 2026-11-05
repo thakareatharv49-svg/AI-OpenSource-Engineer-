@@ -33,7 +33,7 @@ test("shared session credentials are encrypted at rest and can be read by anothe
   assert.equal(command[0], "SET");
   assert.equal(command[1], `aose:session:${session.id}`);
   const encrypted = String(command[2]);
-  assert.match(encrypted, /^enc:v1:/);
+  assert.match(encrypted, /^enc-v1:/);
   assert.equal(encrypted.includes("server-only-token"), false);
   assert.equal(command[3], "PX");
   assert.ok(Number(command[4]) > 0);
