@@ -8,6 +8,7 @@ const safeProduction = {
   GITHUB_OAUTH_CLIENT_SECRET: "client-secret",
   UPSTASH_REDIS_REST_URL: "https://example.upstash.io",
   UPSTASH_REDIS_REST_TOKEN: "redis-token",
+  SESSION_ENCRYPTION_KEY: "test-session-encryption-key-at-least-32-chars",
   API_PUBLIC_URL: "https://api.example.com",
   GITHUB_OAUTH_CALLBACK_URL: "https://api.example.com/api/auth/github/callback",
   CLIENT_ORIGINS: "https://app.example.com,https://admin.example.com",
@@ -22,6 +23,7 @@ test("rejects missing shared infrastructure and OAuth configuration", () => {
   const errors = validateDeploymentConfiguration({ NODE_ENV: "production" });
   assert.ok(errors.some((error) => error.includes("UPSTASH_REDIS_REST_TOKEN")));
   assert.ok(errors.some((error) => error.includes("GITHUB_OAUTH_CLIENT_SECRET")));
+  assert.ok(errors.some((error) => error.includes("SESSION_ENCRYPTION_KEY")));
   assert.ok(errors.some((error) => error.includes("CLIENT_ORIGINS")));
 });
 
