@@ -70,7 +70,7 @@ router.get("/repositories", async (req, res) => {
       .map((item) => ({
         id: item.id,
         fullName: item.full_name,
-        name: typeof item.name === "string" ? item.name : item.full_name!.split("/").at(-1),
+        name: typeof item.name === "string" ? item.name : (typeof item.full_name === "string" ? item.full_name.split("/").at(-1) ?? null : null),
         description: typeof item.description === "string" ? item.description : null,
         htmlUrl: item.html_url,
         defaultBranch: typeof item.default_branch === "string" ? item.default_branch : null,
