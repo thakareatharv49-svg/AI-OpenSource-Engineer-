@@ -28,12 +28,12 @@ function encryptSession(session: GithubSession): string {
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", sessionEncryptionKey(), iv);
   const ciphertext = Buffer.concat([cipher.update(JSON.stringify(session), "utf8"), cipher.final()]);
-  return ["enc:v1", iv.toString("base64url"), cipher.getAuthTag().toString("base64url"), ciphertext.toString("base64url")].join(":");
+  return ["enc-v1", iv.toString("base64url"), cipher.getAuthTag().toString("base64url"), ciphertext.toString("base64url")].join(":");
 }
 
 function decryptSession(value: string): GithubSession {
   const [version, ivText, tagText, ciphertextText, extra] = value.split(":");
-  if (version !== "enc:v1" || !ivText || !tagText || !ciphertextText || extra !== undefined) {
+  if (version !== "enc-v1" || !ivText || !tagText || !ciphertextText || extra !== undefined) {
     throw new Error("Stored session is not encrypted with the supported format.");
   }
   const decipher = createDecipheriv("aes-256-gcm", sessionEncryptionKey(), Buffer.from(ivText, "base64url"));
