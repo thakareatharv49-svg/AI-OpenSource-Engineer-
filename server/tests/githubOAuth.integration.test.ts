@@ -160,3 +160,77 @@ test("OAuth callback rejects missing and oversized codes before token exchange",
   assert.equal(new URL(oversized.headers.get("location") ?? "").searchParams.get("auth"), "failed");
   assert.equal(providerCalls, 0);
 });
+
+test("two GitHub accounts receive isolated sessions and logout affects only its own account", async () => {
+  globalThis.fetch = (async (input: RequestInfo | URL, init: RequestInit = {}) => {
+    const url = String(input);
+    if (url === "https://github.com/login/oauth/access_token") {
+      const body = JSON.parse(String(init.body)) as { code: string };
+      const suffix = body.code === "code-one" ? "one" : "two";
+      return new Response(JSON.stringify({ access_token: "token-" + suffix, token_type: "bearer" }), { status: 200 });
+    }
+    if (url === "https://api.github.com/user") {
+      const authorization = new Headers(init.headers).get("authorization") ?? "";
+      const suffix = authorization.endsWith("token-one") ? "one" : "two";
+      return new Response(JSON.stringify({ id: suffix === "one" ? 101 : 202, login: "account-" + suffix, avatar_url: null }), { status: 200 });
+    }
+    throw new Error("Unexpected provider request: " + url);
+  }) as typeof fetch;
+
+  async function signIn(code: string) {
+    const start = await requestApp(baseUrl + "/api/auth/github", { redirect: "manual" });
+    const state = new URL(start.headers.get("location") ?? "").searchParams.get("state") ?? "";
+    const stateCookie = cookieFrom(start.headers.get("set-cookie"), "aose_oauth_state");
+    const callback = await requestApp(baseUrl + "/api/auth/github/callback?code=" + code + "&state=" + encodeURIComponent(state), {
+      redirect: "manual", headers: { Cookie: stateCookie },
+    });
+    assert.equal(callback.status, 302);
+    return cookieFrom(callback.headers.get("set-cookie"), "aose_session");
+  }
+
+  const cookieOne = await signIn("code-one");
+  const cookieTwo = await signIn("code-two");
+  assert.notEqual(cookieOne, cookieTwo);
+
+  const [meOne, meTwo] = await Promise.all([
+    requestApp(baseUrl + "/api/auth/me", { headers: { Cookie: cookieOne } }),
+    requestApp(baseUrl + "/api/auth/me", { headers: { Cookie: cookieTwo } }),
+  ]);
+  assert.equal((await meOne.json() as { user: { login: string } }).user.login, "account-one");
+  assert.equal((await meTwo.json() as { user: { login: string } }).user.login, "account-two");
+
+  const rejectedLogout = await requestApp(baseUrl + "/api/auth/logout", {
+    method: "POST", headers: { Cookie: cookieOne, Origin: "https://attacker.example" },
+  });
+  assert.equal(rejectedLogout.status, 403);
+  const stillAuthenticated = await requestApp(baseUrl + "/api/auth/me", { headers: { Cookie: cookieOne } });
+  assert.equal((await stillAuthenticated.json() as { authenticated: boolean }).authenticated, true);
+
+  const logoutOne = await requestApp(baseUrl + "/api/auth/logout", {
+    method: "POST", headers: { Cookie: cookieOne, Origin: "http://localhost:5173" },
+  });
+  assert.equal(logoutOne.status, 200);
+  const [afterOne, afterTwo] = await Promise.all([
+    requestApp(baseUrl + "/api/auth/me", { headers: { Cookie: cookieOne } }),
+    requestApp(baseUrl + "/api/auth/me", { headers: { Cookie: cookieTwo } }),
+  ]);
+  assert.equal((await afterOne.json() as { authenticated: boolean }).authenticated, false);
+  const remaining = await afterTwo.json() as { authenticated: boolean; user: { login: string } };
+  assert.equal(remaining.authenticated, true);
+  assert.equal(remaining.user.login, "account-two");
+});
+
+test("session cookie is Secure in production and always HttpOnly with SameSite=Lax", async () => {
+  const previousNodeEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = "production";
+  try {
+    const start = await requestApp(baseUrl + "/api/auth/github", { redirect: "manual" });
+    const stateCookie = start.headers.get("set-cookie") ?? "";
+    assert.match(stateCookie, /HttpOnly/);
+    assert.match(stateCookie, /SameSite=Lax/);
+    assert.match(stateCookie, /Secure/);
+  } finally {
+    if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previousNodeEnv;
+  }
+});
