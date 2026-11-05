@@ -8,6 +8,97 @@ dotenv.config();
 
 const router = Router();
 
+/* ---------------- Search GitHub Repositories ---------------- */
+
+router.get("/repositories", async (req, res) => {
+  const token = res.locals.githubSession?.accessToken as string | undefined;
+  if (!token) {
+    return res.status(401).json({ error: "Sign in with GitHub to search repositories.", code: "AUTH_REQUIRED" });
+  }
+
+  const query = typeof req.query.q === "string" ? req.query.q.trim() : "";
+  if (query.length < 3 || query.length > 200 || /[\u0000-\u001f\u007f]/.test(query)) {
+    return res.status(400).json({ error: "Repository search query must contain 3 to 200 printable characters.", code: "INVALID_SEARCH_QUERY" });
+  }
+
+  const sortValue = typeof req.query.sort === "string" ? req.query.sort : "stars";
+  const sort = ["stars", "forks", "updated", "help-wanted-issues"].includes(sortValue) ? sortValue : null;
+  const orderValue = typeof req.query.order === "string" ? req.query.order : "desc";
+  const order = orderValue === "asc" || orderValue === "desc" ? orderValue : null;
+  const page = typeof req.query.page === "string" && /^[1-9][0-9]*$/.test(req.query.page) ? Number(req.query.page) : 1;
+  const perPage = typeof req.query.per_page === "string" && /^[1-9][0-9]*$/.test(req.query.per_page) ? Number(req.query.per_page) : 20;
+  if (!sort || !order || !Number.isSafeInteger(page) || page > 100 || !Number.isSafeInteger(perPage) || perPage > 30) {
+    return res.status(400).json({ error: "Invalid repository search pagination or sorting options.", code: "INVALID_SEARCH_OPTIONS" });
+  }
+
+  try {
+    const searchQuery = `${query} archived:false fork:false`;
+    const url = new URL("https://api.github.com/search/repositories");
+    url.searchParams.set("q", searchQuery);
+    url.searchParams.set("sort", sort);
+    url.searchParams.set("order", order);
+    url.searchParams.set("page", String(page));
+    url.searchParams.set("per_page", String(perPage));
+    const response = await fetch(url, {
+      headers: githubHeaders(token),
+      signal: AbortSignal.timeout(10_000),
+    });
+    const data = await response.json() as {
+      total_count?: unknown;
+      incomplete_results?: unknown;
+      items?: Array<{
+        id?: unknown; full_name?: unknown; name?: unknown; description?: unknown;
+        html_url?: unknown; default_branch?: unknown; language?: unknown;
+        stargazers_count?: unknown; forks_count?: unknown; open_issues_count?: unknown;
+        updated_at?: unknown; pushed_at?: unknown; topics?: unknown;
+        archived?: unknown; disabled?: unknown; fork?: unknown;
+        license?: { spdx_id?: unknown; name?: unknown } | null;
+      }>;
+      message?: unknown;
+    };
+    if (!response.ok) {
+      const status = response.status === 401 || response.status === 403 || response.status === 422 ? response.status : 502;
+      return res.status(status).json({
+        error: typeof data.message === "string" ? data.message : "GitHub repository search failed.",
+        code: response.status === 403 ? "GITHUB_RATE_LIMITED_OR_FORBIDDEN" : "GITHUB_SEARCH_FAILED",
+      });
+    }
+
+    const repositories = (Array.isArray(data.items) ? data.items : [])
+      .filter((item) => item && item.archived !== true && item.disabled !== true && item.fork !== true &&
+        typeof item.id === "number" && typeof item.full_name === "string" && typeof item.html_url === "string")
+      .map((item) => ({
+        id: item.id,
+        fullName: item.full_name,
+        name: typeof item.name === "string" ? item.name : (typeof item.full_name === "string" ? item.full_name.split("/").at(-1) ?? null : null),
+        description: typeof item.description === "string" ? item.description : null,
+        htmlUrl: item.html_url,
+        defaultBranch: typeof item.default_branch === "string" ? item.default_branch : null,
+        language: typeof item.language === "string" ? item.language : null,
+        stars: typeof item.stargazers_count === "number" ? item.stargazers_count : 0,
+        forks: typeof item.forks_count === "number" ? item.forks_count : 0,
+        openIssues: typeof item.open_issues_count === "number" ? item.open_issues_count : 0,
+        updatedAt: typeof item.updated_at === "string" ? item.updated_at : null,
+        pushedAt: typeof item.pushed_at === "string" ? item.pushed_at : null,
+        topics: Array.isArray(item.topics) ? item.topics.filter((topic): topic is string => typeof topic === "string").slice(0, 20) : [],
+        license: item.license && typeof item.license.spdx_id === "string"
+          ? { spdxId: item.license.spdx_id, name: typeof item.license.name === "string" ? item.license.name : null }
+          : null,
+      }));
+
+    return res.json({
+      query,
+      totalCount: typeof data.total_count === "number" ? data.total_count : repositories.length,
+      incompleteResults: data.incomplete_results === true,
+      page,
+      perPage,
+      repositories,
+    });
+  } catch {
+    return res.status(502).json({ error: "GitHub repository search is temporarily unavailable.", code: "GITHUB_SEARCH_UNAVAILABLE" });
+  }
+});
+
 const isValidRepositoryPart = (value: unknown): value is string =>
   typeof value === "string" &&
   value.length <= 100 &&
