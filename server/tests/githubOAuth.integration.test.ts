@@ -16,6 +16,7 @@ const envKeys = [
 ] as const;
 const originalEnv = new Map(envKeys.map((key) => [key, process.env[key]]));
 const originalFetch = globalThis.fetch;
+const requestApp = (input: RequestInfo | URL, init?: RequestInit) => originalFetch(input, init);
 
 before(async () => {
   for (const key of ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"]) delete process.env[key];
@@ -56,7 +57,7 @@ function cookieFrom(header: string | null, name: string): string {
 }
 
 test("OAuth initiation uses configured callback, minimal scopes and a random state cookie", async () => {
-  const response = await fetch(baseUrl + "/api/auth/github", { redirect: "manual" });
+  const response = await requestApp(baseUrl + "/api/auth/github", { redirect: "manual" });
   assert.equal(response.status, 302);
   const location = new URL(response.headers.get("location") ?? "");
   assert.equal(location.origin + location.pathname, "https://github.com/login/oauth/authorize");
@@ -85,11 +86,11 @@ test("OAuth callback exchanges the code, stores identity server-side and never r
     throw new Error("Unexpected external request: " + url);
   }) as typeof fetch;
 
-  const start = await fetch(baseUrl + "/api/auth/github", { redirect: "manual" });
+  const start = await requestApp(baseUrl + "/api/auth/github", { redirect: "manual" });
   const authorizeUrl = new URL(start.headers.get("location") ?? "");
   const state = authorizeUrl.searchParams.get("state") ?? "";
   const stateCookie = cookieFrom(start.headers.get("set-cookie"), "aose_oauth_state");
-  const callback = await fetch(baseUrl + "/api/auth/github/callback?code=one-time-code&state=" + encodeURIComponent(state), {
+  const callback = await requestApp(baseUrl + "/api/auth/github/callback?code=one-time-code&state=" + encodeURIComponent(state), {
     redirect: "manual",
     headers: { Cookie: stateCookie },
   });
@@ -102,7 +103,7 @@ test("OAuth callback exchanges the code, stores identity server-side and never r
   assert.deepEqual(calls, ["https://github.com/login/oauth/access_token", "https://api.github.com/user"]);
 
   const sessionCookie = cookieFrom(callback.headers.get("set-cookie"), "aose_session");
-  const me = await fetch(baseUrl + "/api/auth/me", { headers: { Cookie: sessionCookie } });
+  const me = await requestApp(baseUrl + "/api/auth/me", { headers: { Cookie: sessionCookie } });
   const body = await me.json() as { authenticated: boolean; user: { login: string }; expiresAt: string };
   assert.equal(me.status, 200);
   assert.equal(body.authenticated, true);
@@ -110,13 +111,13 @@ test("OAuth callback exchanges the code, stores identity server-side and never r
   assert.ok(Date.parse(body.expiresAt) > Date.now());
   assert.equal(JSON.stringify(body).includes("server-only-access-token"), false);
 
-  const logout = await fetch(baseUrl + "/api/auth/logout", {
+  const logout = await requestApp(baseUrl + "/api/auth/logout", {
     method: "POST",
     headers: { Cookie: sessionCookie, Origin: "http://localhost:5173" },
   });
   assert.equal(logout.status, 200);
   assert.deepEqual(await logout.json(), { success: true });
-  const afterLogout = await fetch(baseUrl + "/api/auth/me", { headers: { Cookie: sessionCookie } });
+  const afterLogout = await requestApp(baseUrl + "/api/auth/me", { headers: { Cookie: sessionCookie } });
   assert.deepEqual(await afterLogout.json(), { authenticated: false, user: null });
 });
 
@@ -126,7 +127,7 @@ test("OAuth callback rejects a state mismatch without contacting GitHub", async 
     providerCalls += 1;
     throw new Error("Provider must not be contacted for invalid state");
   }) as typeof fetch;
-  const response = await fetch(baseUrl + "/api/auth/github/callback?code=one-time-code&state=wrong-state", {
+  const response = await requestApp(baseUrl + "/api/auth/github/callback?code=one-time-code&state=wrong-state", {
     redirect: "manual",
     headers: { Cookie: "aose_oauth_state=another-state" },
   });
@@ -142,18 +143,18 @@ test("OAuth callback rejects missing and oversized codes before token exchange",
     throw new Error("Provider must not be contacted for invalid code");
   }) as typeof fetch;
 
-  const start = await fetch(baseUrl + "/api/auth/github", { redirect: "manual" });
+  const start = await requestApp(baseUrl + "/api/auth/github", { redirect: "manual" });
   const state = new URL(start.headers.get("location") ?? "").searchParams.get("state") ?? "";
   const stateCookie = cookieFrom(start.headers.get("set-cookie"), "aose_oauth_state");
-  const missing = await fetch(baseUrl + "/api/auth/github/callback?state=" + encodeURIComponent(state), {
+  const missing = await requestApp(baseUrl + "/api/auth/github/callback?state=" + encodeURIComponent(state), {
     redirect: "manual", headers: { Cookie: stateCookie },
   });
   assert.equal(new URL(missing.headers.get("location") ?? "").searchParams.get("auth"), "failed");
 
-  const secondStart = await fetch(baseUrl + "/api/auth/github", { redirect: "manual" });
+  const secondStart = await requestApp(baseUrl + "/api/auth/github", { redirect: "manual" });
   const secondState = new URL(secondStart.headers.get("location") ?? "").searchParams.get("state") ?? "";
   const secondCookie = cookieFrom(secondStart.headers.get("set-cookie"), "aose_oauth_state");
-  const oversized = await fetch(baseUrl + "/api/auth/github/callback?code=" + "x".repeat(513) + "&state=" + encodeURIComponent(secondState), {
+  const oversized = await requestApp(baseUrl + "/api/auth/github/callback?code=" + "x".repeat(513) + "&state=" + encodeURIComponent(secondState), {
     redirect: "manual", headers: { Cookie: secondCookie },
   });
   assert.equal(new URL(oversized.headers.get("location") ?? "").searchParams.get("auth"), "failed");
