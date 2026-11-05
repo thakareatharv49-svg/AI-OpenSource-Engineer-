@@ -6,6 +6,7 @@ export function validateDeploymentConfiguration(env: DeploymentEnvironment): str
   if (!env.GITHUB_OAUTH_CLIENT_ID?.trim()) errors.push("GITHUB_OAUTH_CLIENT_ID is required in production.");
   if (!env.GITHUB_OAUTH_CLIENT_SECRET?.trim()) errors.push("GITHUB_OAUTH_CLIENT_SECRET is required in production.");
   if (!env.UPSTASH_REDIS_REST_TOKEN?.trim()) errors.push("UPSTASH_REDIS_REST_TOKEN is required in production.");
+  if ((env.SESSION_ENCRYPTION_KEY ?? "").length < 32) errors.push("SESSION_ENCRYPTION_KEY must contain at least 32 characters in production.");
   const redisUrl = parseUrl(env.UPSTASH_REDIS_REST_URL);
   if (!redisUrl || redisUrl.protocol !== "https:") errors.push("UPSTASH_REDIS_REST_URL must be a valid HTTPS URL in production.");
   const apiUrl = parseUrl(env.API_PUBLIC_URL);
