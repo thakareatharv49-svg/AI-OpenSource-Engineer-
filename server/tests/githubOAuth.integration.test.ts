@@ -208,6 +208,7 @@ test("two GitHub accounts receive isolated sessions and logout affects only its 
     method: "POST", headers: { Cookie: cookieOne, Origin: "https://attacker.example" },
   });
   assert.equal(rejectedLogout.status, 403);
+  assert.deepEqual(await rejectedLogout.json(), { error: "Request origin is not allowed.", code: "ORIGIN_NOT_ALLOWED" });
   const stillAuthenticated = await requestApp(baseUrl + "/api/auth/me", { headers: { Cookie: cookieOne } });
   assert.equal((await stillAuthenticated.json() as { authenticated: boolean }).authenticated, true);
 
@@ -215,6 +216,7 @@ test("two GitHub accounts receive isolated sessions and logout affects only its 
     method: "POST", headers: { Cookie: cookieOne, Origin: "http://localhost:5173" },
   });
   assert.equal(logoutOne.status, 200);
+  assert.deepEqual(await logoutOne.json(), { success: true });
   const [afterOne, afterTwo] = await Promise.all([
     requestApp(baseUrl + "/api/auth/me", { headers: { Cookie: cookieOne } }),
     requestApp(baseUrl + "/api/auth/me", { headers: { Cookie: cookieTwo } }),
