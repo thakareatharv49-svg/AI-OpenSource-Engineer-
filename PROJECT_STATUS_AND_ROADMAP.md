@@ -1041,3 +1041,33 @@ Before starting, inspect current auth middleware, OAuth callback/session creatio
 - Documentation PR cleanup: pending safe refresh/port of #145 and #146.
 - Branch protection: inspected; required reviews and required status checks need administrator configuration.
 - Production/live integration validation: not yet completed and must not be represented as passed.
+
+
+---
+
+## 2026-11-05 — Part 2 authentication completion update
+
+This dated update supersedes the older Milestone 3 authentication status above where the two conflict.
+
+### Completed implementation
+
+- PR #158 merged GitHub OAuth route integration tests for authorization URL construction, callback code exchange, identity lookup, server-side session creation, token non-disclosure, logout invalidation, and malformed callback rejection.
+- PR #159 merged production session hardening and multi-account coverage:
+  - Shared Redis GitHub session records are encrypted using AES-256-GCM with a dedicated `SESSION_ENCRYPTION_KEY`.
+  - Production configuration rejects a missing or shorter-than-32-character encryption key.
+  - Malformed, unsupported, tampered, and expired encrypted session records fail closed and are deleted.
+  - Session cookies are HttpOnly and SameSite=Lax; Secure is set in production. Session TTL is eight hours; OAuth state TTL is ten minutes and state is single-use.
+  - Logout is protected by the configured browser-origin allowlist and returns an explicit 403 for disallowed origins.
+  - OAuth error states are surfaced in the client UI; sign-out provides pending/error feedback.
+  - Multi-account tests prove independent GitHub identities and sessions; logging out one account does not invalidate another.
+  - Existing lifecycle tests verify contribution lists and idempotency keys are isolated by authenticated GitHub login.
+- GitHub API operations use the current authenticated session's token. The session token is never returned by `GET /api/auth/me`.
+- Latest PR #159 head `33691936af530f7d5d8bc55aa501869e65792472`: CI and CodeQL both passed; PR merged as `dabc842540fef294172d8045428101cfafb77d9e`.
+
+### Verification boundaries still open
+
+- OAuth provider calls and Redis HTTP requests in CI are mocked. A real OAuth App consent flow, actual Redis key provisioning, browser refresh/logout, and two physical browser profiles have not been executed in this session.
+- Follow `docs/github-oauth-live-verification.md` using a dedicated test OAuth App, test accounts, disposable Redis database, and secrets stored only in a local secret manager.
+- Production non-loopback binding remains blocked by design until the separately documented deployment/security review is approved. Do not weaken the loopback guard to claim authentication readiness.
+
+**Part 2 engineering implementation: complete. Live provider/infrastructure verification: pending controlled operator smoke test.**
