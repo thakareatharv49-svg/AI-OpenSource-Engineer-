@@ -1286,6 +1286,15 @@ useEffect(() => {
 
             {stage === 0 && (
               <div className="issue-results">
+                <div className="issue-search-controls">
+                  <label>Search <input value={issueSearchQuery} onChange={(event) => setIssueSearchQuery(event.target.value)} /></label>
+                  <label>Repository <input value={issueRepositoryFilter} onChange={(event) => setIssueRepositoryFilter(event.target.value)} placeholder="owner/repository" /></label>
+                  <label>Labels <input value={issueLabelsFilter} onChange={(event) => setIssueLabelsFilter(event.target.value)} /></label>
+                  <label>Sort <select value={issueSort} onChange={(event) => setIssueSort(event.target.value as "updated" | "created" | "comments")}><option value="updated">Updated</option><option value="created">Created</option><option value="comments">Comments</option></select></label>
+                  <label>Order <select value={issueOrder} onChange={(event) => setIssueOrder(event.target.value as "asc" | "desc")}><option value="desc">Newest</option><option value="asc">Oldest</option></select></label>
+                  <label>Stale threshold (days) <input type="number" min="1" max="3650" value={issueStaleDays} onChange={(event) => setIssueStaleDays(Number(event.target.value) || 180)} /></label>
+                  <button className="contribution-start-button" onClick={handleIssueSearch} disabled={loadingIssues}>Search Issues</button>
+                </div>
                 {loadingIssues && (
                   <p>Finding real GitHub issues...</p>
                 )}
