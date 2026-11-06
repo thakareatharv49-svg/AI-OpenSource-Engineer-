@@ -13,6 +13,8 @@ type GitHubIssue = {
   user: string;
   createdAt: string;
   updatedAt: string;
+  number?: number;
+  labels?: string[];
 };
 
 type AISelection = {
