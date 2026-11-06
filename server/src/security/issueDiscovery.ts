@@ -48,6 +48,12 @@ export type DiscoveredIssue = {
 };
 
 const REPOSITORY = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+function isValidRepositorySlug(value: string): boolean {
+  if (!REPOSITORY.test(value)) return false;
+  const [owner, name] = value.split("/");
+  return Boolean(owner && name && owner !== "." && owner !== ".." && name !== "." && name !== "..");
+}
+
 const LABEL = /^[^\u0000-\u001f\u007f]{1,80}$/;
 
 function boundedInteger(value: unknown, fallback: number, min: number, max: number): number | null {
@@ -60,7 +66,7 @@ export function parseIssueDiscoveryOptions(input: Record<string, unknown>): Issu
   const query = typeof input.q === "string" ? input.q.trim() : "";
   const repository = typeof input.repo === "string" ? input.repo.trim() : "";
   if (query.length > 300 || /[\u0000-\u001f\u007f]/.test(query)) return null;
-  if (repository && !REPOSITORY.test(repository)) return null;
+  if (repository && !isValidRepositorySlug(repository)) return null;
 
   const rawLabels = typeof input.labels === "string" ? input.labels.split(",").map((label) => label.trim()).filter(Boolean) : [];
   if (rawLabels.length > 5 || rawLabels.some((label) => !LABEL.test(label))) return null;
