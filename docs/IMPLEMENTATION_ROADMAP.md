@@ -130,8 +130,16 @@ Live OAuth/browser verification, two-real-account acceptance, production Redis, 
 **Status: automated implementation/test scope complete and merged.** PR #162 merged as `7a9be63238d9eb71f618dfe9c98b2139aa29d2f1`. CI run `42152104926` and CodeQL run `42152104966` passed on its final PR head; post-merge CI `42153366880` and CodeQL `42153366890` passed on the merge commit. Real OAuth/browser and production Redis acceptance remain outstanding.
 
 
-## Part 3 implementation status — 2026-11-06
+## Part 3 completion — 2026-11-06
 
-Issue discovery and repository intelligence changes are being validated in PR review. The implementation adds bounded issue-search query parameters, OR semantics for alternative labels, evidence-based eligibility filtering and exclusion counts, token-aware GitHub API requests, and explicit rate-limit responses. Repository analysis now prioritizes repository guidance and manifests and refuses empty, failed, or documentation-only source context. Automated unit coverage was added for filters, malformed results, eligibility, context prioritization, and fail-closed behavior.
+**Status: automated implementation and test scope complete and merged.**
 
-Do not mark Part 3 complete until CI and CodeQL pass on the final PR head and the PR is merged. Live GitHub search behavior and representative public/private repository analysis remain integration checks; the code's unit tests do not prove external API behavior.
+- PR #164: https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/164
+- Final PR head: `189082590390e5c72a00d8c778b99b9de2134ec2`
+- Merge commit: `8c8595f9c4874a2e49d75d525954fa9b9854d5b2`
+- CI run `42160691292` passed on the final head: backend typecheck, all 286 backend tests, frontend build, and frontend lint.
+- CodeQL run `42160691436` passed on the same final head.
+
+The contribution UI now exposes search terms, repository, labels, sort/order, freshness threshold, matching issue links, exclusion reasons, and pagination. The API validates and bounds these filters, uses OR semantics for label alternatives, returns exclusion counts, and uses the current user's GitHub token when available. Repository analysis prioritizes contribution guidance/manifests and fails closed on missing or documentation-only source context.
+
+**Remaining integration acceptance:** live GitHub issue-search behavior, real public/private repository file retrieval, and large/truncated repository behavior must still be exercised against representative repositories. Language/framework facets are not a dedicated filter yet; linked-PR detection is not exhaustive from search payloads; assignment/claim labels remain heuristics. Do not describe those integrations as verified by unit tests.
