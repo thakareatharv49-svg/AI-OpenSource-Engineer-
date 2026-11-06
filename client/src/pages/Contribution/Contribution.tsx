@@ -188,6 +188,14 @@ const [forkedRepository, setForkedRepository] = useState("");
   const [issuePage, setIssuePage] = useState(1);
   const [issueTotalCount, setIssueTotalCount] = useState<number | null>(null);
   const [issueExcluded, setIssueExcluded] = useState<Record<string, number>>({});
+  const [appliedIssueFilters, setAppliedIssueFilters] = useState({
+    query: "",
+    repository: "",
+    labels: "good first issue,good-first-issue",
+    sort: "updated" as "updated" | "created" | "comments",
+    order: "desc" as "asc" | "desc",
+    staleDays: 180,
+  });
   const issuePageSize = 30;
 
   const [selectedIssue, setSelectedIssue] =
@@ -299,13 +307,13 @@ const [forkedRepository, setForkedRepository] = useState("");
         const params = new URLSearchParams({
           page: String(issuePage),
           per_page: String(issuePageSize),
-          stale_days: String(issueStaleDays),
-          sort: issueSort,
-          order: issueOrder,
+          stale_days: String(appliedIssueFilters.staleDays),
+          sort: appliedIssueFilters.sort,
+          order: appliedIssueFilters.order,
         });
-        if (issueSearchQuery.trim()) params.set("q", issueSearchQuery.trim());
-        if (issueRepositoryFilter.trim()) params.set("repo", issueRepositoryFilter.trim());
-        if (issueLabelsFilter.trim()) params.set("labels", issueLabelsFilter.trim());
+        if (appliedIssueFilters.query.trim()) params.set("q", appliedIssueFilters.query.trim());
+        if (appliedIssueFilters.repository.trim()) params.set("repo", appliedIssueFilters.repository.trim());
+        if (appliedIssueFilters.labels.trim()) params.set("labels", appliedIssueFilters.labels.trim());
 
         const response = await apiFetch(API_BASE_URL + "/api/github/issues?" + params.toString());
         const data = await response.json();
@@ -322,10 +330,18 @@ const [forkedRepository, setForkedRepository] = useState("");
     };
 
     void fetchIssues();
-  }, [started, stage, issueFetchAttempt, issuePage]);
+  }, [started, stage, issueFetchAttempt, issuePage, appliedIssueFilters]);
 
   const handleIssueSearch = () => {
     setIssuePage(1);
+    setAppliedIssueFilters({
+      query: issueSearchQuery,
+      repository: issueRepositoryFilter,
+      labels: issueLabelsFilter,
+      sort: issueSort,
+      order: issueOrder,
+      staleDays: issueStaleDays,
+    });
     setIssueFetchAttempt((attempt) => attempt + 1);
   };
 
