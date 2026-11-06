@@ -31,7 +31,7 @@ Part 2 is **GitHub authentication and user-account management**:
 - 2.4 User identity and permissions.
 - 2.5 Multi-account isolation.
 
-Earlier planning context (2026-11-04) recorded Part 1.1 complete and Part 1.2 in progress. Reconcile Part 1 against current repository state before changing its completion status; do not assume that old progress note is still current.
+**Part 1 reconciliation (2026-11-06):** The older note that Part 1.1 was complete and Part 1.2 was in progress is superseded. The engineering foundation/architecture audit is complete; compatible dependency remediation and documentation consolidation are merged. Part 1 is **substantially complete but not fully closed** because the active `Protect main` ruleset still has zero required approving reviews and zero required status checks. The available GitHub connection can inspect but cannot edit this administrative ruleset. Live OAuth, real two-account acceptance, production Redis, and production deployment validation remain separate release gates and must not be described as passing.
 
 ## Part 2 — implementation evidence
 
@@ -60,25 +60,20 @@ Security behavior documented and covered by automated tests:
 - Contribution lifecycle records and mutations are scoped to the authenticated GitHub login.
 - GitHub write operations use the token belonging to the current server-side session and validate repository/fork ownership.
 
-## Latest active PR and validation state
+## Part 2 final merge and validation
 
 **PR #162:** https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/162  
-**Title:** `test(auth): verify per-user session and contribution isolation`  
-**Head branch:** `part-2-account-isolation-and-session-hardening`  
-**Latest head SHA:** `30302f9d7a992c9236d9a013ac7b5624453e4992`  
-**Base:** `main` at `22c2960141ef4eb73cd58ab543eadbe4a495339f` when the PR was inspected.
+**Status:** merged 2026-11-06.  
+**Head SHA:** `f8c07edc77fd07dfecdbccabd8c3c40ab0562bb8`  
+**Merge commit:** `7a9be63238d9eb71f618dfe9c98b2139aa29d2f1`  
+**Exact-head CI:** run `42152104926` passed.  
+**Exact-head CodeQL:** run `42152104966` passed.  
+**Post-merge CI:** run `42153366880` passed on the merge commit.  
+**Post-merge CodeQL:** run `42153366890` passed on the merge commit.
 
 A failing test assertion was corrected on 2026-11-06. The GitHub repository-search route appends `archived:false fork:false` to the query, so the account-token isolation test was updated to match the normalized query prefix. Fix commit: `30302f9d7a992c9236d9a013ac7b5624453e4992`.
 
-Latest observed checks at snapshot time:
-- Frontend build: passed.
-- Frontend lint: passed.
-- Backend typecheck: passed.
-- Backend test job: still running; no final conclusion observed.
-- CodeQL: passed (run #403).
-- CI run #573: still in progress, specifically backend tests.
-
-PR #162 was observed open and mergeable when inspected. Do not infer merge success from the populated merge_commit_sha field. Confirm the PR's current merged/state fields and latest checks before any merge. Do not merge while required checks are pending or failing.
+Part 2's automated implementation/test requirements are complete and merged. This does not certify live OAuth provider configuration, real browser sessions, two real GitHub accounts, or production Redis.
 
 ## Verification boundary — do not overstate
 
@@ -95,12 +90,9 @@ Never commit or paste OAuth client secrets, access tokens, Redis tokens, encrypt
 
 ## Immediate next actions
 
-1. Re-fetch PR #162 and its current head SHA.
-2. Re-check CI and CodeQL for that exact head. If backend tests fail, inspect logs, fix the root cause, and wait for fresh checks.
-3. Merge PR #162 only after all required checks pass; then verify the PR is actually merged and `main` points to the resulting commit.
-4. Verify Part 2's merged code and documentation on `main`; mark Part 2 complete only after that.
-5. Update the project roadmap/context with the verified merge SHA and check results.
-6. Move to the next incomplete part only after Part 2 is complete. Reconcile Part 1's older progress note against the current repo first.
+1. Resolve the `Protect main` ruleset administratively by requiring the CI and CodeQL checks and selecting an appropriate approval policy; re-read the ruleset to verify the change.
+2. Complete real OAuth/browser, two-account isolation, and production Redis acceptance in a controlled test environment; record sanitized evidence in the live-verification docs.
+3. Continue with the next incomplete product workstream from `docs/IMPLEMENTATION_ROADMAP.md`, beginning with the Stage 2 issue/repository intelligence audit. Do not confuse these release gates with mocked CI coverage.
 
 ## Session handoff rules
 
@@ -108,3 +100,14 @@ Never commit or paste OAuth client secrets, access tokens, Redis tokens, encrypt
 - Organize work by main parts and subparts; finish one by one.
 - Distinguish merged code, open PRs, passing CI, mocked tests, and real-world acceptance.
 - Inspect current GitHub state before resuming; this snapshot is a dated handoff, not a substitute for live verification.
+
+
+## Part 1 reconciliation — evidence and decision (2026-11-06)
+
+- PR #154 (`docs: record engineering foundation audit and Part 1 status`) merged the architecture/CI/CodeQL and repository foundation audit.
+- PR #155 (`docs: record final Part 1 protection and blocker verification`) merged the exact ruleset finding: `Protect main` has `required_approving_review_count: 0` and an empty `required_status_checks` array. It blocks deletion and non-fast-forward updates, but it is not a strong CI/review merge gate.
+- Compatible dependency groups #142, #150, and #153 and peer-dependency enforcement #152 were merged. Incompatible TypeScript 7 PR #151 was not merged; compatible TypeScript 6 tooling was delivered through PR #156. Do not describe #151 as merged.
+- Stale documentation PRs #145 and #146 were closed without merging; their useful content was ported and consolidated in merged PR #157.
+- PR #162 completed Part 2 automated authentication/session/account-isolation tests and merged as `7a9be63238d9eb71f618dfe9c98b2139aa29d2f1`; exact-head CI/CodeQL and post-merge CI/CodeQL passed.
+
+**Part 1 disposition:** engineering foundation and dependency/documentation cleanup are complete; administrative branch-protection hardening remains outstanding. Therefore Part 1 is recorded as **substantially complete — blocked on repository administrator configuration**, not fully complete. Live OAuth and production integration tests are release acceptance gates and are not CI-proven.
