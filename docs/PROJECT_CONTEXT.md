@@ -39,7 +39,7 @@ The repository history and PRs indicate the following work:
 - PR #158: GitHub OAuth integration-test coverage.
 - PR #159: encrypted sessions and account isolation.
 - PR #160: Part 2 completion documentation.
-- PR #162: additional account-isolation and session-hardening tests; this is the active validation PR at snapshot time.
+- PR #162: additional account-isolation and session-hardening tests; merged after exact-head CI/CodeQL passed.
 
 Relevant implementation/test paths identified:
 - `server/src/security/session.ts`
@@ -92,7 +92,7 @@ Never commit or paste OAuth client secrets, access tokens, Redis tokens, encrypt
 
 1. Resolve the `Protect main` ruleset administratively by requiring the CI and CodeQL checks and selecting an appropriate approval policy; re-read the ruleset to verify the change.
 2. Complete real OAuth/browser, two-account isolation, and production Redis acceptance in a controlled test environment; record sanitized evidence in the live-verification docs.
-3. Continue with the next incomplete product workstream from `docs/IMPLEMENTATION_ROADMAP.md`, beginning with the Stage 2 issue/repository intelligence audit. Do not confuse these release gates with mocked CI coverage.
+3. Complete Part 3 issue/repository intelligence implementation and automated validation; keep live GitHub API behavior and large-repository analysis as explicit integration checks. Do not confuse these release gates with mocked CI coverage.
 
 ## Session handoff rules
 
@@ -111,3 +111,20 @@ Never commit or paste OAuth client secrets, access tokens, Redis tokens, encrypt
 - PR #162 completed Part 2 automated authentication/session/account-isolation tests and merged as `7a9be63238d9eb71f618dfe9c98b2139aa29d2f1`; exact-head CI/CodeQL and post-merge CI/CodeQL passed.
 
 **Part 1 disposition:** engineering foundation and dependency/documentation cleanup are complete; administrative branch-protection hardening remains outstanding. Therefore Part 1 is recorded as **substantially complete — blocked on repository administrator configuration**, not fully complete. Live OAuth and production integration tests are release acceptance gates and are not CI-proven.
+
+
+## Part 3 — issue and repository intelligence (implementation pending PR validation)
+
+Current work branch: `part-3-issue-and-repository-intelligence`.
+
+Implemented in the current worktree/PR branch:
+- Added `server/src/security/issueDiscovery.ts` with validated search options, GitHub query construction, and normalization/eligibility checks.
+- Replaced the fixed 30-item issue search with bounded page/per_page, q, repo, labels, sort, order, and stale_days controls. Alternative labels are ORed, not ANDed.
+- Uses the authenticated session token when available; maps GitHub rate limiting to HTTP 429 and preserves Retry-After.
+- Excludes pull-request search results, malformed records, closed/locked issues, duplicate-labelled issues, assigned or explicitly claimed/in-progress issues, and stale issues; returns exclusion counts and the GitHub incomplete-results signal.
+- Prioritizes root/nested README, CONTRIBUTING, AGENTS, SECURITY, architecture guidance, and dependency manifests during source selection.
+- Repository analysis fails closed if no files are selected, selected-file retrieval fails, or the bounded snapshot has no implementation source. The analysis endpoint reports an upstream-context failure instead of sending empty source to the AI.
+- Added unit tests for issue query/filters/eligibility/malformed results and repository context guidance/source requirements.
+- Added `docs/issue-and-repository-intelligence.md` and linked it from README.
+
+Known limits: language/framework facets are not yet a dedicated verified filter; issue-search payloads do not exhaustively identify linked PRs; assignment/claim labels are heuristics; large repositories are analyzed from a bounded sample. CI/CodeQL and live GitHub API behavior must be checked before Part 3 is marked complete.

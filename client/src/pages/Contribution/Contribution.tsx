@@ -13,6 +13,8 @@ type GitHubIssue = {
   user: string;
   createdAt: string;
   updatedAt: string;
+  number?: number;
+  labels?: string[];
 };
 
 type AISelection = {
@@ -177,6 +179,24 @@ const [forkedRepository, setForkedRepository] = useState("");
   const [loadingIssues, setLoadingIssues] = useState(false);
   const [issueError, setIssueError] = useState("");
   const [issueFetchAttempt, setIssueFetchAttempt] = useState(0);
+  const [issueSearchQuery, setIssueSearchQuery] = useState("");
+  const [issueRepositoryFilter, setIssueRepositoryFilter] = useState("");
+  const [issueLabelsFilter, setIssueLabelsFilter] = useState("good first issue,good-first-issue");
+  const [issueSort, setIssueSort] = useState<"updated" | "created" | "comments">("updated");
+  const [issueOrder, setIssueOrder] = useState<"asc" | "desc">("desc");
+  const [issueStaleDays, setIssueStaleDays] = useState(180);
+  const [issuePage, setIssuePage] = useState(1);
+  const [issueTotalCount, setIssueTotalCount] = useState<number | null>(null);
+  const [issueExcluded, setIssueExcluded] = useState<Record<string, number>>({});
+  const [appliedIssueFilters, setAppliedIssueFilters] = useState({
+    query: "",
+    repository: "",
+    labels: "good first issue,good-first-issue",
+    sort: "updated" as "updated" | "created" | "comments",
+    order: "desc" as "asc" | "desc",
+    staleDays: 180,
+  });
+  const issuePageSize = 30;
 
   const [selectedIssue, setSelectedIssue] =
     useState<GitHubIssue | null>(null);
@@ -283,30 +303,47 @@ const [forkedRepository, setForkedRepository] = useState("");
     const fetchIssues = async () => {
       setLoadingIssues(true);
       setIssueError("");
-
       try {
-        const response = await apiFetch(
-          `${API_BASE_URL}/api/github/issues`
-        );
+        const params = new URLSearchParams({
+          page: String(issuePage),
+          per_page: String(issuePageSize),
+          stale_days: String(appliedIssueFilters.staleDays),
+          sort: appliedIssueFilters.sort,
+          order: appliedIssueFilters.order,
+        });
+        if (appliedIssueFilters.query.trim()) params.set("q", appliedIssueFilters.query.trim());
+        if (appliedIssueFilters.repository.trim()) params.set("repo", appliedIssueFilters.repository.trim());
+        if (appliedIssueFilters.labels.trim()) params.set("labels", appliedIssueFilters.labels.trim());
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch GitHub issues");
-        }
-
+        const response = await apiFetch(API_BASE_URL + "/api/github/issues?" + params.toString());
         const data = await response.json();
-        setIssues(data.issues);
+        if (!response.ok) throw new Error(data.error || "Failed to fetch GitHub issues");
+        setIssues(Array.isArray(data.issues) ? data.issues : []);
+        setIssueTotalCount(typeof data.totalCount === "number" ? data.totalCount : null);
+        setIssueExcluded(data.excluded && typeof data.excluded === "object" ? data.excluded : {});
       } catch (error) {
         console.error("Failed to fetch issues:", error);
-        setIssueError("Unable to fetch GitHub issues.");
+        setIssueError(error instanceof Error ? error.message : "Unable to fetch GitHub issues.");
       } finally {
         setLoadingIssues(false);
       }
     };
 
-    fetchIssues();
-  }, [started, stage, issueFetchAttempt]);
-    
-    
+    void fetchIssues();
+  }, [started, stage, issueFetchAttempt, issuePage, appliedIssueFilters]);
+
+  const handleIssueSearch = () => {
+    setIssuePage(1);
+    setAppliedIssueFilters({
+      query: issueSearchQuery,
+      repository: issueRepositoryFilter,
+      labels: issueLabelsFilter,
+      sort: issueSort,
+      order: issueOrder,
+      staleDays: issueStaleDays,
+    });
+    setIssueFetchAttempt((attempt) => attempt + 1);
+  };
 
   const handleAISelection = async () => {
     if (issues.length === 0) return;
@@ -1265,6 +1302,15 @@ useEffect(() => {
 
             {stage === 0 && (
               <div className="issue-results">
+                <div className="issue-search-controls">
+                  <label>Search <input value={issueSearchQuery} onChange={(event) => setIssueSearchQuery(event.target.value)} /></label>
+                  <label>Repository <input value={issueRepositoryFilter} onChange={(event) => setIssueRepositoryFilter(event.target.value)} placeholder="owner/repository" /></label>
+                  <label>Labels <input value={issueLabelsFilter} onChange={(event) => setIssueLabelsFilter(event.target.value)} /></label>
+                  <label>Sort <select value={issueSort} onChange={(event) => setIssueSort(event.target.value as "updated" | "created" | "comments")}><option value="updated">Updated</option><option value="created">Created</option><option value="comments">Comments</option></select></label>
+                  <label>Order <select value={issueOrder} onChange={(event) => setIssueOrder(event.target.value as "asc" | "desc")}><option value="desc">Newest</option><option value="asc">Oldest</option></select></label>
+                  <label>Stale threshold (days) <input type="number" min="1" max="3650" value={issueStaleDays} onChange={(event) => setIssueStaleDays(Number(event.target.value) || 180)} /></label>
+                  <button className="contribution-start-button" onClick={handleIssueSearch} disabled={loadingIssues}>Search Issues</button>
+                </div>
                 {loadingIssues && (
                   <p>Finding real GitHub issues...</p>
                 )}
@@ -1279,6 +1325,31 @@ useEffect(() => {
                     >
                       Retry Issue Search
                     </button>
+                  </div>
+                )}
+
+                {!loadingIssues && Object.values(issueExcluded).some((count) => count > 0) && (
+                  <p role="status">
+                    Filtered out: {Object.entries(issueExcluded).filter(([, count]) => count > 0).map(([reason, count]) => reason + " " + count).join(" · ")}
+                  </p>
+                )}
+
+                {!loadingIssues && !issueError && issues.length > 0 && !selectedIssue && (
+                  <div style={{ textAlign: "left", marginBottom: "18px" }}>
+                    <h2>Matching issues</h2>
+                    <ul>
+                      {issues.slice(0, 10).map((issue) => (
+                        <li key={issue.id}>
+                          <a href={issue.url} target="_blank" rel="noreferrer">{issue.title}</a>
+                          <p>{issue.repository}{issue.number ? " · #" + issue.number : ""}{issue.labels?.length ? " · " + issue.labels.join(", ") : ""}</p>
+                        </li>
+                      ))}
+                    </ul>
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "12px" }}>
+                      <button className="contribution-start-button" onClick={() => setIssuePage((page) => Math.max(1, page - 1))} disabled={issuePage <= 1 || loadingIssues}>Previous</button>
+                      <span>Page {issuePage}{issueTotalCount !== null ? " · " + issueTotalCount + " GitHub matches" : ""}</span>
+                      <button className="contribution-start-button" onClick={() => setIssuePage((page) => page + 1)} disabled={loadingIssues || (issueTotalCount !== null && issuePage * issuePageSize >= issueTotalCount)}>Next</button>
+                    </div>
                   </div>
                 )}
 
