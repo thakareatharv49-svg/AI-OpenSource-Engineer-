@@ -109,7 +109,7 @@ GitHub Actions runs these frontend and backend checks on pushes and pull request
 - Keep secrets in local environment files or GitHub secret storage. Never commit real keys or paste them into issues or generated proposals.
 - The first version reads a bounded set of repository source files. Large repositories may need more targeted file retrieval before a proposal is reliable.
 
-## Per-user GitHub ownership
+## Issue discovery and repository analysis\n\nSee the [issue discovery and repository intelligence guide](docs/issue-and-repository-intelligence.md) for supported filters, eligibility heuristics, pagination, source-file selection, and analysis limitations.\n\n## Per-user GitHub ownership
 
 Every user's forks, branches, commits, and pull requests must use the GitHub access token from that user's own signed-in session. The OAuth app's client credentials identify the application, not the contributor. See the [per-user ownership and isolation checklist](docs/per-user-github-ownership.md) for the implementation audit and two-account acceptance tests. The lifecycle integration suite also covers cross-user list/read/transition/approval isolation and per-user idempotency; see [per-user isolation regression coverage](docs/per-user-isolation-regression-tests.md). Multi-account live isolation remains unverified until the real-provider tests are run with separate accounts.
 
