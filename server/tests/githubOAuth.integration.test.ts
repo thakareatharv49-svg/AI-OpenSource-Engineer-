@@ -182,8 +182,8 @@ test("two GitHub accounts receive isolated sessions and logout affects only its 
     if (url.startsWith("https://api.github.com/search/repositories?")) {
       const authorization = new Headers(init.headers).get("authorization") ?? "";
       const requestedQuery = new URL(url).searchParams.get("q") ?? "";
-      assert.equal(authorization.endsWith("token-one"), requestedQuery === "typescript-one");
-      assert.equal(authorization.endsWith("token-two"), requestedQuery === "typescript-two");
+      assert.equal(authorization.endsWith("token-one"), requestedQuery.startsWith("typescript-one "));
+      assert.equal(authorization.endsWith("token-two"), requestedQuery.startsWith("typescript-two "));
       return new Response(JSON.stringify({ total_count: 0, incomplete_results: false, items: [] }), { status: 200 });
     }
     throw new Error("Unexpected provider request: " + url);
