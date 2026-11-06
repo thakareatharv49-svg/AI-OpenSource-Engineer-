@@ -19,7 +19,10 @@ test("parses bounded filters and defaults to beginner-friendly issue labels", ()
   assert.equal(options.page, 2);
   assert.equal(options.perPage, 25);
   assert.match(buildIssueSearchQuery(options), /repo:example\/project/);
-  const query = buildIssueSearchQuery(options);\n  assert.match(query, /label:"good first issue"/);\n  assert.match(query, / OR /);\n  assert.match(query, /label:"good-first-issue"/);
+  const query = buildIssueSearchQuery(options);
+  assert.match(query, /label:"good first issue"/);
+  assert.match(query, / OR /);
+  assert.match(query, /label:"good-first-issue"/);
 });
 
 test("rejects malformed repository, controls, unsupported sort, and unbounded pagination", () => {
