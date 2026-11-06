@@ -21,10 +21,14 @@
 - Verify no maintainer-token fallback.
 - Exercise two real GitHub accounts in separate browser profiles.
 
-### Stage 2 — Issue and repository intelligence
-- Verify issue discovery filters, pagination, and unsuitable/duplicate issue handling.
-- Verify repository analysis uses actual files and contribution guidelines.
-- Ensure proposal claims distinguish evidence, assumptions, and unknowns.
+### Stage 2 — Issue and repository intelligence (Part 3)
+- 3.1 Validate issue-search filters, labels, repository scoping, sort/order, bounded pagination, and query input.
+- 3.2 Exclude malformed, closed, locked, duplicate-labelled, assigned/claimed, stale, and pull-request search results with explicit exclusion counts.
+- 3.3 Use the signed-in GitHub token when available and return rate-limit information without silently hiding provider failures.
+- 3.4 Prioritize README, CONTRIBUTING, AGENTS, SECURITY, architecture guidance, dependency manifests, implementation files, and tests in bounded repository context.
+- 3.5 Fail closed when selected source files cannot be fetched, the selection is empty, or no implementation source is present.
+- 3.6 Validate AI-selected issue IDs and repository-analysis file references against the exact supplied data.
+- Record remaining limits honestly: language/framework facets need verified repository metadata support; linked-PR detection is not exhaustive from issue-search payloads alone; repository context is a bounded sample, not a full clone.
 
 ### Stage 3 — AI implementation and quality gates
 - Verify approved proposal is bound to the exact patch.
@@ -124,3 +128,10 @@ Live OAuth/browser verification, two-real-account acceptance, production Redis, 
 ### Part 2 — GitHub authentication and account isolation
 
 **Status: automated implementation/test scope complete and merged.** PR #162 merged as `7a9be63238d9eb71f618dfe9c98b2139aa29d2f1`. CI run `42152104926` and CodeQL run `42152104966` passed on its final PR head; post-merge CI `42153366880` and CodeQL `42153366890` passed on the merge commit. Real OAuth/browser and production Redis acceptance remain outstanding.
+
+
+## Part 3 implementation status — 2026-11-06
+
+Issue discovery and repository intelligence changes are being validated in PR review. The implementation adds bounded issue-search query parameters, OR semantics for alternative labels, evidence-based eligibility filtering and exclusion counts, token-aware GitHub API requests, and explicit rate-limit responses. Repository analysis now prioritizes repository guidance and manifests and refuses empty, failed, or documentation-only source context. Automated unit coverage was added for filters, malformed results, eligibility, context prioritization, and fail-closed behavior.
+
+Do not mark Part 3 complete until CI and CodeQL pass on the final PR head and the PR is merged. Live GitHub search behavior and representative public/private repository analysis remain integration checks; the code's unit tests do not prove external API behavior.
