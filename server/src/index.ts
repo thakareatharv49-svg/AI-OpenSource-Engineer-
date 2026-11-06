@@ -10,6 +10,7 @@ import lifecycleRouter from "./routes/lifecycle.js";
 import { attachGithubSession, requireGithubSession, requireTrustedOrigin } from "./security/session.js";
 import { consumeDistributedQuota, persistOperationalEvent, sharedRedisConfigured } from "./security/sharedRedis.js";
 import { validateDeploymentConfiguration } from "./security/deploymentConfig.js";
+import { normalizeDiscoveredIssues, parseIssueDiscoveryOptions, buildIssueSearchQuery } from "./security/issueDiscovery.js";
 
 dotenv.config();
 
@@ -175,63 +176,70 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
-// GitHub issues
-app.get("/api/github/issues", async (_req, res) => {
-  try {
-    const response = await fetch(
-      "https://api.github.com/search/issues?q=" +
-        encodeURIComponent(
-          'is:issue is:open (label:"good first issue" OR label:good-first-issue)'
-        ) +
-        "&sort=updated&order=desc&per_page=30",
-      {
-        headers: {
-          Accept: "application/vnd.github+json",
-          "User-Agent": "AI-OpenSource-Engineer",
-        },
-      }
-    );
+// GitHub issue discovery. A signed-in user's token raises GitHub's search quota;
+ // public discovery remains available without a session.
+app.get("/api/github/issues", async (req, res) => {
+  const options = parseIssueDiscoveryOptions(req.query as Record<string, unknown>);
+  if (!options) {
+    return res.status(400).json({
+      error: "Invalid issue search filters. Check query, repository, labels, sort, order, page, per_page, and stale_days.",
+      code: "INVALID_ISSUE_SEARCH_OPTIONS",
+    });
+  }
 
+  try {
+    const searchQuery = buildIssueSearchQuery(options);
+    const url = new URL("https://api.github.com/search/issues");
+    url.searchParams.set("q", searchQuery);
+    url.searchParams.set("sort", options.sort);
+    url.searchParams.set("order", options.order);
+    url.searchParams.set("page", String(options.page));
+    url.searchParams.set("per_page", String(options.perPage));
+
+    const token = (res.locals.githubSession as { accessToken?: string } | null)?.accessToken;
+    const headers: Record<string, string> = {
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      "User-Agent": "AI-OpenSource-Engineer",
+    };
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const response = await fetch(url, { headers, signal: AbortSignal.timeout(10_000) });
+    const data = await response.json() as {
+      total_count?: unknown;
+      incomplete_results?: unknown;
+      items?: unknown;
+      message?: unknown;
+    };
     if (!response.ok) {
-      return res.status(response.status).json({
-        error: `GitHub API returned ${response.status}`,
+      const status = response.status === 403 || response.status === 429 ? 429 : 502;
+      if (response.headers.has("retry-after")) res.setHeader("Retry-After", response.headers.get("retry-after"));
+      return res.status(status).json({
+        error: typeof data.message === "string" ? data.message : "GitHub issue search failed.",
+        code: status === 429 ? "GITHUB_RATE_LIMITED" : "GITHUB_ISSUE_SEARCH_FAILED",
       });
     }
+    if (!Array.isArray(data.items)) {
+      return res.status(502).json({ error: "GitHub returned an invalid issue-search response.", code: "GITHUB_ISSUE_RESPONSE_INVALID" });
+    }
 
-    const data = (await response.json()) as {
-      total_count: number;
-      items: Array<{
-        id: number;
-        title: string;
-        html_url: string;
-        repository_url: string;
-        user?: {
-          login: string;
-        };
-        created_at: string;
-        updated_at: string;
-      }>;
-    };
-
-    const issues = data.items.map((issue) => ({
-      id: issue.id,
-      title: issue.title,
-      url: issue.html_url,
-      repository: issue.repository_url,
-      user: issue.user?.login ?? "unknown",
-      createdAt: issue.created_at,
-      updatedAt: issue.updated_at,
-    }));
-
+    const normalized = normalizeDiscoveredIssues(data.items, options.staleDays);
     return res.json({
-      count: issues.length,
-      issues,
+      query: searchQuery,
+      page: options.page,
+      perPage: options.perPage,
+      totalCount: typeof data.total_count === "number" ? data.total_count : null,
+      incompleteResults: data.incomplete_results === true,
+      count: normalized.issues.length,
+      issues: normalized.issues,
+      excluded: normalized.excluded,
+      filters: { repository: options.repository || null, labels: options.labels, staleDays: options.staleDays },
     });
   } catch (error) {
-    console.error("GitHub API error:", error);
-
-    return res.status(500).json({
-      error: "Failed to fetch GitHub issues",
+    console.error("GitHub issue discovery error:", error);
+    return res.status(502).json({
+      error: error instanceof Error ? error.message : "GitHub issue search is temporarily unavailable.",
+      code: "GITHUB_ISSUE_SEARCH_UNAVAILABLE",
     });
   }
 });
