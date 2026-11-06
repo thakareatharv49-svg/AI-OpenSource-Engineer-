@@ -179,6 +179,13 @@ test("two GitHub accounts receive isolated sessions and logout affects only its 
       const suffix = authorization.endsWith("token-one") ? "one" : "two";
       return new Response(JSON.stringify({ id: suffix === "one" ? 101 : 202, login: "account-" + suffix, avatar_url: null }), { status: 200 });
     }
+    if (url.startsWith("https://api.github.com/search/repositories?")) {
+      const authorization = new Headers(init.headers).get("authorization") ?? "";
+      const requestedQuery = new URL(url).searchParams.get("q") ?? "";
+      assert.equal(authorization.endsWith("token-one"), requestedQuery.startsWith("typescript-one "));
+      assert.equal(authorization.endsWith("token-two"), requestedQuery.startsWith("typescript-two "));
+      return new Response(JSON.stringify({ total_count: 0, incomplete_results: false, items: [] }), { status: 200 });
+    }
     throw new Error("Unexpected provider request: " + url);
   }) as typeof fetch;
 
@@ -203,6 +210,14 @@ test("two GitHub accounts receive isolated sessions and logout affects only its 
   ]);
   assert.equal((await meOne.json() as { user: { login: string } }).user.login, "account-one");
   assert.equal((await meTwo.json() as { user: { login: string } }).user.login, "account-two");
+
+  const [searchOne, searchTwo] = await Promise.all([
+    requestApp(baseUrl + "/api/github/repositories?q=typescript-one", { headers: { Cookie: cookieOne } }),
+    requestApp(baseUrl + "/api/github/repositories?q=typescript-two", { headers: { Cookie: cookieTwo } }),
+  ]);
+  assert.equal(searchOne.status, 200);
+  assert.equal(searchTwo.status, 200);
+  await Promise.all([searchOne.arrayBuffer(), searchTwo.arrayBuffer()]);
 
   const rejectedLogout = await requestApp(baseUrl + "/api/auth/logout", {
     method: "POST", headers: { Cookie: cookieOne, Origin: "https://attacker.example" },
@@ -264,4 +279,74 @@ test("OAuth state is single-use and cannot be replayed", async () => {
   const second = await requestApp(callbackUrl, { redirect: "manual", headers: { Cookie: stateCookie } });
   assert.equal(new URL(second.headers.get("location") ?? "").searchParams.get("auth"), "failed");
   assert.equal(providerCalls, 2);
+});
+
+test("two GitHub accounts have isolated contribution histories and authenticated identities", async () => {
+  globalThis.fetch = (async (input: RequestInfo | URL, init: RequestInit = {}) => {
+    const url = String(input);
+    if (url === "https://github.com/login/oauth/access_token") {
+      const body = JSON.parse(String(init.body)) as { code: string };
+      const suffix = body.code === "history-one" ? "one" : "two";
+      return new Response(JSON.stringify({ access_token: "history-token-" + suffix, token_type: "bearer" }), { status: 200 });
+    }
+    if (url === "https://api.github.com/user") {
+      const suffix = (new Headers(init.headers).get("authorization") ?? "").endsWith("history-token-one") ? "one" : "two";
+      return new Response(JSON.stringify({ id: suffix === "one" ? 411 : 422, login: "history-account-" + suffix, avatar_url: null }), { status: 200 });
+    }
+    throw new Error("Unexpected provider request: " + url);
+  }) as typeof fetch;
+
+  async function signIn(code: string) {
+    const start = await requestApp(baseUrl + "/api/auth/github", { redirect: "manual" });
+    const state = new URL(start.headers.get("location") ?? "").searchParams.get("state") ?? "";
+    const stateCookie = cookieFrom(start.headers.get("set-cookie"), "aose_oauth_state");
+    const callback = await requestApp(baseUrl + "/api/auth/github/callback?code=" + code + "&state=" + encodeURIComponent(state), {
+      redirect: "manual", headers: { Cookie: stateCookie },
+    });
+    assert.equal(callback.status, 302);
+    return cookieFrom(callback.headers.get("set-cookie"), "aose_session");
+  }
+
+  const firstCookie = await signIn("history-one");
+  const secondCookie = await signIn("history-two");
+  const firstCreate = await requestApp(baseUrl + "/api/lifecycle/", {
+    method: "POST",
+    headers: { Cookie: firstCookie, Origin: "http://localhost:5173", "Content-Type": "application/json" },
+    body: JSON.stringify({ idempotencyKey: "account-one-issue-0001", issueUrl: "https://github.com/example/project/issues/101", repository: "example/project" }),
+  });
+  const secondCreate = await requestApp(baseUrl + "/api/lifecycle/", {
+    method: "POST",
+    headers: { Cookie: secondCookie, Origin: "http://localhost:5173", "Content-Type": "application/json" },
+    body: JSON.stringify({ idempotencyKey: "account-two-issue-0002", issueUrl: "https://github.com/example/project/issues/202", repository: "example/project" }),
+  });
+  const [firstCreateBody, secondCreateBody] = await Promise.all([firstCreate.text(), secondCreate.text()]);
+  assert.ok([200, 201].includes(firstCreate.status), firstCreateBody);
+  assert.ok([200, 201].includes(secondCreate.status), secondCreateBody);
+
+  const [firstList, secondList] = await Promise.all([
+    requestApp(baseUrl + "/api/lifecycle/", { headers: { Cookie: firstCookie } }),
+    requestApp(baseUrl + "/api/lifecycle/", { headers: { Cookie: secondCookie } }),
+  ]);
+  const firstRecords = (await firstList.json() as { contributions: Array<{ id: string; version: number; issueUrl: string }> }).contributions;
+  const secondRecords = (await secondList.json() as { contributions: Array<{ id: string; version: number; issueUrl: string }> }).contributions;
+  assert.ok(firstRecords.some(record => record.issueUrl.endsWith("/101")));
+  assert.ok(!firstRecords.some(record => record.issueUrl.endsWith("/202")));
+  assert.ok(secondRecords.some(record => record.issueUrl.endsWith("/202")));
+  assert.ok(!secondRecords.some(record => record.issueUrl.endsWith("/101")));
+
+  const firstRecord = firstRecords.find(record => record.issueUrl.endsWith("/101"));
+  assert.ok(firstRecord);
+  const crossAccountRead = await requestApp(baseUrl + "/api/lifecycle/" + firstRecord.id, {
+    headers: { Cookie: secondCookie },
+  });
+  assert.equal(crossAccountRead.status, 404);
+  await crossAccountRead.arrayBuffer();
+
+  const crossAccountMutation = await requestApp(baseUrl + "/api/lifecycle/" + firstRecord.id, {
+    method: "PATCH",
+    headers: { Cookie: secondCookie, Origin: "http://localhost:5173", "Content-Type": "application/json" },
+    body: JSON.stringify({ state: "analyzing", expectedVersion: firstRecord.version }),
+  });
+  assert.equal(crossAccountMutation.status, 404);
+  await crossAccountMutation.arrayBuffer();
 });
