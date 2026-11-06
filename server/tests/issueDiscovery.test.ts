@@ -19,7 +19,7 @@ test("parses bounded filters and defaults to beginner-friendly issue labels", ()
   assert.equal(options.page, 2);
   assert.equal(options.perPage, 25);
   assert.match(buildIssueSearchQuery(options), /repo:example\/project/);
-  assert.match(buildIssueSearchQuery(options), /label:"good first issue"/);
+  const query = buildIssueSearchQuery(options);\n  assert.match(query, /label:"good first issue"/);\n  assert.match(query, / OR /);\n  assert.match(query, /label:"good-first-issue"/);
 });
 
 test("rejects malformed repository, controls, unsupported sort, and unbounded pagination", () => {
@@ -48,7 +48,7 @@ test("keeps only open, unlocked, non-duplicate, unclaimed, fresh issues", () => 
 });
 
 test("rejects malformed GitHub issue records instead of returning incomplete issue data", () => {
-  const result = normalizeDiscoveredIssues([{ ...valid, html_url: "javascript:alert(1)" }, { ...valid, id: "1" }], 180, now);
+  const result = normalizeDiscoveredIssues([{ ...valid, html_url: "javascript:alert(1)" }, { ...valid, id: "1" }, null as unknown as typeof valid], 180, now);
   assert.equal(result.issues.length, 0);
-  assert.equal(result.excluded.malformed, 2);
+  assert.equal(result.excluded.malformed, 3);
 });
