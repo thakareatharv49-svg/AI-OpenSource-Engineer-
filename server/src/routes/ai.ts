@@ -307,11 +307,9 @@ Return ONLY valid JSON:
   } catch (error) {
     console.error("Repository analysis error:", error);
 
-    return res.status(500).json({
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to analyze repository",
+    return res.status(502).json({
+      error: error instanceof Error ? error.message : "Failed to analyze repository",
+      code: "REPOSITORY_CONTEXT_UNAVAILABLE",
     });
   }
 });
