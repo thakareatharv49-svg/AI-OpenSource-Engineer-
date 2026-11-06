@@ -217,6 +217,7 @@ test("two GitHub accounts receive isolated sessions and logout affects only its 
   ]);
   assert.equal(searchOne.status, 200);
   assert.equal(searchTwo.status, 200);
+  await Promise.all([searchOne.arrayBuffer(), searchTwo.arrayBuffer()]);
 
   const rejectedLogout = await requestApp(baseUrl + "/api/auth/logout", {
     method: "POST", headers: { Cookie: cookieOne, Origin: "https://attacker.example" },
@@ -318,8 +319,9 @@ test("two GitHub accounts have isolated contribution histories and authenticated
     headers: { Cookie: secondCookie, Origin: "http://localhost:5173", "Content-Type": "application/json" },
     body: JSON.stringify({ idempotencyKey: "account-two-issue-0002", issueUrl: "https://github.com/example/project/issues/202", repository: "example/project" }),
   });
-  assert.ok([200, 201].includes(firstCreate.status), await firstCreate.clone().text());
-  assert.ok([200, 201].includes(secondCreate.status), await secondCreate.clone().text());
+  const [firstCreateBody, secondCreateBody] = await Promise.all([firstCreate.text(), secondCreate.text()]);
+  assert.ok([200, 201].includes(firstCreate.status), firstCreateBody);
+  assert.ok([200, 201].includes(secondCreate.status), secondCreateBody);
 
   const [firstList, secondList] = await Promise.all([
     requestApp(baseUrl + "/api/lifecycle/", { headers: { Cookie: firstCookie } }),
@@ -338,6 +340,7 @@ test("two GitHub accounts have isolated contribution histories and authenticated
     headers: { Cookie: secondCookie },
   });
   assert.equal(crossAccountRead.status, 404);
+  await crossAccountRead.arrayBuffer();
 
   const crossAccountMutation = await requestApp(baseUrl + "/api/lifecycle/" + firstRecord.id, {
     method: "PATCH",
@@ -345,4 +348,5 @@ test("two GitHub accounts have isolated contribution histories and authenticated
     body: JSON.stringify({ state: "analyzing", expectedVersion: firstRecord.version }),
   });
   assert.equal(crossAccountMutation.status, 404);
+  await crossAccountMutation.arrayBuffer();
 });
