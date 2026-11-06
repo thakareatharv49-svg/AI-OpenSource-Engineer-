@@ -177,6 +177,16 @@ const [forkedRepository, setForkedRepository] = useState("");
   const [loadingIssues, setLoadingIssues] = useState(false);
   const [issueError, setIssueError] = useState("");
   const [issueFetchAttempt, setIssueFetchAttempt] = useState(0);
+  const [issueSearchQuery, setIssueSearchQuery] = useState("");
+  const [issueRepositoryFilter, setIssueRepositoryFilter] = useState("");
+  const [issueLabelsFilter, setIssueLabelsFilter] = useState("good first issue,good-first-issue");
+  const [issueSort, setIssueSort] = useState<"updated" | "created" | "comments">("updated");
+  const [issueOrder, setIssueOrder] = useState<"asc" | "desc">("desc");
+  const [issueStaleDays, setIssueStaleDays] = useState(180);
+  const [issuePage, setIssuePage] = useState(1);
+  const [issueTotalCount, setIssueTotalCount] = useState<number | null>(null);
+  const [issueExcluded, setIssueExcluded] = useState<Record<string, number>>({});
+  const issuePageSize = 30;
 
   const [selectedIssue, setSelectedIssue] =
     useState<GitHubIssue | null>(null);
