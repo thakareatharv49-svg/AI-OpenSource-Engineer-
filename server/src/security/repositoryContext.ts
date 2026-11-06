@@ -21,7 +21,7 @@ function scorePath(path: string, terms: string[]) {
   const normalized = path.toLowerCase();
   const name = normalized.split("/").pop() ?? normalized;
   let score = 0;
-  if (ROOT_GUIDANCE.test(path)) score += 120;
+  if (ROOT_GUIDANCE.test(path)) score += 1_000;
   if (MANIFEST.test(normalized)) score += 17;
   if (/(^|\/)(src|app|lib|pkg|internal|core|modules?)(\/|$)/.test(normalized)) score += 18;
   if (/(^|\/)(tests?|specs?)(\/|$)|(?:\.|_)(?:test|spec)\.[^.]+$/.test(normalized)) score += 15;
@@ -97,7 +97,7 @@ export function assertRepositoryContextHasSource(files: Array<{ path: string; co
   if (!Array.isArray(files) || files.length === 0) {
     throw new Error("No repository files were selected; analysis aborted instead of guessing from issue metadata.");
   }
-  if (!files.some(file => typeof file.path === "string" && IMPLEMENTATION.test(file.path))) {
+  if (!files.some(file => typeof file.path === "string" && IMPLEMENTATION.test(file.path) && !/(^|\\/)(?:tests?|specs?)(\\/|$)|(?:\\.|_)(?:test|spec)\\.[^.]+$/i.test(file.path))) {
     throw new Error("No implementation source files were retrieved; analysis aborted instead of treating documentation-only context as source.");
   }
 }
