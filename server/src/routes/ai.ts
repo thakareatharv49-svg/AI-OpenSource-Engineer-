@@ -4,7 +4,7 @@ import OpenAI from "openai";
 import { Router } from "express";
 import { validateGeneratedProposal } from "../security/proposalQuality.js";
 import { persistOperationalEvent } from "../security/sharedRedis.js";
-import { repositoryContextBudget, selectRelevantRepositoryFiles } from "../security/repositoryContext.js";
+import { assertRepositoryContextHasSource, repositoryContextBudget, selectRelevantRepositoryFiles } from "../security/repositoryContext.js";
 import { fetchSelectedRepositoryFiles } from "../security/githubRepositoryFiles.js";
 import { validateIssueSelectionResult } from "../security/issueSelection.js";
 import { enforceProposalReviewGate, validateCodeReviewResult } from "../security/codeReview.js";
@@ -35,8 +35,10 @@ async function fetchRepositoryFiles(repository: string, token: string, issue: un
   const treeData = await treeResponse.json() as { truncated?: boolean; tree?: Array<{path:string;type:string;size?:number;sha?:string}> };
   if (!Array.isArray(treeData.tree)) throw new Error("GitHub returned an invalid repository tree.");
   const selected = selectRelevantRepositoryFiles(treeData.tree, issue);
+  if (selected.length === 0) throw new Error("No relevant repository files were found; analysis aborted instead of guessing from issue metadata.");
   const fetched = await fetchSelectedRepositoryFiles(repository, defaultBranch, selected, headers);
   const bounded = repositoryContextBudget(fetched);
+  assertRepositoryContextHasSource(bounded.files);
   return { files: bounded.files, context: { selectedFiles: bounded.files.length, contextBytes: bounded.totalBytes, truncated: treeData.truncated === true || bounded.truncated, repositoryTreeTruncated: treeData.truncated === true } };
 }
 
