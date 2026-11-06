@@ -7,7 +7,7 @@ const IMPLEMENTATION = /\.(?:ts|tsx|js|jsx|mjs|cjs|py|pyi|go|rs|java|kt|kts|swif
 const IGNORED = /(?:^|\/)(?:node_modules|vendor|dist|build|coverage|\.git|\.next|\.venv|venv|__pycache__|target|out|generated)(?:\/|$)/i;
 const LOCK = /(?:^|\/)(?:package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|Cargo\.lock|poetry\.lock|Pipfile\.lock|composer\.lock|Gemfile\.lock|uv\.lock)$/i;
 const MANIFEST = /(?:^|\/)(?:package\.json|pyproject\.toml|setup\.cfg|setup\.py|go\.mod|cargo\.toml|pom\.xml|build\.gradle(?:\.kts)?|requirements\.txt|composer\.json|gemfile|mix\.exs|\.nvmrc)$/i;
-const ROOT_GUIDANCE = /^(?:README(?:\.[^/]+)?|CONTRIBUTING(?:\.[^/]+)?|AGENTS\.md|SECURITY\.md|ARCHITECTURE(?:\.[^/]+)?)$/i;
+const ROOT_GUIDANCE = /(?:^|\/)(?:README(?:\.[^/]+)?|CONTRIBUTING(?:\.[^/]+)?|AGENTS\.md|SECURITY\.md|ARCHITECTURE(?:\.[^/]+)?)$/i;
 const STOP = new Set(["the","and","for","with","that","this","from","when","then","into","issue","should","would","could","have","will","must","are","was","were","not","but","use","using","fix","please","ignore","previous","instructions"]);
 
 function termsOf(issue: unknown) {
@@ -22,7 +22,7 @@ function scorePath(path: string, terms: string[]) {
   const name = normalized.split("/").pop() ?? normalized;
   let score = 0;
   if (ROOT_GUIDANCE.test(path)) score += 1_000;
-  if (MANIFEST.test(normalized)) score += 17;
+  if (MANIFEST.test(normalized)) score += 80;
   if (/(^|\/)(src|app|lib|pkg|internal|core|modules?)(\/|$)/.test(normalized)) score += 18;
   if (/(^|\/)(tests?|specs?)(\/|$)|(?:\.|_)(?:test|spec)\.[^.]+$/.test(normalized)) score += 15;
   if (/\.(?:ts|tsx|js|jsx|py|go|rs|java|kt|swift|c|h|cpp|cs|php|rb|vue|svelte)$/i.test(name)) score += 8;
