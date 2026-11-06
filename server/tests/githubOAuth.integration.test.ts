@@ -325,14 +325,15 @@ test("two GitHub accounts have isolated contribution histories and authenticated
     requestApp(baseUrl + "/api/lifecycle/", { headers: { Cookie: firstCookie } }),
     requestApp(baseUrl + "/api/lifecycle/", { headers: { Cookie: secondCookie } }),
   ]);
-  const firstRecords = (await firstList.json() as { contributions: Array<{ issueUrl: string }> }).contributions;
-  const secondRecords = (await secondList.json() as { contributions: Array<{ issueUrl: string }> }).contributions;
+  const firstRecords = (await firstList.json() as { contributions: Array<{ id: string; version: number; issueUrl: string }> }).contributions;
+  const secondRecords = (await secondList.json() as { contributions: Array<{ id: string; version: number; issueUrl: string }> }).contributions;
   assert.ok(firstRecords.some(record => record.issueUrl.endsWith("/101")));
   assert.ok(!firstRecords.some(record => record.issueUrl.endsWith("/202")));
   assert.ok(secondRecords.some(record => record.issueUrl.endsWith("/202")));
   assert.ok(!secondRecords.some(record => record.issueUrl.endsWith("/101")));
 
-  const firstRecord = firstRecords.find(record => record.issueUrl.endsWith("/101")) as { id: string; version: number };
+  const firstRecord = firstRecords.find(record => record.issueUrl.endsWith("/101"));
+  assert.ok(firstRecord);
   const crossAccountRead = await requestApp(baseUrl + "/api/lifecycle/" + firstRecord.id, {
     headers: { Cookie: secondCookie },
   });
