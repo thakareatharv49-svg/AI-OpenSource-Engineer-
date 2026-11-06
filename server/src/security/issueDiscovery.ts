@@ -97,6 +97,7 @@ export function normalizeDiscoveredIssues(
   const cutoff = now - staleDays * 24 * 60 * 60 * 1000;
 
   for (const item of items) {
+    if (!item || typeof item !== "object") { excluded.malformed += 1; continue; }
     if (item?.pull_request) { excluded.pullRequest += 1; continue; }
     if (!Number.isSafeInteger(item?.id) || !Number.isSafeInteger(item?.number) ||
         typeof item.title !== "string" || !item.title.trim() ||
