@@ -1312,6 +1312,31 @@ useEffect(() => {
                   </div>
                 )}
 
+                {!loadingIssues && Object.values(issueExcluded).some((count) => count > 0) && (
+                  <p role="status">
+                    Filtered out: {Object.entries(issueExcluded).filter(([, count]) => count > 0).map(([reason, count]) => reason + " " + count).join(" · ")}
+                  </p>
+                )}
+
+                {!loadingIssues && !issueError && issues.length > 0 && !selectedIssue && (
+                  <div style={{ textAlign: "left", marginBottom: "18px" }}>
+                    <h2>Matching issues</h2>
+                    <ul>
+                      {issues.slice(0, 10).map((issue) => (
+                        <li key={issue.id}>
+                          <a href={issue.url} target="_blank" rel="noreferrer">{issue.title}</a>
+                          <p>{issue.repository}{issue.number ? " · #" + issue.number : ""}{issue.labels?.length ? " · " + issue.labels.join(", ") : ""}</p>
+                        </li>
+                      ))}
+                    </ul>
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "12px" }}>
+                      <button className="contribution-start-button" onClick={() => setIssuePage((page) => Math.max(1, page - 1))} disabled={issuePage <= 1 || loadingIssues}>Previous</button>
+                      <span>Page {issuePage}{issueTotalCount !== null ? " · " + issueTotalCount + " GitHub matches" : ""}</span>
+                      <button className="contribution-start-button" onClick={() => setIssuePage((page) => page + 1)} disabled={loadingIssues || (issueTotalCount !== null && issuePage * issuePageSize >= issueTotalCount)}>Next</button>
+                    </div>
+                  </div>
+                )}
+
                 {!loadingIssues &&
                   !issueError &&
                   issues.length > 0 &&
