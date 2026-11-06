@@ -109,3 +109,18 @@ Every milestone report must state:
 - PR URL and merge SHA, if merged.
 
 Do not mark live GitHub OAuth, real-account isolation, external PR reviewer notification, or contribution graph visibility as verified based solely on mocked/synthetic tests.
+
+
+## Current status reconciliation — 2026-11-06
+
+### Part 1 — engineering foundation
+
+**Status: substantially complete; administrative merge-gate hardening remains blocked.** The architecture/CI audit and compatible dependency cleanup are complete. PRs #154 and #155 record the audit and ruleset inspection. PR #157 safely consolidated the substantive requirements/roadmap/audit material from stale PRs #145 and #146. The incompatible TypeScript 7 PR #151 was not merged; compatible TypeScript 6 tooling was merged through #156.
+
+The active `Protect main` ruleset currently prevents deletion and non-fast-forward updates, but requires zero approving reviews and has no required status checks. This leaves CI and CodeQL green checks as a disciplined workflow practice, not an enforced ruleset gate. The available GitHub connection is read-only for ruleset administration; a repository administrator must configure required CI/CodeQL checks and the intended approval policy.
+
+Live OAuth/browser verification, two-real-account acceptance, production Redis, and production deployment validation remain separate release gates. They are not grounds to falsely mark mocked automated tests as live-passed.
+
+### Part 2 — GitHub authentication and account isolation
+
+**Status: automated implementation/test scope complete and merged.** PR #162 merged as `7a9be63238d9eb71f618dfe9c98b2139aa29d2f1`. CI run `42152104926` and CodeQL run `42152104966` passed on its final PR head; post-merge CI `42153366880` and CodeQL `42153366890` passed on the merge commit. Real OAuth/browser and production Redis acceptance remain outstanding.
