@@ -179,6 +179,11 @@ test("two GitHub accounts receive isolated sessions and logout affects only its 
       const suffix = authorization.endsWith("token-one") ? "one" : "two";
       return new Response(JSON.stringify({ id: suffix === "one" ? 101 : 202, login: "account-" + suffix, avatar_url: null }), { status: 200 });
     }
+    if (url.startsWith("https://api.github.com/search/repositories?")) {
+      const authorization = new Headers(init.headers).get("authorization") ?? "";
+      assert.ok(authorization.endsWith("token-one") || authorization.endsWith("token-two"));
+      return new Response(JSON.stringify({ total_count: 0, incomplete_results: false, items: [] }), { status: 200 });
+    }
     throw new Error("Unexpected provider request: " + url);
   }) as typeof fetch;
 
@@ -203,6 +208,13 @@ test("two GitHub accounts receive isolated sessions and logout affects only its 
   ]);
   assert.equal((await meOne.json() as { user: { login: string } }).user.login, "account-one");
   assert.equal((await meTwo.json() as { user: { login: string } }).user.login, "account-two");
+
+  const [searchOne, searchTwo] = await Promise.all([
+    requestApp(baseUrl + "/api/github/repositories?q=typescript", { headers: { Cookie: cookieOne } }),
+    requestApp(baseUrl + "/api/github/repositories?q=typescript", { headers: { Cookie: cookieTwo } }),
+  ]);
+  assert.equal(searchOne.status, 200);
+  assert.equal(searchTwo.status, 200);
 
   const rejectedLogout = await requestApp(baseUrl + "/api/auth/logout", {
     method: "POST", headers: { Cookie: cookieOne, Origin: "https://attacker.example" },
