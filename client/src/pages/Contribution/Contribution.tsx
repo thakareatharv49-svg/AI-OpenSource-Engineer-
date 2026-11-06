@@ -293,30 +293,39 @@ const [forkedRepository, setForkedRepository] = useState("");
     const fetchIssues = async () => {
       setLoadingIssues(true);
       setIssueError("");
-
       try {
-        const response = await apiFetch(
-          `${API_BASE_URL}/api/github/issues`
-        );
+        const params = new URLSearchParams({
+          page: String(issuePage),
+          per_page: String(issuePageSize),
+          stale_days: String(issueStaleDays),
+          sort: issueSort,
+          order: issueOrder,
+        });
+        if (issueSearchQuery.trim()) params.set("q", issueSearchQuery.trim());
+        if (issueRepositoryFilter.trim()) params.set("repo", issueRepositoryFilter.trim());
+        if (issueLabelsFilter.trim()) params.set("labels", issueLabelsFilter.trim());
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch GitHub issues");
-        }
-
+        const response = await apiFetch(API_BASE_URL + "/api/github/issues?" + params.toString());
         const data = await response.json();
-        setIssues(data.issues);
+        if (!response.ok) throw new Error(data.error || "Failed to fetch GitHub issues");
+        setIssues(Array.isArray(data.issues) ? data.issues : []);
+        setIssueTotalCount(typeof data.totalCount === "number" ? data.totalCount : null);
+        setIssueExcluded(data.excluded && typeof data.excluded === "object" ? data.excluded : {});
       } catch (error) {
         console.error("Failed to fetch issues:", error);
-        setIssueError("Unable to fetch GitHub issues.");
+        setIssueError(error instanceof Error ? error.message : "Unable to fetch GitHub issues.");
       } finally {
         setLoadingIssues(false);
       }
     };
 
-    fetchIssues();
-  }, [started, stage, issueFetchAttempt]);
-    
-    
+    void fetchIssues();
+  }, [started, stage, issueFetchAttempt, issuePage]);
+
+  const handleIssueSearch = () => {
+    setIssuePage(1);
+    setIssueFetchAttempt((attempt) => attempt + 1);
+  };
 
   const handleAISelection = async () => {
     if (issues.length === 0) return;
