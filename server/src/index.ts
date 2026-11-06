@@ -213,7 +213,8 @@ app.get("/api/github/issues", async (req, res) => {
     };
     if (!response.ok) {
       const status = response.status === 403 || response.status === 429 ? 429 : 502;
-      if (response.headers.has("retry-after")) res.setHeader("Retry-After", response.headers.get("retry-after"));
+      const retryAfter = response.headers.get("retry-after");
+      if (retryAfter) res.setHeader("Retry-After", retryAfter);
       return res.status(status).json({
         error: typeof data.message === "string" ? data.message : "GitHub issue search failed.",
         code: status === 429 ? "GITHUB_RATE_LIMITED" : "GITHUB_ISSUE_SEARCH_FAILED",
