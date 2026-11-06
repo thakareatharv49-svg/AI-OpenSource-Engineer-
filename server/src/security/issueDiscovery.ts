@@ -81,14 +81,13 @@ export function parseIssueDiscoveryOptions(input: Record<string, unknown>): Issu
 
 export function buildIssueSearchQuery(options: IssueDiscoveryOptions): string {
   const labelAlternatives = options.labels
-    .map((label) => \`label:"\${label.replace(/"/g, "\\\\\\"")}"\`)
+    .map((label) => 'label:"' + label.replace(/"/g, '\\"') + '"')
     .join(" OR ");
-  const terms = ["is:issue", "is:open", \`(\${labelAlternatives})\`];
-  if (options.repository) terms.push(\`repo:\${options.repository}\`);
+  const terms = ["is:issue", "is:open", "(" + labelAlternatives + ")"];
+  if (options.repository) terms.push("repo:" + options.repository);
   if (options.query) terms.push(options.query);
   return terms.join(" ");
-}
-/** Return only actionable issues; excluded items are counted with explicit evidence. */
+}/** Return only actionable issues; excluded items are counted with explicit evidence. */
 export function normalizeDiscoveredIssues(
   items: GitHubIssueSearchItem[],
   staleDays: number,
