@@ -73,3 +73,13 @@ test("expired shared sessions are rejected and deleted", async () => {
   const request = { headers: { cookie: `${sessionCookieNameForTests()}=${session.id}` } } as never;
   assert.equal(await getGithubSession(request), null);
 });
+
+test("process-local sessions expire and cannot be read after expiry", async () => {
+  delete process.env.UPSTASH_REDIS_REST_URL;
+  delete process.env.UPSTASH_REDIS_REST_TOKEN;
+  const session = createGithubSession({ login: "local-expiry-user", avatarUrl: null, accessToken: "local-only-token" });
+  const request = { headers: { cookie: `${sessionCookieNameForTests()}=${session.id}` } } as never;
+  assert.equal((await getGithubSession(request))?.login, "local-expiry-user");
+  session.expiresAt = Date.now() - 1;
+  assert.equal(await getGithubSession(request), null);
+});
