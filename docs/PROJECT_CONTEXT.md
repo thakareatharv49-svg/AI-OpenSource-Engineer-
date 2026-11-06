@@ -92,7 +92,7 @@ Never commit or paste OAuth client secrets, access tokens, Redis tokens, encrypt
 
 1. Resolve the `Protect main` ruleset administratively by requiring the CI and CodeQL checks and selecting an appropriate approval policy; re-read the ruleset to verify the change.
 2. Complete real OAuth/browser, two-account isolation, and production Redis acceptance in a controlled test environment; record sanitized evidence in the live-verification docs.
-3. Complete Part 3 issue/repository intelligence implementation and automated validation; keep live GitHub API behavior and large-repository analysis as explicit integration checks. Do not confuse these release gates with mocked CI coverage.
+3. Continue with Part 4 (fork, branch, and commit correctness) from the implementation roadmap. Keep live GitHub API behavior and large-repository analysis as explicit integration checks; do not confuse those release gates with mocked CI coverage.
 
 ## Session handoff rules
 
@@ -113,18 +113,21 @@ Never commit or paste OAuth client secrets, access tokens, Redis tokens, encrypt
 **Part 1 disposition:** engineering foundation and dependency/documentation cleanup are complete; administrative branch-protection hardening remains outstanding. Therefore Part 1 is recorded as **substantially complete — blocked on repository administrator configuration**, not fully complete. Live OAuth and production integration tests are release acceptance gates and are not CI-proven.
 
 
-## Part 3 — issue and repository intelligence (implementation pending PR validation)
+## Part 3 — issue and repository intelligence (automated implementation/test scope complete and merged)
 
-Current work branch: `part-3-issue-and-repository-intelligence`.
+**PR #164:** https://github.com/thakareatharv49-svg/AI-OpenSource-Engineer-/pull/164  
+**Merged:** 2026-11-06.  
+**Merge commit:** `8c8595f9c4874a2e49d75d525954fa9b9854d5b2`  
+**Final PR head:** `189082590390e5c72a00d8c778b99b9de2134ec2`.
 
 Implemented in the current worktree/PR branch:
 - Added `server/src/security/issueDiscovery.ts` with validated search options, GitHub query construction, and normalization/eligibility checks.
-- Replaced the fixed 30-item issue search with bounded page/per_page, q, repo, labels, sort, order, and stale_days controls. Alternative labels are ORed, not ANDed.
+- Replaced the fixed 30-item issue search with bounded page/per_page, q, repo, labels, sort, order, and stale_days controls. Alternative labels are ORed, not ANDed. Added user-facing search, repository, label, sort, order, freshness, matching-issue, exclusion-summary, and pagination controls to the contribution screen.
 - Uses the authenticated session token when available; maps GitHub rate limiting to HTTP 429 and preserves Retry-After.
 - Excludes pull-request search results, malformed records, closed/locked issues, duplicate-labelled issues, assigned or explicitly claimed/in-progress issues, and stale issues; returns exclusion counts and the GitHub incomplete-results signal.
 - Prioritizes root/nested README, CONTRIBUTING, AGENTS, SECURITY, architecture guidance, and dependency manifests during source selection.
 - Repository analysis fails closed if no files are selected, selected-file retrieval fails, or the bounded snapshot has no implementation source. The analysis endpoint reports an upstream-context failure instead of sending empty source to the AI.
-- Added unit tests for issue query/filters/eligibility/malformed results and repository context guidance/source requirements.
+- Added unit tests for issue query/filters/eligibility/malformed results and repository context guidance/source requirements. Final CI run `42160691292` passed: backend typecheck, all 286 backend tests, frontend build, and frontend lint. Final CodeQL run `42160691436` passed on the same final PR head.
 - Added `docs/issue-and-repository-intelligence.md` and linked it from README.
 
-Known limits: language/framework facets are not yet a dedicated verified filter; issue-search payloads do not exhaustively identify linked PRs; assignment/claim labels are heuristics; large repositories are analyzed from a bounded sample. CI/CodeQL and live GitHub API behavior must be checked before Part 3 is marked complete.
+Known limits: language/framework facets are not yet a dedicated verified filter; issue-search payloads do not exhaustively identify linked PRs; assignment/claim labels are heuristics; large repositories are analyzed from a bounded sample. The automated implementation/test scope is complete and merged. Live GitHub API behavior and representative public/private repository analysis remain integration acceptance checks and are not proven by mocked/unit tests.
