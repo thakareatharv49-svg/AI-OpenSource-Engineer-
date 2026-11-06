@@ -331,4 +331,17 @@ test("two GitHub accounts have isolated contribution histories and authenticated
   assert.ok(!firstRecords.some(record => record.issueUrl.endsWith("/202")));
   assert.ok(secondRecords.some(record => record.issueUrl.endsWith("/202")));
   assert.ok(!secondRecords.some(record => record.issueUrl.endsWith("/101")));
+
+  const firstRecord = firstRecords.find(record => record.issueUrl.endsWith("/101")) as { id: string; version: number };
+  const crossAccountRead = await requestApp(baseUrl + "/api/lifecycle/" + firstRecord.id, {
+    headers: { Cookie: secondCookie },
+  });
+  assert.equal(crossAccountRead.status, 404);
+
+  const crossAccountMutation = await requestApp(baseUrl + "/api/lifecycle/" + firstRecord.id, {
+    method: "PATCH",
+    headers: { Cookie: secondCookie, Origin: "http://localhost:5173", "Content-Type": "application/json" },
+    body: JSON.stringify({ state: "analyzing", expectedVersion: firstRecord.version }),
+  });
+  assert.equal(crossAccountMutation.status, 404);
 });
