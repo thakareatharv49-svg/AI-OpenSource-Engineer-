@@ -97,7 +97,7 @@ export function assertRepositoryContextHasSource(files: Array<{ path: string; co
   if (!Array.isArray(files) || files.length === 0) {
     throw new Error("No repository files were selected; analysis aborted instead of guessing from issue metadata.");
   }
-  if (!files.some(file => typeof file.path === "string" && IMPLEMENTATION.test(file.path) && !/(^|\\/)(?:tests?|specs?)(\\/|$)|(?:\\.|_)(?:test|spec)\\.[^.]+$/i.test(file.path))) {
+  if (!files.some(file => typeof file.path === "string" && IMPLEMENTATION.test(file.path) && !file.path.split("/").some(part => /^(?:tests?|specs?)$/i.test(part)) && !/(?:\.|_)(?:test|spec)\.[^.]+$/i.test(file.path))) {
     throw new Error("No implementation source files were retrieved; analysis aborted instead of treating documentation-only context as source.");
   }
 }
